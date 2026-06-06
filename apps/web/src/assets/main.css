@@ -272,12 +272,12 @@
   }
 
   .prompt-card-grid {
-    @apply relative grid min-h-[260px] gap-4;
-    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    @apply relative grid min-h-[260px] gap-5;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
   }
 
   .prompt-card {
-    @apply flex min-h-56 flex-col rounded-lg border bg-card px-[18px] py-4 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-lg;
+    @apply flex min-h-56 cursor-pointer flex-col overflow-hidden rounded-md border border-slate-200 bg-card px-[18px] py-4 shadow-[0_1px_2px_rgba(15,23,42,0.05)] outline-none transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_10px_24px_rgba(15,23,42,0.10)] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
   }
 
   .prompt-card-head {
@@ -285,7 +285,7 @@
   }
 
   .prompt-card-title {
-    @apply min-w-0 text-base font-black leading-snug text-slate-950 transition-colors hover:text-primary;
+    @apply line-clamp-2 min-w-0 overflow-hidden text-base font-black leading-snug text-slate-950 transition-colors hover:text-primary;
   }
 
   .card-star-button,
@@ -306,7 +306,7 @@
   }
 
   .prompt-card-tag {
-    @apply inline-flex h-6 max-w-full items-center overflow-hidden rounded-full px-2.5 text-xs font-extrabold;
+    @apply inline-flex h-6 max-w-full items-center truncate rounded-full px-2.5 text-xs font-extrabold;
   }
 
   .prompt-card-tag.category {
@@ -318,11 +318,19 @@
   }
 
   .prompt-card-meta {
-    @apply mt-auto flex items-center gap-2 text-xs font-bold text-slate-500;
+    @apply mt-auto flex flex-wrap items-center justify-between gap-3 border-t pt-3 text-xs font-bold text-slate-500;
+  }
+
+  .prompt-card-owner {
+    @apply flex min-w-0 items-center gap-2;
   }
 
   .prompt-card-meta .date {
-    @apply ml-auto whitespace-nowrap;
+    @apply whitespace-nowrap text-slate-400;
+  }
+
+  .prompt-card-actions {
+    @apply ml-auto flex flex-none items-center justify-end gap-1.5 rounded-md bg-slate-50 p-1;
   }
 
   .meta-avatar {

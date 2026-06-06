@@ -106,14 +106,22 @@
     <section class="prompt-card-grid">
       <div v-if="store.loading" class="loading-panel">正在加载 Prompt...</div>
 
-      <article v-for="prompt in store.prompts" :key="prompt.id" class="prompt-card">
+      <article
+        v-for="prompt in store.prompts"
+        :key="prompt.id"
+        class="prompt-card"
+        role="link"
+        tabindex="0"
+        @click="router.push(`/prompts/${prompt.id}`)"
+        @keydown.enter="router.push(`/prompts/${prompt.id}`)"
+      >
         <header class="prompt-card-head">
-          <RouterLink class="prompt-card-title" :to="`/prompts/${prompt.id}`">{{ prompt.name }}</RouterLink>
+          <RouterLink class="prompt-card-title" :to="`/prompts/${prompt.id}`" @click.stop>{{ prompt.name }}</RouterLink>
           <button
             type="button"
             :title="prompt.isFavorite ? '取消收藏' : '收藏'"
             :class="['card-star-button', { active: prompt.isFavorite }]"
-            @click="handleFavorite(prompt)"
+            @click.stop="handleFavorite(prompt)"
           >
             <Star class="h-4 w-4" :fill="prompt.isFavorite ? 'currentColor' : 'none'" />
           </button>
@@ -135,21 +143,19 @@
         </div>
 
         <footer class="prompt-card-meta">
-          <span class="meta-avatar">A</span>
-          <span>Admin</span>
-          <span class="date">{{ formatShortDate(prompt.updatedAt) }}</span>
-          <button type="button" title="复制内容" class="card-icon-button" @click="copyPrompt(prompt.content)">
-            <Copy class="h-4 w-4" />
-          </button>
-          <button type="button" title="查看详情" class="card-icon-button" @click="router.push(`/prompts/${prompt.id}`)">
-            <Eye class="h-4 w-4" />
-          </button>
-          <button type="button" title="编辑" class="card-icon-button" @click="router.push(`/prompts/${prompt.id}/edit`)">
-            <Pencil class="h-4 w-4" />
-          </button>
-          <button type="button" title="删除" class="card-icon-button" @click="handleDelete(prompt)">
-            <Trash2 class="h-4 w-4" />
-          </button>
+          <div class="prompt-card-owner">
+            <span class="meta-avatar">A</span>
+            <span>Admin</span>
+            <span class="date">{{ formatShortDate(prompt.updatedAt) }}</span>
+          </div>
+          <div class="prompt-card-actions" aria-label="Prompt 操作">
+            <button type="button" title="复制内容" class="card-icon-button" @click.stop="copyPrompt(prompt.content)">
+              <Copy class="h-4 w-4" />
+            </button>
+            <button type="button" title="删除" class="card-icon-button" @click.stop="handleDelete(prompt)">
+              <Trash2 class="h-4 w-4" />
+            </button>
+          </div>
         </footer>
       </article>
 
@@ -190,9 +196,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router';
 import {
   ChartPie,
   Copy,
-  Eye,
   FileText,
-  Pencil,
   Plus,
   RotateCcw,
   Search,
