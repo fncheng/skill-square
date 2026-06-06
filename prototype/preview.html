@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prompt Skill Manager</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --panel: #ffffff;
+      --line: #e6eaf2;
+      --line-soft: #eef2f8;
+      --text: #111827;
+      --muted: #6b7280;
+      --soft: #94a3b8;
+      --brand: #6864f7;
+      --brand-strong: #5b55f0;
+      --brand-soft: #eef0ff;
+      --shadow: 0 14px 36px rgba(33, 47, 84, .08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-width: 1180px;
+      color: var(--text);
+      background: var(--bg);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+      font-size: 14px;
+      letter-spacing: 0;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    .icon {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      stroke-width: 1.9;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+      flex: 0 0 auto;
+    }
+
+    .topbar {
+      position: fixed;
+      inset: 0 0 auto 0;
+      z-index: 30;
+      height: 66px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 28px;
+      background: rgba(255, 255, 255, .92);
+      border-bottom: 1px solid var(--line-soft);
+      backdrop-filter: blur(16px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 16px;
+    }
+
+    .brand-mark {
+      position: relative;
+      width: 28px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #6864f7, #4d7cff);
+      box-shadow: 0 10px 20px rgba(91, 85, 240, .24);
+    }
+
+    .brand-mark::before,
+    .brand-mark::after {
+      content: "";
+      position: absolute;
+      border: 1.7px solid rgba(255, 255, 255, .9);
+      border-radius: 4px;
+      transform: rotate(45deg);
+    }
+
+    .brand-mark::before {
+      width: 9px;
+      height: 9px;
+    }
+
+    .brand-mark::after {
+      width: 4px;
+      height: 4px;
+      box-shadow: 8px 0 0 rgba(255, 255, 255, .05), -8px 0 0 rgba(255, 255, 255, .05);
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 22px;
+      color: #172033;
+    }
+
+    .icon-button {
+      width: 28px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      padding: 0;
+      color: #1f2937;
+      background: transparent;
+      border: 0;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .icon-button:hover {
+      background: #f1f4fb;
+    }
+
+    .user {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-weight: 600;
+    }
+
+    .avatar {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 50% 38%, #f4c3a6 0 17%, transparent 18%),
+        radial-gradient(circle at 50% 68%, #1f2937 0 26%, transparent 27%),
+        linear-gradient(135deg, #82492f, #1e293b);
+      box-shadow: inset 0 0 0 2px #fff, 0 3px 8px rgba(15, 23, 42, .16);
+    }
+
+    .sidebar {
+      position: fixed;
+      inset: 66px auto 0 0;
+      z-index: 20;
+      width: 216px;
+      display: flex;
+      flex-direction: column;
+      padding: 22px 16px 28px;
+      background: rgba(255, 255, 255, .76);
+      border-right: 1px solid var(--line);
+    }
+
+    .nav-group {
+      display: grid;
+      gap: 8px;
+    }
+
+    .nav-title {
+      margin: 24px 12px 16px;
+      color: #7f8aa0;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      height: 48px;
+      padding: 0 18px;
+      color: #465166;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 600;
+    }
+
+    .nav-link .icon {
+      width: 17px;
+      height: 17px;
+      color: #64748b;
+    }
+
+    .nav-link.active {
+      color: var(--brand-strong);
+      background: var(--brand-soft);
+    }
+
+    .nav-link.active .icon {
+      color: var(--brand-strong);
+    }
+
+    .sidebar-bottom {
+      margin-top: auto;
+    }
+
+    .page {
+      margin-left: 216px;
+      padding: 66px 28px 58px 26px;
+    }
+
+    .hero {
+      position: relative;
+      min-height: 290px;
+      overflow: hidden;
+      padding: 52px 42px;
+      background:
+        radial-gradient(circle at 86% 28%, rgba(104, 100, 247, .14), transparent 29%),
+        linear-gradient(135deg, #ffffff 0%, #f8faff 48%, #f1f4ff 100%);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .75);
+    }
+
+    .hero h1 {
+      margin: 0 0 12px;
+      font-size: 32px;
+      line-height: 1.18;
+      font-weight: 800;
+    }
+
+    .hero h1 span {
+      color: var(--brand);
+    }
+
+    .hero p {
+      margin: 0 0 34px;
+      color: #4b5563;
+      font-size: 15px;
+      font-weight: 500;
+    }
+
+    .search-shell {
+      width: min(620px, 60vw);
+    }
+
+    .search-box {
+      position: relative;
+      display: flex;
+      align-items: center;
+      height: 56px;
+      padding: 0 16px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      box-shadow: 0 10px 24px rgba(30, 41, 59, .08);
+    }
+
+    .search-box .icon {
+      color: #64748b;
+    }
+
+    .search-box input {
+      width: 100%;
+      min-width: 0;
+      margin: 0 12px;
+      color: #334155;
+      background: transparent;
+      border: 0;
+      outline: 0;
+      font-size: 14px;
+    }
+
+    .shortcut {
+      display: inline-flex;
+      align-items: center;
+      height: 24px;
+      padding: 0 8px;
+      color: #8b95a8;
+      background: #f7f8fc;
+      border: 1px solid #e6eaf4;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .hot {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-top: 28px;
+      color: #758198;
+      font-weight: 600;
+    }
+
+    .hot b {
+      color: #1f2937;
+    }
+
+    .hot span:not(:first-child)::before {
+      content: "";
+      display: inline-block;
+      width: 4px;
+      height: 4px;
+      margin: 0 13px 2px 0;
+      background: #c8cfdb;
+      border-radius: 50%;
+    }
+
+    .hero-art {
+      position: absolute;
+      top: 44px;
+      right: 38px;
+      width: 310px;
+      height: 230px;
+      color: #7e83f6;
+    }
+
+    .art-search {
+      position: absolute;
+      top: 0;
+      left: 55px;
+      width: 210px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 0 18px;
+      background: #dfe2ff;
+      border-radius: 9px;
+      box-shadow: 0 18px 42px rgba(108, 115, 220, .14);
+    }
+
+    .art-search .icon {
+      width: 22px;
+      height: 22px;
+      color: var(--brand);
+      stroke-width: 3;
+    }
+
+    .art-line {
+      width: 70px;
+      height: 9px;
+      background: #b6b8f3;
+      border-radius: 999px;
+    }
+
+    .art-card {
+      position: absolute;
+      bottom: 26px;
+      width: 96px;
+      height: 126px;
+      padding: 16px;
+      background: rgba(255, 255, 255, .72);
+      border: 1px solid rgba(225, 230, 246, .85);
+      border-radius: 10px;
+      box-shadow: 0 18px 34px rgba(73, 88, 138, .11);
+      backdrop-filter: blur(8px);
+    }
+
+    .art-card:nth-child(2) {
+      left: 0;
+      transform: translateY(-2px);
+    }
+
+    .art-card:nth-child(3) {
+      left: 110px;
+      height: 112px;
+      bottom: 10px;
+      opacity: .72;
+    }
+
+    .art-card:nth-child(4) {
+      right: 0;
+      height: 114px;
+      bottom: 5px;
+      opacity: .72;
+    }
+
+    .art-thumb {
+      height: 56px;
+      display: grid;
+      place-items: center;
+      margin-bottom: 14px;
+      color: #eef0ff;
+      background: linear-gradient(135deg, #7775f7, #a5a8ff);
+      border-radius: 7px;
+      font-size: 23px;
+      font-weight: 800;
+    }
+
+    .art-card:nth-child(3) .art-thumb,
+    .art-card:nth-child(4) .art-thumb {
+      color: #9aa0e8;
+      background: #e7e9ff;
+    }
+
+    .art-card i {
+      display: block;
+      width: 44px;
+      height: 8px;
+      margin-top: 8px;
+      background: #c7cef5;
+      border-radius: 999px;
+    }
+
+    .art-card i:last-child {
+      width: 54px;
+    }
+
+    .spark {
+      position: absolute;
+      right: 22px;
+      top: 54px;
+      width: 18px;
+      height: 18px;
+      color: #c9cdfb;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 24px;
+      margin: 28px 0 24px;
+    }
+
+    .toolbar h2 {
+      margin: 0 0 20px;
+      font-size: 21px;
+      line-height: 1.2;
+      font-weight: 800;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .chip {
+      min-width: 54px;
+      height: 36px;
+      padding: 0 18px;
+      color: #1f2937;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      font-weight: 650;
+      cursor: pointer;
+      box-shadow: 0 5px 14px rgba(31, 41, 55, .04);
+    }
+
+    .chip.active {
+      color: var(--brand-strong);
+      border-color: var(--brand);
+      background: #fbfbff;
+      box-shadow: 0 8px 18px rgba(91, 85, 240, .1);
+    }
+
+    .view-tools {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 1px;
+    }
+
+    .select {
+      height: 38px;
+      display: inline-flex;
+      align-items: center;
+      gap: 14px;
+      padding: 0 13px 0 16px;
+      color: #4b5563;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      font-weight: 600;
+      box-shadow: 0 6px 18px rgba(31, 41, 55, .04);
+    }
+
+    .view-toggle {
+      display: flex;
+      gap: 6px;
+      height: 38px;
+      padding: 5px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+    }
+
+    .view-toggle button {
+      width: 28px;
+      height: 26px;
+      display: grid;
+      place-items: center;
+      padding: 0;
+      color: #64748b;
+      background: transparent;
+      border: 0;
+      border-radius: 7px;
+    }
+
+    .view-toggle button.active {
+      color: var(--brand);
+      background: #f1f2ff;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 22px 20px;
+    }
+
+    .card {
+      min-height: 228px;
+      display: flex;
+      flex-direction: column;
+      padding: 22px 20px 18px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      box-shadow: 0 8px 24px rgba(26, 37, 63, .035);
+    }
+
+    .card-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .card-title {
+      margin: 0;
+      font-size: 16px;
+      line-height: 1.35;
+      font-weight: 800;
+    }
+
+    .star {
+      width: 20px;
+      height: 20px;
+      color: #9aa6ba;
+      fill: none;
+    }
+
+    .star.on {
+      color: #f6bd40;
+      fill: currentColor;
+      stroke: currentColor;
+    }
+
+    .desc {
+      min-height: 52px;
+      margin: 0 0 18px;
+      color: #647084;
+      font-size: 13px;
+      line-height: 1.8;
+      font-weight: 560;
+    }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .tag {
+      height: 25px;
+      display: inline-flex;
+      align-items: center;
+      padding: 0 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .blue { color: #3080dd; background: #ddecff; }
+    .green { color: #10a86a; background: #dcf7e8; }
+    .purple { color: #6f50da; background: #ede8ff; }
+    .pink { color: #dd518c; background: #fde4ef; }
+    .orange { color: #d18a15; background: #fff2cd; }
+    .gray { color: #6c7584; background: #edf0f4; }
+    .red { color: #e2495b; background: #ffe1e5; }
+
+    .meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: auto;
+      color: #738096;
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .meta-avatar {
+      width: 18px;
+      height: 18px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      background: #b8c2d3;
+      border-radius: 50%;
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .date {
+      margin-left: auto;
+    }
+
+    .copy {
+      width: 18px;
+      height: 18px;
+      margin-left: 10px;
+      color: #8c98ab;
+    }
+
+    .fab {
+      position: fixed;
+      right: 32px;
+      bottom: 38px;
+      z-index: 40;
+      width: 58px;
+      height: 58px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      background: linear-gradient(135deg, #6c68ff, #5154f4);
+      border: 0;
+      border-radius: 50%;
+      box-shadow: 0 18px 34px rgba(81, 84, 244, .34);
+      cursor: pointer;
+    }
+
+    .fab .icon {
+      width: 26px;
+      height: 26px;
+      stroke-width: 2.2;
+    }
+
+    @media (max-width: 1250px) {
+      body {
+        min-width: 1024px;
+      }
+
+      .hero-art {
+        opacity: .38;
+        transform: scale(.92);
+        transform-origin: top right;
+      }
+
+      .cards {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+  </style>
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute">
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-2.9-5.6 2.9 1.1-6.2L3 9.6l6.2-.9L12 3Z"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/><path d="M14 3v6h6"/><path d="M8 13h8M8 17h5"/></symbol>
+    <symbol id="i-box" viewBox="0 0 24 24"><path d="M21 8 12 3 3 8l9 5 9-5Z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></symbol>
+    <symbol id="i-tag" viewBox="0 0 24 24"><path d="M20 13 11 4H5v6l9 9a2 2 0 0 0 3 0l3-3a2 2 0 0 0 0-3Z"/><path d="M7.5 7.5h.01"/></symbol>
+    <symbol id="i-archive" viewBox="0 0 24 24"><path d="M3 7h18"/><path d="M5 7v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7"/><path d="M8 3h8l2 4H6l2-4Z"/><path d="M10 12h4"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1h.2a2 2 0 1 1 0 4h-.2a1.7 1.7 0 0 0-1.5 1Z"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.7A8 8 0 1 1 11.3 3 6 6 0 0 0 21 12.7Z"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 7h18s-3 0-3-7"/><path d="M10 20a2 2 0 0 0 4 0"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><rect x="4" y="4" width="11" height="11" rx="2"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-doc" viewBox="0 0 24 24"><path d="M7 3h8l4 4v14H7Z"/><path d="M15 3v5h4"/><path d="M10 12h6M10 16h6"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9v9Z"/><path d="M12 3a9 9 0 0 1 9 9h-9Z"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="m12 2 2.3 7.7L22 12l-7.7 2.3L12 22l-2.3-7.7L2 12l7.7-2.3L12 2Z"/></symbol>
+  </svg>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark"></span>
+      <span>Prompt Skill Manager</span>
+    </div>
+    <div class="top-actions">
+      <button class="icon-button" aria-label="深色模式"><svg class="icon"><use href="#i-moon"></use></svg></button>
+      <button class="icon-button" aria-label="通知"><svg class="icon"><use href="#i-bell"></use></svg></button>
+      <div class="user">
+        <span class="avatar"></span>
+        <span>Admin</span>
+        <svg class="icon" style="width:14px;height:14px"><use href="#i-chevron"></use></svg>
+      </div>
+    </div>
+  </header>
+
+  <aside class="sidebar">
+    <nav class="nav-group">
+      <a href="#" class="nav-link active"><svg class="icon"><use href="#i-home"></use></svg>首页</a>
+      <a href="#" class="nav-link"><svg class="icon"><use href="#i-star"></use></svg>我的收藏</a>
+      <a href="#" class="nav-link"><svg class="icon"><use href="#i-clock"></use></svg>历史记录</a>
+    </nav>
+    <div class="nav-title">管理</div>
+    <nav class="nav-group">
+      <a href="#" class="nav-link"><svg class="icon"><use href="#i-file"></use></svg>提示词管理</a>
+      <a href="#" class="nav-link"><svg class="icon"><use href="#i-box"></use></svg>分类管理</a>
+      <a href="#" class="nav-link"><svg class="icon"><use href="#i-tag"></use></svg>标签管理</a>
+      <a href="#" class="nav-link"><svg class="icon"><use href="#i-archive"></use></svg>版本管理</a>
+    </nav>
+    <nav class="nav-group sidebar-bottom">
+      <a href="#" class="nav-link"><svg class="icon"><use href="#i-settings"></use></svg>设置</a>
+      <a href="#" class="nav-link"><svg class="icon"><use href="#i-info"></use></svg>关于</a>
+    </nav>
+  </aside>
+
+  <main class="page">
+    <section class="hero">
+      <h1>发现优质 <span>Prompt</span></h1>
+      <p>搜索、收藏、管理你的 AI 提示词，让 AI 帮你更高效地完成工作</p>
+      <div class="search-shell">
+        <label class="search-box">
+          <svg class="icon"><use href="#i-search"></use></svg>
+          <input type="text" placeholder="搜索提示词，例如：代码优化、需求分析、单元测试...">
+          <span class="shortcut">⌘ K</span>
+        </label>
+        <div class="hot">
+          <b>热门搜索:</b>
+          <span>代码优化</span>
+          <span>需求分析</span>
+          <span>单元测试</span>
+          <span>接口设计</span>
+          <span>文档生成</span>
+          <span>Bug排查</span>
+        </div>
+      </div>
+
+      <div class="hero-art" aria-hidden="true">
+        <div class="art-search"><svg class="icon"><use href="#i-search"></use></svg><span class="art-line"></span></div>
+        <div class="art-card">
+          <div class="art-thumb">&lt;/&gt;</div>
+          <i></i><i></i>
+        </div>
+        <div class="art-card">
+          <div class="art-thumb"><svg class="icon" style="width:34px;height:34px;stroke-width:1.8"><use href="#i-doc"></use></svg></div>
+          <i></i><i></i>
+        </div>
+        <div class="art-card">
+          <div class="art-thumb"><svg class="icon" style="width:36px;height:36px;stroke-width:1.8"><use href="#i-chart"></use></svg></div>
+          <i></i><i></i>
+        </div>
+        <svg class="spark"><use href="#i-spark"></use></svg>
+      </div>
+    </section>
+
+    <section class="toolbar">
+      <div>
+        <h2>分类</h2>
+        <div class="chips">
+          <button class="chip active">全部</button>
+          <button class="chip">前端开发</button>
+          <button class="chip">后端开发</button>
+          <button class="chip">AI Agent</button>
+          <button class="chip">测试相关</button>
+          <button class="chip">运维部署</button>
+          <button class="chip">产品设计</button>
+          <button class="chip">文档写作</button>
+          <button class="chip">其他</button>
+        </div>
+      </div>
+      <div class="view-tools">
+        <button class="select">最新创建 <svg class="icon" style="width:14px;height:14px"><use href="#i-chevron"></use></svg></button>
+        <div class="view-toggle">
+          <button class="active" aria-label="网格视图"><svg class="icon"><use href="#i-grid"></use></svg></button>
+          <button aria-label="列表视图"><svg class="icon"><use href="#i-list"></use></svg></button>
+        </div>
+      </div>
+    </section>
+
+    <section class="cards">
+      <article class="card">
+        <div class="card-head"><h3 class="card-title">前端需求分析专家</h3><svg class="icon star on"><use href="#i-star"></use></svg></div>
+        <p class="desc">帮助梳理和分析前端需求，输出结构化的需求文档和技术方案。</p>
+        <div class="tags"><span class="tag blue">前端开发</span><span class="tag blue">需求分析</span></div>
+        <div class="meta"><span class="meta-avatar">A</span><span>Admin</span><span class="date">2024-05-20</span><svg class="icon copy"><use href="#i-copy"></use></svg></div>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><h3 class="card-title">Vue3 组件设计助手</h3><svg class="icon star"><use href="#i-star"></use></svg></div>
+        <p class="desc">基于 Vue3 + TS 生成高质量、可复用的组件代码。</p>
+        <div class="tags"><span class="tag green">前端开发</span><span class="tag purple">Vue3</span><span class="tag purple">组件</span></div>
+        <div class="meta"><span class="meta-avatar">A</span><span>Admin</span><span class="date">2024-05-19</span><svg class="icon copy"><use href="#i-copy"></use></svg></div>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><h3 class="card-title">接口文档生成器</h3><svg class="icon star"><use href="#i-star"></use></svg></div>
+        <p class="desc">根据接口信息自动生成规范的 API 文档（Markdown 格式）。</p>
+        <div class="tags"><span class="tag purple">后端开发</span><span class="tag red">文档生成</span><span class="tag pink">接口</span></div>
+        <div class="meta"><span class="meta-avatar">A</span><span>Admin</span><span class="date">2024-05-18</span><svg class="icon copy"><use href="#i-copy"></use></svg></div>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><h3 class="card-title">SQL 优化顾问</h3><svg class="icon star"><use href="#i-star"></use></svg></div>
+        <p class="desc">分析 SQL 语句并提供优化建议，提升数据库性能。</p>
+        <div class="tags"><span class="tag orange">后端开发</span><span class="tag green">SQL</span><span class="tag green">性能优化</span></div>
+        <div class="meta"><span class="meta-avatar">A</span><span>Admin</span><span class="date">2024-05-18</span><svg class="icon copy"><use href="#i-copy"></use></svg></div>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><h3 class="card-title">单元测试用例生成</h3><svg class="icon star"><use href="#i-star"></use></svg></div>
+        <p class="desc">根据函数或方法生成完整的单元测试用例（Jest 格式）。</p>
+        <div class="tags"><span class="tag purple">测试相关</span><span class="tag purple">单元测试</span><span class="tag purple">Jest</span></div>
+        <div class="meta"><span class="meta-avatar">A</span><span>Admin</span><span class="date">2024-05-17</span><svg class="icon copy"><use href="#i-copy"></use></svg></div>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><h3 class="card-title">Bug 排查助手</h3><svg class="icon star"><use href="#i-star"></use></svg></div>
+        <p class="desc">根据 Bug 现象和日志信息，帮助定位问题原因并提供解决方案。</p>
+        <div class="tags"><span class="tag gray">其他</span><span class="tag pink">Bug排查</span><span class="tag gray">日志分析</span></div>
+        <div class="meta"><span class="meta-avatar">A</span><span>Admin</span><span class="date">2024-05-16</span><svg class="icon copy"><use href="#i-copy"></use></svg></div>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><h3 class="card-title">Dockerfile 生成器</h3><svg class="icon star"><use href="#i-star"></use></svg></div>
+        <p class="desc">根据项目描述生成最佳实践的 Dockerfile 文件。</p>
+        <div class="tags"><span class="tag orange">运维部署</span><span class="tag blue">Docker</span><span class="tag blue">部署</span></div>
+        <div class="meta"><span class="meta-avatar">A</span><span>Admin</span><span class="date">2024-05-16</span><svg class="icon copy"><use href="#i-copy"></use></svg></div>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><h3 class="card-title">产品需求文档模板</h3><svg class="icon star"><use href="#i-star"></use></svg></div>
+        <p class="desc">生成标准的 PRD 文档结构，包含背景、目标、功能、流程等。</p>
+        <div class="tags"><span class="tag red">产品设计</span><span class="tag pink">PRD</span><span class="tag pink">文档模板</span></div>
+        <div class="meta"><span class="meta-avatar">A</span><span>Admin</span><span class="date">2024-05-15</span><svg class="icon copy"><use href="#i-copy"></use></svg></div>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><h3 class="card-title">正则表达式生成器</h3><svg class="icon star"><use href="#i-star"></use></svg></div>
+        <p class="desc">根据需求生成准确的正则表达式，并提供解释和测试用例。</p>
+        <div class="tags"><span class="tag gray">其他</span><span class="tag blue">正则</span><span class="tag blue">工具</span></div>
+        <div class="meta"><span class="meta-avatar">A</span><span>Admin</span><span class="date">2024-05-15</span><svg class="icon copy"><use href="#i-copy"></use></svg></div>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><h3 class="card-title">TypeScript 类型设计</h3><svg class="icon star"><use href="#i-star"></use></svg></div>
+        <p class="desc">根据业务场景设计合理的 TypeScript 类型定义。</p>
+        <div class="tags"><span class="tag blue">前端开发</span><span class="tag purple">TypeScript</span><span class="tag purple">类型</span></div>
+        <div class="meta"><span class="meta-avatar">A</span><span>Admin</span><span class="date">2024-05-14</span><svg class="icon copy"><use href="#i-copy"></use></svg></div>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><h3 class="card-title">Git 提交信息助手</h3><svg class="icon star"><use href="#i-star"></use></svg></div>
+        <p class="desc">根据代码变更生成规范的 Git 提交信息。</p>
+        <div class="tags"><span class="tag gray">其他</span><span class="tag blue">Git</span><span class="tag blue">工具</span></div>
+        <div class="meta"><span class="meta-avatar">A</span><span>Admin</span><span class="date">2024-05-14</span><svg class="icon copy"><use href="#i-copy"></use></svg></div>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><h3 class="card-title">代码重构建议</h3><svg class="icon star"><use href="#i-star"></use></svg></div>
+        <p class="desc">分析代码并提供重构建议，提升代码质量和可维护性。</p>
+        <div class="tags"><span class="tag gray">其他</span><span class="tag gray">重构</span><span class="tag gray">代码质量</span></div>
+        <div class="meta"><span class="meta-avatar">A</span><span>Admin</span><span class="date">2024-05-13</span><svg class="icon copy"><use href="#i-copy"></use></svg></div>
+      </article>
+    </section>
+  </main>
+
+  <button class="fab" aria-label="新增 Prompt"><svg class="icon"><use href="#i-plus"></use></svg></button>
+</body>
+</html>

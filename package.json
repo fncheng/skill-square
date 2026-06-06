@@ -1,0 +1,16 @@
+{
+  "name": "prompt-skill-manager",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@9.15.4",
+  "scripts": {
+    "dev:api": "pnpm --filter @prompt-skill-manager/api start:dev",
+    "dev:web": "pnpm --filter @prompt-skill-manager/web dev",
+    "prisma:generate": "pnpm --filter @prompt-skill-manager/api prisma:generate",
+    "prisma:migrate": "pnpm --filter @prompt-skill-manager/api prisma:migrate",
+    "prisma:deploy": "pnpm --filter @prompt-skill-manager/api prisma:deploy",
+    "prisma:seed": "pnpm --filter @prompt-skill-manager/api prisma:seed",
+    "docker:up": "docker compose up -d --build",
+    "docker:down": "docker compose down"
+  }
+}

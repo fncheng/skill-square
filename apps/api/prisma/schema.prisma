@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Prompt {
+  id          String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String          @db.VarChar(160)
+  description String          @default("") @db.VarChar(1000)
+  content     String          @db.Text
+  isFavorite  Boolean         @default(false)
+  categoryId  String?         @db.Uuid
+  category    Category?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  tags        PromptTag[]
+  versions    PromptVersion[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @default(now()) @updatedAt
+
+  @@index([name])
+  @@index([categoryId])
+  @@index([isFavorite])
+  @@map("prompts")
+}
+
+model Category {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String   @unique @db.VarChar(80)
+  description String   @default("") @db.VarChar(500)
+  prompts     Prompt[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  @@map("categories")
+}
+
+model Tag {
+  id        String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String      @unique @db.VarChar(80)
+  color     String      @default("#3b82f6") @db.VarChar(32)
+  prompts   PromptTag[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @default(now()) @updatedAt
+
+  @@map("tags")
+}
+
+model PromptTag {
+  promptId   String   @db.Uuid
+  tagId      String   @db.Uuid
+  assignedAt DateTime @default(now())
+  prompt     Prompt   @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  tag        Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([promptId, tagId])
+  @@index([tagId])
+  @@map("prompt_tags")
+}
+
+model PromptVersion {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  promptId     String   @db.Uuid
+  version      Int
+  name         String   @db.VarChar(160)
+  description  String   @default("") @db.VarChar(1000)
+  content      String   @db.Text
+  isFavorite   Boolean  @default(false)
+  categoryId   String?  @db.Uuid
+  categoryName String?  @db.VarChar(80)
+  tagIds       String[] @default([])
+  tagNames     String[] @default([])
+  createdAt    DateTime @default(now())
+  prompt       Prompt   @relation(fields: [promptId], references: [id], onDelete: Cascade)
+
+  @@unique([promptId, version])
+  @@index([promptId])
+  @@map("prompt_versions")
+}

@@ -1,0 +1,68 @@
+# Prompt Skill Manager
+
+Prompt Skill Manager 是一个用于管理 AI Prompt、Agent Workflow、Skill、Cursor Rule 与 Codex Prompt 的 MVP 平台。
+
+## 技术栈
+
+- 前端：Vue3、TypeScript、Vite、Element Plus、Vue Router、Pinia、Monaco Editor
+- 后端：NestJS、TypeScript、Prisma、Swagger
+- 数据库：PostgreSQL
+- 部署：Docker Compose
+
+## 目录结构
+
+```text
+.
+├── apps
+│   ├── api          # NestJS + Prisma 后端
+│   └── web          # Vue3 + Vite 前端
+├── docs
+│   └── architecture.md
+├── prototype        # 原型图与原型 HTML
+├── docker-compose.yml
+├── package.json
+└── pnpm-workspace.yaml
+```
+
+## Docker Compose 启动
+
+```bash
+cp .env.example .env
+docker compose up -d --build
+```
+
+服务启动后：
+
+- 前端：http://localhost:5173
+- 后端 API：http://localhost:3000/api
+- Swagger：http://localhost:3000/api/docs
+- PostgreSQL：localhost:5432
+
+API 容器启动时会执行 Prisma 迁移和初始化种子数据。
+
+## 本地开发
+
+```bash
+pnpm install
+cp .env.example apps/api/.env
+pnpm prisma:migrate
+pnpm prisma:seed
+pnpm dev:api
+pnpm dev:web
+```
+
+本地开发时，前端默认访问 `VITE_API_BASE_URL=http://localhost:3000/api`。
+
+## 核心功能
+
+- Prompt 创建、编辑、删除、详情查看与复制
+- 分类 CRUD
+- 标签 CRUD
+- 名称、内容、标签搜索
+- 分类、标签、收藏筛选
+- 收藏与取消收藏
+- Prompt 版本历史与回滚
+
+## API 文档
+
+后端启动后访问 `http://localhost:3000/api/docs` 查看 Swagger 文档。

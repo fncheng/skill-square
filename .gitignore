@@ -1,0 +1,56 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Build output
+dist/
+build/
+.output/
+apps/api/dist/
+apps/web/dist/
+
+# Vite and frontend cache
+.vite/
+apps/web/node_modules/.vite/
+
+# TypeScript
+*.tsbuildinfo
+node_modules/.tmp/
+
+# Prisma generated output
+apps/api/generated/
+
+# Test and coverage output
+coverage/
+.nyc_output/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Runtime files
+*.pid
+*.seed
+*.pid.lock
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/
+
+# WSL and Windows downloaded file metadata
+*:Zone.Identifier
+
+# Docker local overrides
+docker-compose.override.yml
