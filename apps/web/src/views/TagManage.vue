@@ -5,64 +5,93 @@
         <h1 class="page-title">标签管理</h1>
         <p class="page-subtitle">维护可复用的 Prompt 标签与颜色。</p>
       </div>
-      <el-button type="primary" :icon="Plus" @click="openCreateDialog">新建标签</el-button>
+      <Button @click="openCreateDialog">
+        <Plus class="h-4 w-4" />
+        新建标签
+      </Button>
     </div>
 
-    <div class="manage-surface">
-      <el-table v-loading="loading" :data="tags" row-key="id" stripe>
-        <el-table-column label="标签名称" min-width="180">
-          <template #default="{ row }">
-            <span class="color-chip" :style="{ backgroundColor: row.color }" />
-            <span>{{ row.name }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="color" label="颜色" width="140" />
-        <el-table-column label="创建时间" width="180">
-          <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
-        </el-table-column>
-        <el-table-column label="更新时间" width="180">
-          <template #default="{ row }">{{ formatDateTime(row.updatedAt) }}</template>
-        </el-table-column>
-        <el-table-column label="操作" width="130" align="right">
-          <template #default="{ row }">
-            <div class="table-actions">
-              <el-tooltip content="编辑">
-                <el-button :icon="Edit" circle @click="openEditDialog(row)" />
-              </el-tooltip>
-              <el-tooltip content="删除">
-                <el-button :icon="Delete" circle type="danger" plain @click="handleDelete(row)" />
-              </el-tooltip>
+    <div class="manage-surface relative">
+      <div v-if="loading" class="loading-panel">正在加载标签...</div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>标签名称</th>
+            <th>颜色</th>
+            <th>创建时间</th>
+            <th>更新时间</th>
+            <th class="text-right">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="tag in tags" :key="tag.id">
+            <td class="font-semibold">
+              <span class="color-chip mr-2" :style="{ backgroundColor: tag.color }" />
+              {{ tag.name }}
+            </td>
+            <td>{{ tag.color }}</td>
+            <td>{{ formatDateTime(tag.createdAt) }}</td>
+            <td>{{ formatDateTime(tag.updatedAt) }}</td>
+            <td>
+              <div class="table-actions">
+                <Button variant="outline" size="icon" title="编辑" @click="openEditDialog(tag)">
+                  <Pencil class="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="icon" title="删除" @click="handleDelete(tag)">
+                  <Trash2 class="h-4 w-4" />
+                </Button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div v-if="!loading && tags.length === 0" class="empty-state">暂无标签</div>
+    </div>
+
+    <Teleport to="body">
+      <div v-if="dialogVisible" class="dialog-overlay">
+        <section class="dialog-panel">
+          <div class="mb-5 flex items-start justify-between gap-4">
+            <div>
+              <h2 class="text-lg font-black">{{ editingId ? '编辑标签' : '新建标签' }}</h2>
+              <p class="text-sm text-muted-foreground">标签颜色会用于 Prompt 卡片和详情展示。</p>
             </div>
-          </template>
-        </el-table-column>
-      </el-table>
-    </div>
-
-    <el-dialog v-model="dialogVisible" :title="editingId ? '编辑标签' : '新建标签'" width="480px">
-      <el-form ref="formRef" label-position="top" :model="form" :rules="rules">
-        <el-form-item label="标签名称" prop="name">
-          <el-input v-model="form.name" maxlength="80" show-word-limit />
-        </el-form-item>
-        <el-form-item label="颜色" prop="color">
-          <div style="display: flex; align-items: center; gap: 12px">
-            <el-color-picker v-model="form.color" />
-            <el-input v-model="form.color" maxlength="7" style="width: 160px" />
+            <Button variant="ghost" size="icon" @click="dialogVisible = false">
+              <X class="h-4 w-4" />
+            </Button>
           </div>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="saving" @click="handleSubmit">保存</el-button>
-      </template>
-    </el-dialog>
+
+          <div class="form-grid">
+            <label class="form-field">
+              <span class="form-label">标签名称</span>
+              <Input v-model="form.name" maxlength="80" />
+            </label>
+            <label class="form-field">
+              <span class="form-label">颜色</span>
+              <div class="flex items-center gap-3">
+                <input v-model="form.color" class="h-9 w-12 rounded-md border bg-background p-1" type="color" />
+                <Input v-model="form.color" class="w-40" maxlength="7" />
+              </div>
+            </label>
+          </div>
+
+          <div class="mt-6 flex justify-end gap-2">
+            <Button variant="outline" @click="dialogVisible = false">取消</Button>
+            <Button :disabled="saving" @click="handleSubmit">{{ saving ? '保存中...' : '保存' }}</Button>
+          </div>
+        </section>
+      </div>
+    </Teleport>
   </section>
 </template>
 
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue';
-import type { FormInstance, FormRules } from 'element-plus';
-import { ElMessage, ElMessageBox } from 'element-plus';
-import { Delete, Edit, Plus } from '@element-plus/icons-vue';
+import { Pencil, Plus, Trash2, X } from 'lucide-vue-next';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { useConfirm } from '@/composables/use-confirm';
+import { useToast } from '@/composables/use-toast';
 import { createTag, deleteTag, getTags, updateTag, type TagPayload } from '@/api/tags';
 import type { Tag } from '@/types/domain';
 import { formatDateTime } from '@/utils/date';
@@ -72,20 +101,13 @@ const loading = ref(false);
 const saving = ref(false);
 const dialogVisible = ref(false);
 const editingId = ref<string>();
-const formRef = ref<FormInstance>();
+const { toast } = useToast();
+const { confirm } = useConfirm();
 
 const form = reactive<TagPayload>({
   name: '',
   color: '#3b82f6'
 });
-
-const rules: FormRules<TagPayload> = {
-  name: [{ required: true, message: '请输入标签名称', trigger: 'blur' }],
-  color: [
-    { required: true, message: '请选择标签颜色', trigger: 'change' },
-    { pattern: /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, message: '请输入合法的 HEX 颜色', trigger: 'blur' }
-  ]
-};
 
 onMounted(loadTags);
 
@@ -113,19 +135,29 @@ function openEditDialog(tag: Tag) {
 }
 
 async function handleSubmit() {
-  const valid = await formRef.value?.validate();
-  if (!valid) {
+  if (!form.name.trim()) {
+    toast({ title: '请输入标签名称', variant: 'destructive' });
+    return;
+  }
+
+  if (!/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(form.color)) {
+    toast({ title: '请输入合法的 HEX 颜色', variant: 'destructive' });
     return;
   }
 
   saving.value = true;
   try {
+    const payload = {
+      name: form.name.trim(),
+      color: form.color
+    };
+
     if (editingId.value) {
-      await updateTag(editingId.value, form);
+      await updateTag(editingId.value, payload);
     } else {
-      await createTag(form);
+      await createTag(payload);
     }
-    ElMessage.success('标签已保存');
+    toast({ title: '标签已保存', variant: 'success' });
     dialogVisible.value = false;
     await loadTags();
   } finally {
@@ -134,17 +166,19 @@ async function handleSubmit() {
 }
 
 async function handleDelete(tag: Tag) {
-  try {
-    await ElMessageBox.confirm(`确认删除标签「${tag.name}」？`, '删除标签', {
-      type: 'warning',
-      confirmButtonText: '删除',
-      cancelButtonText: '取消'
-    });
-    await deleteTag(tag.id);
-    ElMessage.success('标签已删除');
-    await loadTags();
-  } catch {
-    // 用户取消删除时无需提示。
+  const confirmed = await confirm({
+    title: '删除标签',
+    description: `确认删除标签「${tag.name}」？Prompt 与该标签的关联将被删除。`,
+    confirmText: '删除',
+    destructive: true
+  });
+
+  if (!confirmed) {
+    return;
   }
+
+  await deleteTag(tag.id);
+  toast({ title: '标签已删除', variant: 'success' });
+  await loadTags();
 }
 </script>

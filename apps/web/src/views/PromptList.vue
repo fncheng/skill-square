@@ -6,7 +6,7 @@
         <p>搜索、收藏、管理你的 AI 提示词，让 AI 帮你更高效地完成工作</p>
 
         <label class="hero-search">
-          <el-icon><Search /></el-icon>
+          <Search class="h-5 w-5 text-slate-500" />
           <input
             v-model="store.filters.search"
             type="text"
@@ -14,7 +14,7 @@
             @keyup.enter="handleSearch"
           />
           <button v-if="store.filters.search" type="button" class="hero-search-clear" @click="clearSearch">
-            <el-icon><Close /></el-icon>
+            <X class="h-4 w-4" />
           </button>
         </label>
 
@@ -28,7 +28,7 @@
 
       <div class="hero-art" aria-hidden="true">
         <div class="art-search">
-          <el-icon><Search /></el-icon>
+          <Search class="h-5 w-5" />
           <span />
         </div>
         <div class="art-card art-card-primary">
@@ -38,14 +38,14 @@
         </div>
         <div class="art-card">
           <div class="art-thumb">
-            <el-icon><Document /></el-icon>
+            <FileText class="h-8 w-8" />
           </div>
           <i />
           <i />
         </div>
         <div class="art-card">
           <div class="art-thumb">
-            <el-icon><TrendCharts /></el-icon>
+            <ChartPie class="h-8 w-8" />
           </div>
           <i />
           <i />
@@ -77,43 +77,46 @@
       </div>
 
       <div class="card-view-tools">
-        <el-select
-          v-model="store.filters.tagIds"
-          multiple
-          clearable
-          collapse-tags
-          collapse-tags-tooltip
-          filterable
-          placeholder="标签筛选"
+        <select
+          v-model="store.filters.favorite"
+          class="native-select w-36"
+          aria-label="收藏筛选"
           @change="handleSearch"
         >
-          <el-option v-for="tag in store.tags" :key="tag.id" :label="tag.name" :value="tag.id">
-            <span class="color-chip" :style="{ backgroundColor: tag.color }" />
-            <span>{{ tag.name }}</span>
-          </el-option>
-        </el-select>
-        <el-select v-model="store.filters.favorite" placeholder="收藏筛选" @change="handleSearch">
-          <el-option label="全部" value="" />
-          <el-option label="已收藏" value="true" />
-          <el-option label="未收藏" value="false" />
-        </el-select>
-        <el-button :icon="Refresh" @click="handleReset">重置</el-button>
+          <option value="">全部收藏</option>
+          <option value="true">已收藏</option>
+          <option value="false">未收藏</option>
+        </select>
+        <select
+          v-model="selectedTagId"
+          class="native-select w-40"
+          aria-label="标签筛选"
+          @change="applyTagFilter"
+        >
+          <option value="">全部标签</option>
+          <option v-for="tag in store.tags" :key="tag.id" :value="tag.id">{{ tag.name }}</option>
+        </select>
+        <Button variant="outline" @click="handleReset">
+          <RotateCcw class="h-4 w-4" />
+          重置
+        </Button>
       </div>
     </section>
 
-    <section v-loading="store.loading" class="prompt-card-grid">
+    <section class="prompt-card-grid">
+      <div v-if="store.loading" class="loading-panel">正在加载 Prompt...</div>
+
       <article v-for="prompt in store.prompts" :key="prompt.id" class="prompt-card">
         <header class="prompt-card-head">
           <RouterLink class="prompt-card-title" :to="`/prompts/${prompt.id}`">{{ prompt.name }}</RouterLink>
-          <el-tooltip :content="prompt.isFavorite ? '取消收藏' : '收藏'">
-            <button
-              type="button"
-              :class="['card-star-button', { active: prompt.isFavorite }]"
-              @click="handleFavorite(prompt)"
-            >
-              <el-icon><component :is="prompt.isFavorite ? StarFilled : Star" /></el-icon>
-            </button>
-          </el-tooltip>
+          <button
+            type="button"
+            :title="prompt.isFavorite ? '取消收藏' : '收藏'"
+            :class="['card-star-button', { active: prompt.isFavorite }]"
+            @click="handleFavorite(prompt)"
+          >
+            <Star class="h-4 w-4" :fill="prompt.isFavorite ? 'currentColor' : 'none'" />
+          </button>
         </header>
 
         <p class="prompt-card-desc">{{ prompt.description || '暂无描述' }}</p>
@@ -135,83 +138,85 @@
           <span class="meta-avatar">A</span>
           <span>Admin</span>
           <span class="date">{{ formatShortDate(prompt.updatedAt) }}</span>
-          <el-tooltip content="复制内容">
-            <button type="button" class="card-icon-button" @click="copyPrompt(prompt.content)">
-              <el-icon><CopyDocument /></el-icon>
-            </button>
-          </el-tooltip>
-          <el-dropdown trigger="click" @command="(command) => handleCardCommand(command, prompt)">
-            <button type="button" class="card-icon-button">
-              <el-icon><MoreFilled /></el-icon>
-            </button>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item command="view" :icon="View">查看详情</el-dropdown-item>
-                <el-dropdown-item command="edit" :icon="Edit">编辑</el-dropdown-item>
-                <el-dropdown-item command="delete" :icon="Delete">删除</el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
+          <button type="button" title="复制内容" class="card-icon-button" @click="copyPrompt(prompt.content)">
+            <Copy class="h-4 w-4" />
+          </button>
+          <button type="button" title="查看详情" class="card-icon-button" @click="router.push(`/prompts/${prompt.id}`)">
+            <Eye class="h-4 w-4" />
+          </button>
+          <button type="button" title="编辑" class="card-icon-button" @click="router.push(`/prompts/${prompt.id}/edit`)">
+            <Pencil class="h-4 w-4" />
+          </button>
+          <button type="button" title="删除" class="card-icon-button" @click="handleDelete(prompt)">
+            <Trash2 class="h-4 w-4" />
+          </button>
         </footer>
       </article>
 
       <div v-if="!store.loading && store.prompts.length === 0" class="prompt-card-empty">
-        <el-empty description="暂无匹配的 Prompt" />
+        <div class="grid place-items-center gap-2 py-8 text-center text-muted-foreground">
+          <Search class="h-8 w-8" />
+          <p class="font-semibold">暂无匹配的 Prompt</p>
+        </div>
       </div>
     </section>
 
     <div class="card-pagination">
-      <el-pagination
-        v-model:current-page="store.page"
-        v-model:page-size="store.pageSize"
-        background
-        layout="total, sizes, prev, pager, next"
-        :page-sizes="[8, 12, 24, 48]"
-        :total="store.total"
-        @current-change="store.fetchPrompts"
-        @size-change="handlePageSizeChange"
-      />
+      <span class="text-sm text-muted-foreground">共 {{ store.total }} 条</span>
+      <select v-model.number="store.pageSize" class="native-select w-24" @change="handlePageSizeChange">
+        <option :value="8">8 条</option>
+        <option :value="12">12 条</option>
+        <option :value="24">24 条</option>
+        <option :value="48">48 条</option>
+      </select>
+      <Button variant="outline" size="sm" :disabled="store.page <= 1" @click="changePage(store.page - 1)">
+        上一页
+      </Button>
+      <span class="text-sm font-semibold">第 {{ store.page }} / {{ totalPages }} 页</span>
+      <Button variant="outline" size="sm" :disabled="store.page >= totalPages" @click="changePage(store.page + 1)">
+        下一页
+      </Button>
     </div>
 
-    <el-tooltip content="新建 Prompt">
-      <button type="button" class="prompt-fab" @click="router.push('/prompts/new')">
-        <el-icon><Plus /></el-icon>
-      </button>
-    </el-tooltip>
+    <button type="button" class="prompt-fab" title="新建 Prompt" @click="router.push('/prompts/new')">
+      <Plus class="h-7 w-7" />
+    </button>
   </section>
 </template>
 
 <script setup lang="ts">
-import { onMounted, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
-import { ElMessage, ElMessageBox } from 'element-plus';
 import {
-  CopyDocument,
-  Close,
-  Delete,
-  Document,
-  Edit,
-  MoreFilled,
+  ChartPie,
+  Copy,
+  Eye,
+  FileText,
+  Pencil,
   Plus,
-  Refresh,
+  RotateCcw,
   Search,
   Star,
-  StarFilled,
-  TrendCharts,
-  View
-} from '@element-plus/icons-vue';
+  Trash2,
+  X
+} from 'lucide-vue-next';
+import { Button } from '@/components/ui/button';
+import { useConfirm } from '@/composables/use-confirm';
+import { useToast } from '@/composables/use-toast';
 import { deletePrompt } from '@/api/prompts';
 import { usePromptStore } from '@/stores/prompt';
 import type { Prompt } from '@/types/domain';
 import { copyText } from '@/utils/clipboard';
 
-type CardCommand = 'view' | 'edit' | 'delete';
-
 const store = usePromptStore();
 const route = useRoute();
 const router = useRouter();
+const { toast } = useToast();
+const { confirm } = useConfirm();
+const selectedTagId = ref('');
 
 const hotKeywords = ['代码优化', '需求分析', '单元测试', '接口设计', '文档生成', 'Bug排查'];
+const totalPages = computed(() => Math.max(1, Math.ceil(store.total / store.pageSize)));
 
 onMounted(async () => {
   store.filters.favorite = route.query.favorite === 'true' ? 'true' : '';
@@ -248,8 +253,14 @@ async function applyCategory(categoryId: string) {
   await handleSearch();
 }
 
+async function applyTagFilter() {
+  store.filters.tagIds = selectedTagId.value ? [selectedTagId.value] : [];
+  await handleSearch();
+}
+
 async function handleReset() {
   store.resetFilters();
+  selectedTagId.value = '';
   store.pageSize = 8;
   await router.replace('/prompts');
   await store.fetchPrompts();
@@ -260,46 +271,35 @@ async function handlePageSizeChange() {
   await store.fetchPrompts();
 }
 
+async function changePage(page: number) {
+  store.page = page;
+  await store.fetchPrompts();
+}
+
 async function handleFavorite(prompt: Prompt) {
   await store.toggleFavorite(prompt);
 }
 
-async function handleCardCommand(command: string | number, prompt: Prompt) {
-  const action = command as CardCommand;
+async function handleDelete(prompt: Prompt) {
+  const confirmed = await confirm({
+    title: '删除 Prompt',
+    description: `确认删除「${prompt.name}」？删除后将同时删除该 Prompt 的历史版本。`,
+    confirmText: '删除',
+    destructive: true
+  });
 
-  if (action === 'view') {
-    await router.push(`/prompts/${prompt.id}`);
+  if (!confirmed) {
     return;
   }
 
-  if (action === 'edit') {
-    await router.push(`/prompts/${prompt.id}/edit`);
-    return;
-  }
-
-  if (action === 'delete') {
-    await handleDelete(prompt.id);
-  }
-}
-
-async function handleDelete(id: string) {
-  try {
-    await ElMessageBox.confirm('删除后将同时删除该 Prompt 的历史版本。', '删除 Prompt', {
-      type: 'warning',
-      confirmButtonText: '删除',
-      cancelButtonText: '取消'
-    });
-    await deletePrompt(id);
-    ElMessage.success('Prompt 已删除');
-    await store.fetchPrompts();
-  } catch {
-    // 用户取消删除时无需提示。
-  }
+  await deletePrompt(prompt.id);
+  toast({ title: 'Prompt 已删除', variant: 'success' });
+  await store.fetchPrompts();
 }
 
 async function copyPrompt(content: string) {
   await copyText(content);
-  ElMessage.success('Prompt 内容已复制');
+  toast({ title: 'Prompt 内容已复制', variant: 'success' });
 }
 
 function formatShortDate(value: string) {

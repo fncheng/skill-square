@@ -3,16 +3,20 @@
     <header class="app-topbar">
       <RouterLink class="brand" to="/prompts">
         <span class="brand-mark">
-          <el-icon><Collection /></el-icon>
+          <Boxes class="h-4 w-4" />
         </span>
         <span>Prompt Skill Manager</span>
       </RouterLink>
 
       <div class="topbar-actions">
-        <el-button :icon="Search" circle />
-        <el-button :icon="Bell" circle />
+        <Button variant="ghost" size="icon">
+          <Search class="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="icon">
+          <Bell class="h-4 w-4" />
+        </Button>
         <span class="admin-badge">
-          <el-icon><UserFilled /></el-icon>
+          <CircleUserRound class="h-4 w-4" />
           Admin
         </span>
       </div>
@@ -26,7 +30,7 @@
           :class="['nav-link', { active: isPrimaryActive(item) }]"
           :to="item.to"
         >
-          <el-icon><component :is="item.icon" /></el-icon>
+          <component :is="item.icon" class="h-4 w-4" />
           <span>{{ item.label }}</span>
         </RouterLink>
       </nav>
@@ -39,7 +43,7 @@
           :class="['nav-link', { active: isManageActive(item.path) }]"
           :to="item.path"
         >
-          <el-icon><component :is="item.icon" /></el-icon>
+          <component :is="item.icon" class="h-4 w-4" />
           <span>{{ item.label }}</span>
         </RouterLink>
       </nav>
@@ -48,6 +52,9 @@
     <main class="app-main">
       <RouterView />
     </main>
+
+    <Toaster />
+    <ConfirmDialog />
   </div>
 </template>
 
@@ -56,14 +63,17 @@ import { computed } from 'vue';
 import { RouterLink, RouterView, useRoute } from 'vue-router';
 import {
   Bell,
-  Collection,
+  Boxes,
+  CircleUserRound,
   Folder,
   House,
-  PriceTag,
+  Tags,
   Search,
-  Star,
-  UserFilled
-} from '@element-plus/icons-vue';
+  Star
+} from 'lucide-vue-next';
+import { Button } from '@/components/ui/button';
+import ConfirmDialog from '@/components/ui/confirm/ConfirmDialog.vue';
+import Toaster from '@/components/ui/toast/Toaster.vue';
 
 const route = useRoute();
 
@@ -74,7 +84,7 @@ const primaryNav = [
 
 const manageNav = [
   { label: '分类管理', path: '/categories', icon: Folder },
-  { label: '标签管理', path: '/tags', icon: PriceTag }
+  { label: '标签管理', path: '/tags', icon: Tags }
 ];
 
 const normalizedPath = computed(() => route.path);

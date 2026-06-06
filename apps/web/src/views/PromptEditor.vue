@@ -6,72 +6,63 @@
         <p class="page-subtitle">维护 Prompt 基础信息、分类、标签与正文内容。</p>
       </div>
       <div class="table-actions">
-        <el-button :icon="Back" @click="router.back()">返回</el-button>
-        <el-button type="primary" :icon="Check" :loading="saving" @click="handleSubmit">保存</el-button>
+        <Button variant="outline" @click="router.back()">
+          <ArrowLeft class="h-4 w-4" />
+          返回
+        </Button>
+        <Button :disabled="saving" @click="handleSubmit">
+          <Check class="h-4 w-4" />
+          {{ saving ? '保存中...' : '保存' }}
+        </Button>
       </div>
     </div>
 
     <div class="editor-layout">
       <div class="form-surface">
-        <el-form ref="formRef" label-position="top" :model="form" :rules="rules">
-          <el-form-item label="名称" prop="name">
-            <el-input v-model="form.name" maxlength="160" show-word-limit placeholder="输入 Prompt 名称" />
-          </el-form-item>
+        <div class="form-grid">
+          <label class="form-field">
+            <span class="form-label">名称</span>
+            <Input v-model="form.name" maxlength="160" placeholder="输入 Prompt 名称" />
+            <span class="text-xs text-muted-foreground">{{ form.name.length }}/160</span>
+          </label>
 
-          <el-form-item label="描述" prop="description">
-            <el-input
-              v-model="form.description"
-              type="textarea"
-              maxlength="1000"
-              show-word-limit
-              :rows="5"
-              placeholder="输入 Prompt 描述"
-            />
-          </el-form-item>
+          <label class="form-field">
+            <span class="form-label">描述</span>
+            <Textarea v-model="form.description" maxlength="1000" rows="5" placeholder="输入 Prompt 描述" />
+            <span class="text-xs text-muted-foreground">{{ form.description.length }}/1000</span>
+          </label>
 
-          <el-form-item label="分类" prop="categoryId">
-            <el-select v-model="form.categoryId" clearable filterable placeholder="选择分类" style="width: 100%">
-              <el-option
-                v-for="category in store.categories"
-                :key="category.id"
-                :label="category.name"
-                :value="category.id"
-              />
-            </el-select>
-          </el-form-item>
+          <label class="form-field">
+            <span class="form-label">分类</span>
+            <select v-model="form.categoryId" class="native-select w-full">
+              <option :value="null">不设置分类</option>
+              <option v-for="category in store.categories" :key="category.id" :value="category.id">
+                {{ category.name }}
+              </option>
+            </select>
+          </label>
 
-          <el-form-item label="标签" prop="tagIds">
-            <el-select
-              v-model="form.tagIds"
-              multiple
-              clearable
-              collapse-tags
-              collapse-tags-tooltip
-              filterable
-              placeholder="选择标签"
-              style="width: 100%"
-            >
-              <el-option v-for="tag in store.tags" :key="tag.id" :label="tag.name" :value="tag.id">
-                <span class="color-chip" :style="{ backgroundColor: tag.color }" />
-                <span>{{ tag.name }}</span>
-              </el-option>
-            </el-select>
-          </el-form-item>
+          <label class="form-field">
+            <span class="form-label">标签</span>
+            <select v-model="form.tagIds" class="native-multi w-full" multiple>
+              <option v-for="tag in store.tags" :key="tag.id" :value="tag.id">
+                {{ tag.name }}
+              </option>
+            </select>
+            <span class="text-xs text-muted-foreground">可按住 Ctrl 或 Shift 多选标签。</span>
+          </label>
 
-          <el-form-item label="收藏">
-            <el-switch v-model="form.isFavorite" active-text="已收藏" inactive-text="未收藏" />
-          </el-form-item>
-
-          <el-form-item label="内容" prop="content" class="content-validator">
-            <el-input v-model="form.content" style="display: none" />
-          </el-form-item>
-        </el-form>
+          <label class="checkbox-row">
+            <input v-model="form.isFavorite" class="h-4 w-4 accent-indigo-600" type="checkbox" />
+            <span>收藏该 Prompt</span>
+          </label>
+        </div>
       </div>
 
       <div class="editor-surface">
         <div class="editor-head">
           <span>Prompt 内容</span>
-          <el-tag effect="plain">Markdown</el-tag>
+          <Badge variant="outline">Markdown</Badge>
         </div>
         <PromptMonacoEditor v-model="form.content" />
       </div>
@@ -82,9 +73,12 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import type { FormInstance, FormRules } from 'element-plus';
-import { ElMessage } from 'element-plus';
-import { Back, Check } from '@element-plus/icons-vue';
+import { ArrowLeft, Check } from 'lucide-vue-next';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/composables/use-toast';
 import { createPrompt, getPrompt, updatePrompt } from '@/api/prompts';
 import PromptMonacoEditor from '@/components/prompt/PromptMonacoEditor.vue';
 import { usePromptStore } from '@/stores/prompt';
@@ -93,7 +87,7 @@ import type { PromptPayload } from '@/types/domain';
 const route = useRoute();
 const router = useRouter();
 const store = usePromptStore();
-const formRef = ref<FormInstance>();
+const { toast } = useToast();
 const saving = ref(false);
 const isEdit = computed(() => route.name === 'prompt-edit');
 
@@ -105,11 +99,6 @@ const form = reactive<PromptPayload>({
   tagIds: [],
   isFavorite: false
 });
-
-const rules: FormRules<PromptPayload> = {
-  name: [{ required: true, message: '请输入 Prompt 名称', trigger: 'blur' }],
-  content: [{ required: true, message: '请输入 Prompt 内容', trigger: 'change' }]
-};
 
 onMounted(async () => {
   await Promise.all([store.fetchCategories(), store.fetchTags()]);
@@ -127,8 +116,13 @@ onMounted(async () => {
 });
 
 async function handleSubmit() {
-  const valid = await formRef.value?.validate();
-  if (!valid) {
+  if (!form.name.trim()) {
+    toast({ title: '请输入 Prompt 名称', variant: 'destructive' });
+    return;
+  }
+
+  if (!form.content.trim()) {
+    toast({ title: '请输入 Prompt 内容', variant: 'destructive' });
     return;
   }
 
@@ -136,13 +130,15 @@ async function handleSubmit() {
   try {
     const payload: PromptPayload = {
       ...form,
+      name: form.name.trim(),
+      description: form.description.trim(),
       categoryId: form.categoryId || null,
       tagIds: [...form.tagIds]
     };
     const prompt = isEdit.value
       ? await updatePrompt(String(route.params.id), payload)
       : await createPrompt(payload);
-    ElMessage.success('Prompt 已保存');
+    toast({ title: 'Prompt 已保存', variant: 'success' });
     await router.push(`/prompts/${prompt.id}`);
   } finally {
     saving.value = false;

@@ -1,13 +1,21 @@
 <template>
-  <section v-loading="loading">
+  <section class="relative">
+    <div v-if="loading" class="loading-panel">正在加载 Prompt...</div>
+
     <div class="page-head">
       <div>
         <h1 class="page-title">{{ prompt?.name || 'Prompt 详情' }}</h1>
         <p class="page-subtitle">{{ prompt?.description }}</p>
       </div>
       <div class="table-actions">
-        <el-button :icon="CopyDocument" @click="copyContent">一键复制</el-button>
-        <el-button :icon="Edit" type="primary" @click="router.push(`/prompts/${prompt?.id}/edit`)">编辑</el-button>
+        <Button variant="outline" @click="copyContent">
+          <Copy class="h-4 w-4" />
+          一键复制
+        </Button>
+        <Button @click="router.push(`/prompts/${prompt?.id}/edit`)">
+          <Pencil class="h-4 w-4" />
+          编辑
+        </Button>
       </div>
     </div>
 
@@ -15,7 +23,7 @@
       <div class="editor-surface">
         <div class="editor-head">
           <span>Prompt 内容</span>
-          <el-tag effect="plain">只读</el-tag>
+          <Badge variant="outline">只读</Badge>
         </div>
         <PromptMonacoEditor v-model="content" read-only />
       </div>
@@ -30,23 +38,23 @@
           <div class="meta-item">
             <span class="meta-label">标签</span>
             <div class="tag-list">
-              <el-tag
+              <span
                 v-for="tag in prompt.tags"
                 :key="tag.id"
-                :color="tag.color"
-                style="color: #fff; border-color: transparent"
+                class="prompt-card-tag"
+                :style="getTagStyle(tag.color)"
               >
                 {{ tag.name }}
-              </el-tag>
+              </span>
               <span v-if="prompt.tags.length === 0" class="meta-value">无标签</span>
             </div>
           </div>
 
           <div class="meta-item">
             <span class="meta-label">收藏状态</span>
-            <el-tag :type="prompt.isFavorite ? 'warning' : 'info'" effect="plain">
+            <Badge :variant="prompt.isFavorite ? 'secondary' : 'outline'">
               {{ prompt.isFavorite ? '已收藏' : '未收藏' }}
-            </el-tag>
+            </Badge>
           </div>
 
           <div class="meta-item">
@@ -62,68 +70,90 @@
       </aside>
     </div>
 
-    <div class="table-surface" style="margin-top: 18px">
-      <div class="page-head" style="margin-bottom: 8px">
+    <div class="table-surface mt-4">
+      <div class="page-head mb-2">
         <div>
-          <h2 class="page-title" style="font-size: 18px">版本历史</h2>
+          <h2 class="text-lg font-black">版本历史</h2>
           <p class="page-subtitle">每次创建、编辑和回滚都会形成一个快照版本。</p>
         </div>
       </div>
 
-      <el-table :data="versions" row-key="id" stripe>
-        <el-table-column label="版本" width="90">
-          <template #default="{ row }">
-            <el-tag effect="plain">v{{ row.version }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="名称" min-width="180" prop="name" />
-        <el-table-column label="分类" width="130">
-          <template #default="{ row }">{{ row.categoryName || '未分类' }}</template>
-        </el-table-column>
-        <el-table-column label="标签" min-width="180">
-          <template #default="{ row }">
-            <div class="tag-list">
-              <el-tag v-for="tagName in row.tagNames" :key="tagName" effect="plain">{{ tagName }}</el-tag>
-              <span v-if="row.tagNames.length === 0" class="meta-value">无标签</span>
-            </div>
-          </template>
-        </el-table-column>
-        <el-table-column label="生成时间" width="180">
-          <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
-        </el-table-column>
-        <el-table-column label="操作" width="150" align="right">
-          <template #default="{ row }">
-            <div class="table-actions">
-              <el-tooltip content="查看版本">
-                <el-button :icon="View" circle @click="openVersion(row)" />
-              </el-tooltip>
-              <el-tooltip content="回滚">
-                <el-button :icon="RefreshLeft" circle type="primary" plain @click="handleRollback(row)" />
-              </el-tooltip>
-            </div>
-          </template>
-        </el-table-column>
-      </el-table>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>版本</th>
+            <th>名称</th>
+            <th>分类</th>
+            <th>标签</th>
+            <th>生成时间</th>
+            <th class="text-right">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="version in versions" :key="version.id">
+            <td><Badge variant="outline">v{{ version.version }}</Badge></td>
+            <td class="font-semibold">{{ version.name }}</td>
+            <td>{{ version.categoryName || '未分类' }}</td>
+            <td>
+              <div class="tag-list">
+                <Badge v-for="tagName in version.tagNames" :key="tagName" variant="secondary">{{ tagName }}</Badge>
+                <span v-if="version.tagNames.length === 0" class="meta-value">无标签</span>
+              </div>
+            </td>
+            <td>{{ formatDateTime(version.createdAt) }}</td>
+            <td>
+              <div class="table-actions">
+                <Button variant="outline" size="icon" title="查看版本" @click="openVersion(version)">
+                  <Eye class="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="icon" title="回滚" @click="handleRollback(version)">
+                  <RotateCcw class="h-4 w-4" />
+                </Button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div v-if="versions.length === 0" class="empty-state">暂无版本历史</div>
     </div>
 
-    <el-dialog v-model="versionDialogVisible" title="版本内容" width="720px">
-      <template v-if="selectedVersion">
-        <el-descriptions :column="2" border>
-          <el-descriptions-item label="版本">v{{ selectedVersion.version }}</el-descriptions-item>
-          <el-descriptions-item label="分类">{{ selectedVersion.categoryName || '未分类' }}</el-descriptions-item>
-          <el-descriptions-item label="名称" :span="2">{{ selectedVersion.name }}</el-descriptions-item>
-        </el-descriptions>
-        <pre class="version-content" style="margin-top: 14px">{{ selectedVersion.content }}</pre>
-      </template>
-    </el-dialog>
+    <Teleport to="body">
+      <div v-if="versionDialogVisible" class="dialog-overlay">
+        <section class="dialog-panel max-w-3xl">
+          <div class="mb-4 flex items-start justify-between gap-4">
+            <div>
+              <h2 class="text-lg font-black">版本内容</h2>
+              <p v-if="selectedVersion" class="text-sm text-muted-foreground">
+                v{{ selectedVersion.version }} · {{ selectedVersion.categoryName || '未分类' }}
+              </p>
+            </div>
+            <Button variant="ghost" size="icon" @click="versionDialogVisible = false">
+              <X class="h-4 w-4" />
+            </Button>
+          </div>
+
+          <template v-if="selectedVersion">
+            <div class="grid gap-2 rounded-lg border bg-slate-50 p-3 text-sm">
+              <div><span class="font-semibold">名称：</span>{{ selectedVersion.name }}</div>
+              <div><span class="font-semibold">标签：</span>{{ selectedVersion.tagNames.join('、') || '无标签' }}</div>
+            </div>
+            <pre class="version-content mt-3">{{ selectedVersion.content }}</pre>
+          </template>
+        </section>
+      </div>
+    </Teleport>
   </section>
 </template>
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ElMessage, ElMessageBox } from 'element-plus';
-import { CopyDocument, Edit, RefreshLeft, View } from '@element-plus/icons-vue';
+import { Copy, Eye, Pencil, RotateCcw, X } from 'lucide-vue-next';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { useConfirm } from '@/composables/use-confirm';
+import { useToast } from '@/composables/use-toast';
 import { getPrompt, getPromptVersions, rollbackPrompt } from '@/api/prompts';
 import PromptMonacoEditor from '@/components/prompt/PromptMonacoEditor.vue';
 import type { Prompt, PromptVersion } from '@/types/domain';
@@ -132,6 +162,8 @@ import { formatDateTime } from '@/utils/date';
 
 const route = useRoute();
 const router = useRouter();
+const { toast } = useToast();
+const { confirm } = useConfirm();
 const prompt = ref<Prompt>();
 const versions = ref<PromptVersion[]>([]);
 const selectedVersion = ref<PromptVersion>();
@@ -160,7 +192,7 @@ async function copyContent() {
   }
 
   await copyText(prompt.value.content);
-  ElMessage.success('Prompt 内容已复制');
+  toast({ title: 'Prompt 内容已复制', variant: 'success' });
 }
 
 function openVersion(version: PromptVersion) {
@@ -173,17 +205,43 @@ async function handleRollback(version: PromptVersion) {
     return;
   }
 
-  try {
-    await ElMessageBox.confirm(`确认回滚到 v${version.version}？`, '回滚版本', {
-      type: 'warning',
-      confirmButtonText: '回滚',
-      cancelButtonText: '取消'
-    });
-    await rollbackPrompt(prompt.value.id, version.id);
-    ElMessage.success('Prompt 已回滚');
-    await load();
-  } catch {
-    // 用户取消回滚时无需提示。
+  const confirmed = await confirm({
+    title: '回滚版本',
+    description: `确认回滚到 v${version.version}？回滚后会生成新的版本快照。`,
+    confirmText: '回滚'
+  });
+
+  if (!confirmed) {
+    return;
   }
+
+  await rollbackPrompt(prompt.value.id, version.id);
+  toast({ title: 'Prompt 已回滚', variant: 'success' });
+  await load();
+}
+
+function getTagStyle(color: string) {
+  return {
+    color,
+    backgroundColor: hexToRgba(color, 0.12)
+  };
+}
+
+function hexToRgba(hex: string, alpha: number) {
+  const normalized = hex.replace('#', '');
+  const fullHex =
+    normalized.length === 3
+      ? normalized
+          .split('')
+          .map((char) => `${char}${char}`)
+          .join('')
+      : normalized;
+
+  const value = Number.parseInt(fullHex, 16);
+  const red = (value >> 16) & 255;
+  const green = (value >> 8) & 255;
+  const blue = value & 255;
+
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
 }
 </script>
