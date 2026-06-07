@@ -10,7 +10,7 @@
           <input
             v-model="store.filters.search"
             type="text"
-            placeholder="搜索提示词，例如：代码优化、需求分析、单元测试..."
+            placeholder="搜索 Prompt、分类、标签关键词..."
             @keyup.enter="handleSearch"
           />
           <button v-if="store.filters.search" type="button" class="hero-search-clear" @click="clearSearch">

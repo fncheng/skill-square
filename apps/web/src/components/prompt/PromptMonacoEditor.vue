@@ -7,14 +7,6 @@ import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 
-declare global {
-  interface Window {
-    MonacoEnvironment?: {
-      getWorker: () => Worker;
-    };
-  }
-}
-
 const props = withDefaults(
   defineProps<{
     modelValue: string;

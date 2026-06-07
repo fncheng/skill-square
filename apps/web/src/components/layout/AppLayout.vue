@@ -50,6 +50,15 @@
     </aside>
 
     <main class="app-main">
+      <RouterLink
+        v-if="showMainBack"
+        class="app-main-back"
+        to="/prompts"
+        title="返回主页面"
+        aria-label="返回主页面"
+      >
+        <ArrowLeft class="h-4 w-4" />
+      </RouterLink>
       <RouterView />
     </main>
 
@@ -62,6 +71,7 @@
 import { computed } from 'vue';
 import { RouterLink, RouterView, useRoute } from 'vue-router';
 import {
+  ArrowLeft,
   Bell,
   Boxes,
   CircleUserRound,
@@ -88,6 +98,7 @@ const manageNav = [
 ];
 
 const normalizedPath = computed(() => route.path);
+const showMainBack = computed(() => route.name === 'prompt-detail');
 
 function isPrimaryActive(item: (typeof primaryNav)[number]) {
   if (item.key === 'favorites') {

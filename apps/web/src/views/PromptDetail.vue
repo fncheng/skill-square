@@ -23,7 +23,12 @@
       <div class="editor-surface">
         <div class="editor-head">
           <span>Prompt 内容</span>
-          <Badge variant="outline">只读</Badge>
+          <div class="editor-head-actions">
+            <Badge variant="outline">只读</Badge>
+            <button type="button" class="editor-head-icon-button" title="复制内容" @click="copyContent">
+              <Copy class="h-4 w-4" />
+            </button>
+          </div>
         </div>
         <PromptMonacoEditor v-model="content" read-only />
       </div>
