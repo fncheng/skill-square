@@ -23,6 +23,14 @@
 
 以下命令在本地开发机器执行，工作目录必须是项目根目录。
 
+项目根目录的 `.npmrc` 会在 Docker 构建阶段复制到镜像构建环境中，因此 `pnpm install` 会使用其中配置的 npm registry。例如：
+
+```ini
+registry=https://registry.npmmirror.com
+```
+
+如果 `.npmrc` 只包含 registry 地址，可以随项目提交；如果 `.npmrc` 包含 npm Token 或私有仓库凭据，不要直接复制进镜像构建上下文，应改用 Docker BuildKit secret。
+
 ```bash
 pnpm docker:build:images
 ```

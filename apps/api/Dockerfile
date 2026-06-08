@@ -1,7 +1,7 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 RUN corepack enable
-COPY package.json pnpm-workspace.yaml ./
+COPY .npmrc package.json pnpm-workspace.yaml ./
 COPY apps/api/package.json apps/api/package.json
 RUN pnpm install --filter @prompt-skill-manager/api...
 
