@@ -10,6 +10,11 @@
     "prisma:migrate": "pnpm --filter @prompt-skill-manager/api prisma:migrate",
     "prisma:deploy": "pnpm --filter @prompt-skill-manager/api prisma:deploy",
     "prisma:seed": "pnpm --filter @prompt-skill-manager/api prisma:seed",
+    "docker:build:api": "docker build -f apps/api/Dockerfile -t prompt-skill-manager-api:${IMAGE_TAG:-0.1.0} .",
+    "docker:build:web": "docker build -f apps/web/Dockerfile --build-arg VITE_API_BASE_URL=/api -t prompt-skill-manager-web:${IMAGE_TAG:-0.1.0} .",
+    "docker:build:images": "pnpm docker:build:api && pnpm docker:build:web",
+    "docker:save:images": "docker save prompt-skill-manager-api:${IMAGE_TAG:-0.1.0} prompt-skill-manager-web:${IMAGE_TAG:-0.1.0} | gzip > prompt-skill-manager-images-${IMAGE_TAG:-0.1.0}.tar.gz",
+    "docker:package": "pnpm docker:build:images && pnpm docker:save:images",
     "docker:up": "docker compose up -d --build",
     "docker:down": "docker compose down"
   }
