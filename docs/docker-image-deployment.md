@@ -56,6 +56,7 @@ IMAGE_TAG=0.1.1 pnpm docker:build:images
 - 前端镜像内的 Nginx 已经配置 `/api/` 反向代理到 `api:3000`。
 - API 镜像启动时会执行 Prisma 迁移和种子数据初始化，然后启动 NestJS 服务。
 - API 镜像基于 Alpine 时需要安装 `openssl`，否则 Prisma 迁移可能因为无法加载 libssl/OpenSSL 而失败，表现为接口全部 `502`。
+- API 镜像内的 seed 不通过裸 `ts-node` 命令执行，而是直接调用 `./node_modules/.bin/ts-node`，避免容器运行时 PATH 找不到 `ts-node` 导致启动失败。
 
 如果构建时报错 `failed to resolve source metadata for docker.io/library/nginx` 或 `docker.io/library/node`，说明 Docker Hub 访问超时。此时可以临时指定可访问的基础镜像地址：
 
@@ -326,6 +327,15 @@ Error: Could not parse schema engine response
 ```
 
 修复方式是使用已经安装 `openssl` 的新版 API 镜像重新部署。
+
+如果迁移已经成功，但 seed 阶段出现以下信息，说明旧版 API 镜像仍在通过 `prisma db seed` 间接调用裸 `ts-node` 命令：
+
+```text
+Error: Command failed with ENOENT: ts-node -r tsconfig-paths/register prisma/seed.ts
+spawn ts-node ENOENT
+```
+
+修复方式是使用新版 API 镜像重新部署。新版镜像会直接调用容器内的 `./node_modules/.bin/ts-node` 执行 seed。
 
 ## 九、配置宿主机 Nginx 和 HTTPS
 

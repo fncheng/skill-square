@@ -19,11 +19,13 @@ FROM ${NODE_IMAGE} AS runner
 WORKDIR /app
 RUN apk add --no-cache openssl
 ENV NODE_ENV=production
+ENV PATH="/app/apps/api/node_modules/.bin:/app/node_modules/.bin:${PATH}"
 COPY package.json pnpm-workspace.yaml ./
 COPY apps/api/package.json apps/api/package.json
+COPY apps/api/tsconfig.json apps/api/tsconfig.json
 COPY --from=builder /app/node_modules node_modules
 COPY --from=builder /app/apps/api/node_modules apps/api/node_modules
 COPY --from=builder /app/apps/api/dist apps/api/dist
 COPY --from=builder /app/apps/api/prisma apps/api/prisma
 EXPOSE 3000
-CMD ["sh", "-c", "cd apps/api && ./node_modules/.bin/prisma migrate deploy && ./node_modules/.bin/prisma db seed && node dist/main.js"]
+CMD ["sh", "-c", "cd apps/api && ./node_modules/.bin/prisma migrate deploy && ./node_modules/.bin/ts-node -r tsconfig-paths/register prisma/seed.ts && node dist/main.js"]
