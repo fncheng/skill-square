@@ -31,6 +31,8 @@ registry=https://registry.npmmirror.com
 
 如果 `.npmrc` 只包含 registry 地址，可以随项目提交；如果 `.npmrc` 包含 npm Token 或私有仓库凭据，不要直接复制进镜像构建上下文，应改用 Docker BuildKit secret。
 
+注意：`.npmrc` 只影响 `pnpm install` 下载 npm 包，不影响 Docker 拉取基础镜像。`FROM node:20-alpine` 和 `FROM nginx:1.27-alpine` 仍然由 Docker 自己访问镜像仓库。
+
 ```bash
 pnpm docker:build:images
 ```
@@ -50,8 +52,27 @@ IMAGE_TAG=0.1.1 pnpm docker:build:images
 
 - `VITE_API_BASE_URL=/api` 表示前端统一请求同域名下的 `/api`。
 - `package.json` 中的 `docker:build:web` 脚本已经内置 `--build-arg VITE_API_BASE_URL=/api`。
+- Dockerfile 会复制 `pnpm-lock.yaml`，并使用 `pnpm install --frozen-lockfile --prod=false` 安装依赖，确保构建阶段包含 `vite`、`vue-tsc`、`typescript` 等开发依赖。
 - 前端镜像内的 Nginx 已经配置 `/api/` 反向代理到 `api:3000`。
 - API 镜像启动时会执行 Prisma 迁移和种子数据初始化，然后启动 NestJS 服务。
+
+如果构建时报错 `failed to resolve source metadata for docker.io/library/nginx` 或 `docker.io/library/node`，说明 Docker Hub 访问超时。此时可以临时指定可访问的基础镜像地址：
+
+```bash
+NODE_IMAGE=你的镜像源/library/node:20-alpine \
+NGINX_IMAGE=你的镜像源/library/nginx:1.27-alpine \
+pnpm docker:build:web
+```
+
+只构建 API 镜像时：
+
+```bash
+NODE_IMAGE=你的镜像源/library/node:20-alpine pnpm docker:build:api
+```
+
+也可以在 Docker Desktop 或服务器 Docker daemon 中配置 registry mirror，从 Docker 层统一解决基础镜像拉取超时问题。
+
+如果前端构建时报错 `Cannot find type definition file for 'vite/client'`，通常表示构建阶段没有正确安装前端开发依赖。当前 Dockerfile 已经显式复制 `pnpm-lock.yaml` 并安装 `devDependencies`；如果本地仍命中旧缓存，可以重新执行构建，必要时对该镜像构建使用 Docker 的 `--no-cache` 参数。
 
 构建完成后检查镜像：
 

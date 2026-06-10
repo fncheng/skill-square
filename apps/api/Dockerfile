@@ -1,9 +1,12 @@
-FROM node:20-alpine AS deps
+ARG NODE_IMAGE=node:20-alpine
+
+FROM ${NODE_IMAGE} AS deps
 WORKDIR /app
 RUN corepack enable
-COPY .npmrc package.json pnpm-workspace.yaml ./
+COPY .npmrc package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY apps/api/package.json apps/api/package.json
-RUN pnpm install --filter @prompt-skill-manager/api...
+COPY apps/web/package.json apps/web/package.json
+RUN pnpm install --filter @prompt-skill-manager/api... --frozen-lockfile --prod=false
 
 FROM deps AS builder
 WORKDIR /app
@@ -11,7 +14,7 @@ COPY apps/api apps/api
 RUN pnpm --filter @prompt-skill-manager/api prisma:generate
 RUN pnpm --filter @prompt-skill-manager/api build
 
-FROM node:20-alpine AS runner
+FROM ${NODE_IMAGE} AS runner
 WORKDIR /app
 RUN corepack enable
 ENV NODE_ENV=production
