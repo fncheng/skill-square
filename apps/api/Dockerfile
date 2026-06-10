@@ -2,6 +2,7 @@ ARG NODE_IMAGE=node:20-alpine
 
 FROM ${NODE_IMAGE} AS deps
 WORKDIR /app
+RUN apk add --no-cache openssl
 RUN corepack enable
 COPY .npmrc package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY apps/api/package.json apps/api/package.json
@@ -16,7 +17,7 @@ RUN pnpm --filter @prompt-skill-manager/api build
 
 FROM ${NODE_IMAGE} AS runner
 WORKDIR /app
-RUN corepack enable
+RUN apk add --no-cache openssl
 ENV NODE_ENV=production
 COPY package.json pnpm-workspace.yaml ./
 COPY apps/api/package.json apps/api/package.json
@@ -25,4 +26,4 @@ COPY --from=builder /app/apps/api/node_modules apps/api/node_modules
 COPY --from=builder /app/apps/api/dist apps/api/dist
 COPY --from=builder /app/apps/api/prisma apps/api/prisma
 EXPOSE 3000
-CMD ["sh", "-c", "pnpm --filter @prompt-skill-manager/api prisma:deploy && pnpm --filter @prompt-skill-manager/api prisma:seed && pnpm --filter @prompt-skill-manager/api start:prod"]
+CMD ["sh", "-c", "cd apps/api && ./node_modules/.bin/prisma migrate deploy && ./node_modules/.bin/prisma db seed && node dist/main.js"]

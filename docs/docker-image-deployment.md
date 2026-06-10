@@ -55,6 +55,7 @@ IMAGE_TAG=0.1.1 pnpm docker:build:images
 - Dockerfile 会复制 `pnpm-lock.yaml`，并使用 `pnpm install --frozen-lockfile --prod=false` 安装依赖，确保构建阶段包含 `vite`、`vue-tsc`、`typescript` 等开发依赖。
 - 前端镜像内的 Nginx 已经配置 `/api/` 反向代理到 `api:3000`。
 - API 镜像启动时会执行 Prisma 迁移和种子数据初始化，然后启动 NestJS 服务。
+- API 镜像基于 Alpine 时需要安装 `openssl`，否则 Prisma 迁移可能因为无法加载 libssl/OpenSSL 而失败，表现为接口全部 `502`。
 
 如果构建时报错 `failed to resolve source metadata for docker.io/library/nginx` 或 `docker.io/library/node`，说明 Docker Hub 访问超时。此时可以临时指定可访问的基础镜像地址：
 
@@ -82,11 +83,17 @@ docker images | grep prompt-skill-manager
 
 ## 二、导出镜像包
 
-将前端和后端镜像导出为一个压缩包：
+将前端、后端和 PostgreSQL 运行期镜像导出为一个压缩包：
 
 ```bash
 pnpm docker:save:images
 ```
+
+该命令会导出以下镜像：
+
+- `prompt-skill-manager-api:0.1.0`
+- `prompt-skill-manager-web:0.1.0`
+- `postgres:16-alpine`
 
 该命令会生成：
 
@@ -105,6 +112,23 @@ IMAGE_TAG=0.1.1 pnpm docker:save:images
 ```bash
 pnpm docker:package
 ```
+
+`docker:package` 会依次执行：
+
+- 构建 API 镜像。
+- 构建 Web 镜像。
+- 拉取 `postgres:16-alpine`。
+- 导出包含三个镜像的离线包。
+
+如果本地也无法直接拉取 `postgres:16-alpine`，需要先通过可用的 Docker registry mirror 拉取 PostgreSQL 镜像，并确保本地存在 `postgres:16-alpine` 这个标签。
+
+如果你的 PostgreSQL 镜像来源不是 Docker Hub，可以在本地打包时指定源镜像：
+
+```bash
+POSTGRES_SOURCE_IMAGE=你的镜像源/library/postgres:16-alpine pnpm docker:package
+```
+
+脚本会把该源镜像重新标记为 `postgres:16-alpine`，从而保持服务器 `docker-compose.yml` 不变。
 
 确认文件存在：
 
@@ -138,13 +162,26 @@ docker --version
 docker compose version
 ```
 
-如果服务器尚未安装，可以先安装：
+如果服务器尚未安装，可以使用系统默认软件源安装：
 
 ```bash
 sudo apt update
 sudo apt install -y docker.io docker-compose-plugin
 sudo systemctl enable --now docker
 ```
+
+如果服务器只能使用阿里云内网软件源，可以先配置 Docker CE apt 源，然后安装 Docker CE：
+
+```bash
+sudo apt-get -y install apt-transport-https ca-certificates curl software-properties-common
+sudo curl -fsSL http://mirrors.cloud.aliyuncs.com/docker-ce/linux/ubuntu/gpg | sudo apt-key add -
+sudo add-apt-repository -y "deb [arch=$(dpkg --print-architecture)] http://mirrors.cloud.aliyuncs.com/docker-ce/linux/ubuntu $(lsb_release -cs) stable"
+sudo apt-get update
+sudo apt-get -y install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo systemctl enable --now docker
+```
+
+上述阿里云地址是 Docker 安装包的软件源，不是 Docker 镜像仓库。它可以用于安装 Docker，但不能替代 `docker.io` 拉取 `postgres:16-alpine` 这类容器镜像。
 
 ## 五、加载镜像
 
@@ -156,6 +193,7 @@ docker load -i /tmp/prompt-skill-manager-images-0.1.0.tar.gz
 
 ```bash
 docker images | grep prompt-skill-manager
+docker images | grep postgres
 ```
 
 ## 六、创建环境变量文件
@@ -233,12 +271,30 @@ CORS_ORIGIN: http://服务器IP
 CORS_ORIGIN: https://你的域名
 ```
 
+如果不使用宿主机 Nginx，而是直接通过 `http://服务器IP:10086` 访问，可以把生产 `docker-compose.yml` 改成：
+
+```yaml
+api:
+  environment:
+    DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
+    PORT: 3000
+    CORS_ORIGIN: http://服务器IP:10086
+
+web:
+  ports:
+    - "10086:80"
+```
+
+此时不需要暴露 API 容器的 `3000` 端口，前端容器内的 Nginx 会继续把 `/api/` 转发到 `api:3000`。
+
 ## 八、启动服务
 
 ```bash
 cd /opt/prompt-skill-manager
-docker compose up -d
+docker compose up -d --pull never
 ```
+
+`--pull never` 表示启动时只使用本地已加载的镜像，不尝试从 `docker.io` 或其他远程仓库拉取镜像。
 
 查看容器状态：
 
@@ -253,6 +309,23 @@ docker compose logs -f api
 ```
 
 首次启动时，API 容器会执行数据库迁移和初始化数据。如果日志中出现 NestJS started 之类的启动信息，表示后端已正常运行。
+
+如果页面可以打开，但所有接口都返回 `502`，优先查看 API 容器日志：
+
+```bash
+docker compose ps
+docker compose logs -f api
+```
+
+如果日志中出现以下信息，说明 API 镜像缺少 OpenSSL/libssl，Prisma 迁移失败，API 容器没有正常启动：
+
+```text
+Please manually install OpenSSL and try installing Prisma again.
+Prisma failed to detect the libssl/openssl version to use
+Error: Could not parse schema engine response
+```
+
+修复方式是使用已经安装 `openssl` 的新版 API 镜像重新部署。
 
 ## 九、配置宿主机 Nginx 和 HTTPS
 
@@ -381,7 +454,7 @@ web:
 
 ```bash
 cd /opt/prompt-skill-manager
-docker compose up -d
+docker compose up -d --pull never
 ```
 
 ## 十二、数据库备份与恢复
