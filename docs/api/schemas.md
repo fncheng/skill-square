@@ -112,6 +112,50 @@ interface PromptVersion {
 | `tagNames` | `string[]` | 版本快照中的标签名称列表 |
 | `createdAt` | `string` | 版本生成时间 |
 
+## Solution
+
+```ts
+interface Solution {
+  id: string;
+  title: string;
+  summary: string;
+  content: string;
+  category: string;
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+字段说明：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `id` | `string` | 解决方案 UUID |
+| `title` | `string` | 标题，长度 `1-200` |
+| `summary` | `string` | 列表摘要，最大长度 `500` |
+| `content` | `string` | Markdown 正文，不能为空 |
+| `category` | `string` | 分类，最大长度 `80`，未设置时为空字符串 |
+| `tags` | `string[]` | 标签数组 |
+| `createdAt` | `string` | 创建时间 |
+| `updatedAt` | `string` | 更新时间 |
+
+## CreateSolutionRequest
+
+```ts
+interface CreateSolutionRequest {
+  title: string;
+  summary?: string;
+  content: string;
+  category?: string;
+  tags?: string[];
+}
+```
+
+## UpdateSolutionRequest
+
+`UpdateSolutionRequest` 与 `CreateSolutionRequest` 字段一致，但所有字段均可选。
+
 ## CreatePromptRequest
 
 ```ts

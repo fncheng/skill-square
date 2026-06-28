@@ -79,6 +79,14 @@ export interface Solution {
   updatedAt: string;
 }
 
+export interface SolutionPayload {
+  title: string;
+  summary: string;
+  content: string;
+  category: string;
+  tags: string[];
+}
+
 export interface SolutionFilters {
   search: string;
   category: string;

@@ -33,9 +33,19 @@ export const router = createRouter({
       component: () => import('@/views/SolutionList.vue')
     },
     {
+      path: '/solutions/new',
+      name: 'solution-create',
+      component: () => import('@/views/SolutionEditor.vue')
+    },
+    {
       path: '/solutions/:id',
       name: 'solution-detail',
       component: () => import('@/views/SolutionDetail.vue')
+    },
+    {
+      path: '/solutions/:id/edit',
+      name: 'solution-edit',
+      component: () => import('@/views/SolutionEditor.vue')
     },
     {
       path: '/categories',
