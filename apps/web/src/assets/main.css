@@ -448,6 +448,139 @@
   .checkbox-row {
     @apply inline-flex items-center gap-2 text-sm font-medium text-slate-700;
   }
+
+  .solution-home {
+    @apply pb-9;
+  }
+
+  .solution-toolbar {
+    @apply mb-6 flex flex-wrap items-center gap-4;
+  }
+
+  .solution-search {
+    @apply flex h-10 w-full max-w-sm items-center gap-2.5 rounded-md border border-input bg-white pl-3.5 pr-2 shadow-sm transition focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/10;
+  }
+
+  .solution-search input {
+    @apply min-w-0 flex-1 border-0 bg-transparent text-sm font-medium text-slate-700 outline-none placeholder:text-slate-400;
+  }
+
+  .solution-search-clear {
+    @apply grid h-7 w-7 flex-none place-items-center rounded-full border-0 bg-transparent text-slate-400 transition-colors hover:bg-accent hover:text-primary;
+  }
+
+  .solution-grid {
+    @apply grid gap-5;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+  }
+
+  .solution-card {
+    @apply flex min-h-[200px] cursor-pointer flex-col rounded-md border border-slate-200 bg-card px-5 py-4 shadow-[0_1px_2px_rgba(15,23,42,0.05)] outline-none transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_10px_24px_rgba(15,23,42,0.10)] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+  }
+
+  .solution-card-head {
+    @apply mb-3 flex items-start gap-3;
+  }
+
+  .solution-card-icon {
+    @apply grid h-8 w-8 flex-none place-items-center rounded-md bg-accent text-primary;
+  }
+
+  .solution-card-title {
+    @apply m-0 line-clamp-2 text-base font-black leading-snug text-slate-950;
+  }
+
+  .solution-card-desc {
+    @apply mb-4 mt-0 line-clamp-3 flex-1 text-[13px] font-medium leading-7 text-slate-500;
+  }
+
+  .solution-card-tags {
+    @apply mb-4 flex flex-wrap gap-2;
+  }
+
+  .solution-card-meta {
+    @apply mt-auto flex items-center justify-between border-t pt-3 text-xs font-bold text-slate-500;
+  }
+
+  .solution-card-readmore {
+    @apply inline-flex items-center gap-1 text-primary;
+  }
+
+  .solution-empty {
+    @apply col-span-full rounded-lg border bg-card py-8;
+  }
+
+  .md-surface {
+    @apply rounded-lg border bg-card px-7 py-6 text-[15px] leading-7 text-slate-700 shadow-sm;
+  }
+
+  .md-surface .md-heading {
+    @apply mb-3 mt-7 scroll-mt-24 font-black text-slate-900 first:mt-0;
+  }
+
+  .md-surface h1.md-heading {
+    @apply text-2xl;
+  }
+
+  .md-surface h2.md-heading {
+    @apply border-b pb-2 text-xl;
+  }
+
+  .md-surface h3.md-heading {
+    @apply text-lg;
+  }
+
+  .md-surface p {
+    @apply my-3.5;
+  }
+
+  .md-surface .md-list {
+    @apply my-3.5 grid gap-1.5 pl-6;
+  }
+
+  .md-surface ul.md-list {
+    @apply list-disc;
+  }
+
+  .md-surface ol.md-list {
+    @apply list-decimal;
+  }
+
+  .md-surface .md-list li {
+    @apply pl-1 leading-7 marker:text-slate-400;
+  }
+
+  .md-surface .md-inline-code {
+    @apply rounded border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-[13px] font-semibold text-rose-600;
+  }
+
+  .md-surface .md-pre {
+    @apply my-4 overflow-auto rounded-lg border border-slate-800 bg-slate-900 px-4 py-3.5 text-[13px] leading-6 text-slate-100;
+  }
+
+  .md-surface .md-pre code {
+    @apply font-mono text-slate-100;
+  }
+
+  .md-surface .md-link {
+    @apply font-semibold text-primary underline-offset-2 hover:underline;
+  }
+
+  .md-toc {
+    @apply grid gap-1.5 border-l-2 border-slate-100 pl-3;
+  }
+
+  .md-toc-link {
+    @apply truncate text-[13px] font-semibold text-slate-500 transition-colors hover:text-primary;
+  }
+
+  .md-toc-link.level-3 {
+    @apply pl-3 text-xs font-medium;
+  }
+
+  .md-toc-link.level-4 {
+    @apply pl-6 text-xs font-medium;
+  }
 }
 
 @media (max-width: 1180px) {

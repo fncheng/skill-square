@@ -51,11 +51,11 @@
 
     <main class="app-main">
       <RouterLink
-        v-if="showMainBack"
+        v-if="backTarget"
         class="app-main-back"
-        to="/prompts"
-        title="返回主页面"
-        aria-label="返回主页面"
+        :to="backTarget"
+        title="返回上级"
+        aria-label="返回上级"
       >
         <ArrowLeft class="h-4 w-4" />
       </RouterLink>
@@ -77,6 +77,7 @@ import {
   CircleUserRound,
   Folder,
   House,
+  Lightbulb,
   Tags,
   Search,
   Star
@@ -89,7 +90,8 @@ const route = useRoute();
 
 const primaryNav = [
   { key: 'prompts', label: 'Prompt 列表', to: '/prompts', icon: House },
-  { key: 'favorites', label: '我的收藏', to: { path: '/prompts', query: { favorite: 'true' } }, icon: Star }
+  { key: 'favorites', label: '我的收藏', to: { path: '/prompts', query: { favorite: 'true' } }, icon: Star },
+  { key: 'solutions', label: '解决方案', to: '/solutions', icon: Lightbulb }
 ];
 
 const manageNav = [
@@ -98,7 +100,12 @@ const manageNav = [
 ];
 
 const normalizedPath = computed(() => route.path);
-const showMainBack = computed(() => route.name === 'prompt-detail');
+
+const backTarget = computed(() => {
+  if (route.name === 'prompt-detail') return '/prompts';
+  if (route.name === 'solution-detail') return '/solutions';
+  return '';
+});
 
 function isPrimaryActive(item: (typeof primaryNav)[number]) {
   if (item.key === 'favorites') {
@@ -107,6 +114,10 @@ function isPrimaryActive(item: (typeof primaryNav)[number]) {
 
   if (item.key === 'prompts') {
     return normalizedPath.value.startsWith('/prompts') && route.query.favorite !== 'true';
+  }
+
+  if (item.key === 'solutions') {
+    return normalizedPath.value.startsWith('/solutions');
   }
 
   return false;

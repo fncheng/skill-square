@@ -67,3 +67,19 @@ export interface PromptPage {
   page: number;
   pageSize: number;
 }
+
+export interface Solution {
+  id: string;
+  title: string;
+  summary: string;
+  content: string;
+  category: string;
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SolutionFilters {
+  search: string;
+  category: string;
+}

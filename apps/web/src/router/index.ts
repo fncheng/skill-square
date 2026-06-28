@@ -28,6 +28,16 @@ export const router = createRouter({
       component: () => import('@/views/PromptEditor.vue')
     },
     {
+      path: '/solutions',
+      name: 'solutions',
+      component: () => import('@/views/SolutionList.vue')
+    },
+    {
+      path: '/solutions/:id',
+      name: 'solution-detail',
+      component: () => import('@/views/SolutionDetail.vue')
+    },
+    {
       path: '/categories',
       name: 'categories',
       component: () => import('@/views/CategoryManage.vue')
