@@ -1,7 +1,8 @@
 {
-  "$schema": "https://shadcn-vue.com/schema.json",
+  "$schema": "https://ui.shadcn.com/schema.json",
   "style": "new-york",
-  "typescript": true,
+  "rsc": false,
+  "tsx": true,
   "tailwind": {
     "config": "tailwind.config.ts",
     "css": "src/assets/main.css",
@@ -12,6 +13,7 @@
     "components": "@/components",
     "utils": "@/lib/utils",
     "ui": "@/components/ui",
-    "lib": "@/lib"
+    "lib": "@/lib",
+    "hooks": "@/hooks"
   }
 }

@@ -7,7 +7,7 @@ Prompt Skill Manager 用于管理 AI Prompt、Agent Workflow、Skill、Cursor Ru
 ## 总体架构
 
 - 根目录采用 monorepo，统一维护前端、后端、数据库迁移、Docker Compose 与项目文档。
-- `apps/web` 是 Vue3 单页应用，负责列表、编辑、详情、分类管理、标签管理和 Monaco Editor 内容编辑。
+- `apps/web` 是 React18 单页应用（Vite + React Router + Zustand），负责列表、编辑、详情、分类管理、标签管理和 Monaco Editor 内容编辑。
 - `apps/api` 是 NestJS RESTful API，负责 DTO 校验、业务规则、Swagger 文档、Prisma 数据访问与版本快照。
 - PostgreSQL 保存结构化数据，Prisma Schema 和迁移 SQL 作为唯一数据库结构来源。
 - Docker Compose 编排 `web`、`api`、`db` 三个服务，前端容器通过 Nginx 将 `/api` 反向代理到后端。
@@ -16,11 +16,12 @@ Prompt Skill Manager 用于管理 AI Prompt、Agent Workflow、Skill、Cursor Ru
 
 ### 前端
 
-- `router`：页面路由，包括 Prompt 列表、编辑、详情、分类管理、标签管理。
-- `stores`：Pinia 管理 Prompt 查询条件、分页数据、分类与标签缓存。
+- `App.tsx`：基于 `react-router-dom` 的页面路由，包括 Prompt 列表、编辑、详情、分类管理、标签管理、解决方案。
+- `stores`：Zustand 管理 Prompt 查询条件、分页数据、分类与标签缓存，以及全局 Toast、Confirm 状态。
+- `hooks`：`useToast`、`useConfirm`、`useMarkdown` 等业务 Hooks。
 - `api`：Axios 封装 RESTful API。
-- `views`：页面级组件，承载业务交互。
-- `components`：布局组件与 Monaco Editor 组件。
+- `views`：页面级组件（`.tsx`），承载业务交互。
+- `components`：布局组件、shadcn/ui 风格基础组件与 Monaco Editor 组件。
 - `types`：前端 DTO 类型，与后端响应字段保持一致。
 
 ### 后端

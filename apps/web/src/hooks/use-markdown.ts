@@ -1,6 +1,4 @@
-import { computed, unref, type ComputedRef, type Ref } from 'vue';
-
-type MaybeRef<T> = T | Ref<T>;
+import { useMemo } from 'react';
 
 export interface MarkdownHeading {
   level: number;
@@ -9,8 +7,8 @@ export interface MarkdownHeading {
 }
 
 export interface UseMarkdownReturn {
-  html: ComputedRef<string>;
-  headings: ComputedRef<MarkdownHeading[]>;
+  html: string;
+  headings: MarkdownHeading[];
 }
 
 /** 转义 HTML 特殊字符，避免文档内容造成 XSS。 */
@@ -172,12 +170,7 @@ function parseMarkdown(source: string): ParseResult {
   return { html: blocks.join('\n'), headings };
 }
 
-/** 响应式 Markdown 渲染，返回 HTML 与标题目录。 */
-export function useMarkdown(source: MaybeRef<string>): UseMarkdownReturn {
-  const parsed = computed(() => parseMarkdown(unref(source) || ''));
-
-  return {
-    html: computed(() => parsed.value.html),
-    headings: computed(() => parsed.value.headings)
-  };
+/** 记忆化的 Markdown 渲染 hook，返回 HTML 与标题目录。 */
+export function useMarkdown(source: string): UseMarkdownReturn {
+  return useMemo(() => parseMarkdown(source || ''), [source]);
 }

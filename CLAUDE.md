@@ -16,17 +16,17 @@
 
 ### 前端
 
-- Vue 3
+- React 18
 - TypeScript
-- Vite
-- Vue Router
-- Pinia
-- Monaco Editor
-- shadcn-vue 风格本地组件
+- Vite（`@vitejs/plugin-react`）
+- React Router（`react-router-dom`）
+- Zustand
+- Monaco Editor（`@monaco-editor/react`）
+- shadcn/ui 风格本地组件
 - Tailwind CSS
-- lucide-vue-next
+- lucide-react
 
-前端不再使用 Element Plus。新增或修改 UI 时，不要引入 `element-plus` 或 `@element-plus/icons-vue`。
+前端已由 Vue 迁移为 React，不再使用 Vue、Vue Router、Pinia、Element Plus。新增或修改 UI 时，不要引入 `vue`、`element-plus` 或 `@element-plus/icons-vue`。
 
 ### 后端
 
@@ -43,12 +43,13 @@
 
 ## 目录约束
 
-- 前端页面放在 `apps/web/src/views`。
+- 前端页面（`.tsx`）放在 `apps/web/src/views`。
 - 前端通用布局组件放在 `apps/web/src/components/layout`。
-- shadcn-vue 风格基础 UI 组件放在 `apps/web/src/components/ui`。
+- shadcn/ui 风格基础 UI 组件放在 `apps/web/src/components/ui`。
 - 前端 API 封装放在 `apps/web/src/api`。
 - 前端类型定义放在 `apps/web/src/types`。
-- Pinia Store 放在 `apps/web/src/stores`。
+- Zustand Store 放在 `apps/web/src/stores`。
+- 业务 hooks（如 `useToast`、`useConfirm`、`useMarkdown`）放在 `apps/web/src/hooks`。
 - 后端模块按业务资源放在 `apps/api/src` 下，例如 `prompts`、`categories`、`tags`。
 - Prisma Schema、迁移和种子数据放在 `apps/api/prisma`。
 - API 文档放在 `docs/api`。
@@ -56,15 +57,16 @@
 
 ## 前端实现规则
 
+- 组件统一使用函数组件 + `<script setup>` 风格已废弃，改用 React 函数组件与 Hooks。
 - UI 统一使用 Tailwind CSS 与 `apps/web/src/components/ui` 下的本地组件。
-- 图标统一使用 `lucide-vue-next`。
+- 图标统一使用 `lucide-react`。
 - 样式优先使用 Tailwind class；跨页面复用或复杂布局样式写入 `apps/web/src/assets/main.css`。
-- 不要重新引入 Element Plus。
+- 不要重新引入 Vue 或 Element Plus。
 - 不要引入新的 UI 框架，除非用户明确要求。
 - 保持后台工具型产品的界面风格：克制、清晰、易扫描、操作路径短。
-- Prompt 内容编辑继续使用 Monaco Editor，不要替换为普通 textarea。
-- Toast 使用 `apps/web/src/composables/use-toast.ts` 与 `Toaster.vue`。
-- 确认弹窗使用 `apps/web/src/composables/use-confirm.ts` 与 `ConfirmDialog.vue`。
+- Prompt 内容编辑继续使用 Monaco Editor（`@monaco-editor/react`），不要替换为普通 textarea。
+- Toast 使用 `apps/web/src/hooks/use-toast.ts`、`apps/web/src/stores/toast.ts` 与 `components/ui/toaster.tsx`；组件外触发用 `pushToast`。
+- 确认弹窗使用 `apps/web/src/hooks/use-confirm.ts`、`apps/web/src/stores/confirm.ts` 与 `components/ui/confirm-dialog.tsx`。
 
 ## 后端实现规则
 
@@ -107,7 +109,8 @@
 
 ## 验证要求
 
-- 修改前端 UI 后，优先检查是否仍有 `element-plus`、`@element-plus/icons-vue`、`<el-` 等遗留引用。
+- 修改前端 UI 后，优先检查是否仍有 `vue`、`lucide-vue-next`、`element-plus`、`@element-plus/icons-vue`、`.vue` 等遗留引用。
+- 前端类型检查命令：`pnpm --filter @prompt-skill-manager/web typecheck`（等价 `tsc --noEmit`），属非构建检查。
 - 不要执行 `pnpm dev:web` 作为前端验证命令；前端开发服务器由用户自行启动。
 - 修改 API 后，检查 Controller、DTO、Service、Prisma Schema 和 `docs/api` 是否同步。
 - 修改数据库后，检查 Prisma Schema、迁移文件和种子数据是否一致。

@@ -1,75 +1,103 @@
-import { defineStore } from 'pinia';
+import { create } from 'zustand';
 import { getCategories } from '@/api/categories';
 import { getTags } from '@/api/tags';
 import { favoritePrompt, getPrompts, unfavoritePrompt } from '@/api/prompts';
 import type { Category, Prompt, Tag } from '@/types/domain';
 
-type FavoriteFilter = '' | 'true' | 'false';
+export type FavoriteFilter = '' | 'true' | 'false';
 
-export const usePromptStore = defineStore('prompt', {
-  state: () => ({
-    prompts: [] as Prompt[],
-    categories: [] as Category[],
-    tags: [] as Tag[],
-    total: 0,
-    page: 1,
-    pageSize: 10,
-    loading: false,
-    filters: {
-      search: '',
-      categoryId: '',
-      tagIds: [] as string[],
-      favorite: '' as FavoriteFilter
+export interface PromptFilters {
+  search: string;
+  categoryId: string;
+  tagIds: string[];
+  favorite: FavoriteFilter;
+}
+
+interface PromptState {
+  prompts: Prompt[];
+  categories: Category[];
+  tags: Tag[];
+  total: number;
+  page: number;
+  pageSize: number;
+  loading: boolean;
+  filters: PromptFilters;
+  bootstrap: () => Promise<void>;
+  fetchCategories: () => Promise<void>;
+  fetchTags: () => Promise<void>;
+  fetchPrompts: () => Promise<void>;
+  setFilters: (partial: Partial<PromptFilters>) => void;
+  setPage: (page: number) => void;
+  setPageSize: (pageSize: number) => void;
+  resetFilters: () => void;
+  toggleFavorite: (prompt: Prompt) => Promise<void>;
+}
+
+const initialFilters: PromptFilters = {
+  search: '',
+  categoryId: '',
+  tagIds: [],
+  favorite: ''
+};
+
+export const usePromptStore = create<PromptState>((set, get) => ({
+  prompts: [],
+  categories: [],
+  tags: [],
+  total: 0,
+  page: 1,
+  pageSize: 10,
+  loading: false,
+  filters: { ...initialFilters },
+
+  async bootstrap() {
+    await Promise.all([get().fetchCategories(), get().fetchTags(), get().fetchPrompts()]);
+  },
+
+  async fetchCategories() {
+    set({ categories: await getCategories() });
+  },
+
+  async fetchTags() {
+    set({ tags: await getTags() });
+  },
+
+  async fetchPrompts() {
+    set({ loading: true });
+    try {
+      const { page, pageSize, filters } = get();
+      const data = await getPrompts({
+        page,
+        pageSize,
+        search: filters.search || undefined,
+        categoryId: filters.categoryId || undefined,
+        tagIds: filters.tagIds,
+        favorite: filters.favorite === '' ? undefined : filters.favorite === 'true'
+      });
+      set({ prompts: data.items, total: data.total, page: data.page, pageSize: data.pageSize });
+    } finally {
+      set({ loading: false });
     }
-  }),
+  },
 
-  actions: {
-    async bootstrap() {
-      await Promise.all([this.fetchCategories(), this.fetchTags(), this.fetchPrompts()]);
-    },
+  setFilters(partial) {
+    set((state) => ({ filters: { ...state.filters, ...partial } }));
+  },
 
-    async fetchCategories() {
-      this.categories = await getCategories();
-    },
+  setPage(page) {
+    set({ page });
+  },
 
-    async fetchTags() {
-      this.tags = await getTags();
-    },
+  setPageSize(pageSize) {
+    set({ pageSize });
+  },
 
-    async fetchPrompts() {
-      this.loading = true;
-      try {
-        const data = await getPrompts({
-          page: this.page,
-          pageSize: this.pageSize,
-          search: this.filters.search || undefined,
-          categoryId: this.filters.categoryId || undefined,
-          tagIds: this.filters.tagIds,
-          favorite: this.filters.favorite === '' ? undefined : this.filters.favorite === 'true'
-        });
-        this.prompts = data.items;
-        this.total = data.total;
-        this.page = data.page;
-        this.pageSize = data.pageSize;
-      } finally {
-        this.loading = false;
-      }
-    },
+  resetFilters() {
+    set({ filters: { ...initialFilters }, page: 1 });
+  },
 
-    resetFilters() {
-      this.filters.search = '';
-      this.filters.categoryId = '';
-      this.filters.tagIds = [];
-      this.filters.favorite = '';
-      this.page = 1;
-    },
-
-    async toggleFavorite(prompt: Prompt) {
-      const updated = prompt.isFavorite ? await unfavoritePrompt(prompt.id) : await favoritePrompt(prompt.id);
-      const index = this.prompts.findIndex((item) => item.id === prompt.id);
-      if (index >= 0) {
-        this.prompts[index] = updated;
-      }
-    }
+  async toggleFavorite(prompt) {
+    const updated = prompt.isFavorite ? await unfavoritePrompt(prompt.id) : await favoritePrompt(prompt.id);
+    set((state) => ({ prompts: state.prompts.map((item) => (item.id === prompt.id ? updated : item)) }));
   }
-});
+}));

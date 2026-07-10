@@ -1,15 +1,8 @@
-<template>
-  <span :class="badgeClass" v-bind="$attrs">
-    <slot />
-  </span>
-</template>
-
-<script setup lang="ts">
-import { computed } from 'vue';
+import { type HTMLAttributes } from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
-const badgeVariants = cva(
+export const badgeVariants = cva(
   'inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors',
   {
     variants: {
@@ -26,17 +19,10 @@ const badgeVariants = cva(
   }
 );
 
-type BadgeVariants = VariantProps<typeof badgeVariants>;
+export interface BadgeProps
+  extends HTMLAttributes<HTMLSpanElement>,
+    VariantProps<typeof badgeVariants> {}
 
-const props = withDefaults(
-  defineProps<{
-    variant?: BadgeVariants['variant'];
-    class?: string;
-  }>(),
-  {
-    variant: 'default'
-  }
-);
-
-const badgeClass = computed(() => cn(badgeVariants({ variant: props.variant }), props.class));
-</script>
+export function Badge({ className, variant, ...props }: BadgeProps) {
+  return <span className={cn(badgeVariants({ variant }), className)} {...props} />;
+}
