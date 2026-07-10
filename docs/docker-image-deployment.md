@@ -444,27 +444,32 @@ IMAGE_TAG=0.1.1 pnpm docker:package
 scp prompt-skill-manager-images-0.1.1.tar.gz root@你的服务器IP:/tmp/
 ```
 
-服务器加载镜像：
+同时上传服务器侧更新脚本：
 
 ```bash
-docker load -i /tmp/prompt-skill-manager-images-0.1.1.tar.gz
+scp scripts/server-update-images.sh root@你的服务器IP:/opt/prompt-skill-manager/
 ```
 
-修改 `/opt/prompt-skill-manager/docker-compose.yml` 中的镜像版本：
-
-```yaml
-api:
-  image: prompt-skill-manager-api:0.1.1
-
-web:
-  image: prompt-skill-manager-web:0.1.1
-```
-
-重启服务：
+服务器执行更新：
 
 ```bash
 cd /opt/prompt-skill-manager
-docker compose up -d --pull never
+chmod +x server-update-images.sh
+./server-update-images.sh 0.1.1
+```
+
+该脚本会自动完成：
+
+- 加载 `/tmp/prompt-skill-manager-images-0.1.1.tar.gz`。
+- 备份 `/opt/prompt-skill-manager/docker-compose.yml`。
+- 将 `api` 和 `web` 服务镜像版本更新为 `0.1.1`。
+- 执行 `docker compose up -d --pull never`。
+- 输出 `docker compose ps` 结果。
+
+如果镜像包不在默认路径，可以显式传入路径：
+
+```bash
+./server-update-images.sh 0.1.1 /tmp/prompt-skill-manager-images-0.1.1.tar.gz
 ```
 
 ## 十二、数据库备份与恢复
