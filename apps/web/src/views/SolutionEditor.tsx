@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Check } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -99,10 +99,6 @@ export function SolutionEditor() {
           <p className="page-subtitle">维护标题、摘要、分类、标签与 Markdown 正文内容。</p>
         </div>
         <div className="table-actions">
-          <Button variant="outline" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-4 w-4" />
-            返回
-          </Button>
           <Button disabled={saving} onClick={handleSubmit}>
             <Check className="h-4 w-4" />
             {saving ? '保存中...' : '保存'}

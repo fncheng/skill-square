@@ -44,6 +44,29 @@ const manageNav: ManageNavItem[] = [
   { label: '标签管理', path: '/tags', icon: Tags }
 ];
 
+/**
+ * 根据当前路径计算左上角返回按钮的目标地址。
+ * 编辑页返回对应详情页，新建页与详情页返回对应列表页；列表与管理页无返回。
+ */
+function resolveBackTarget(pathname: string): string {
+  const editMatch = pathname.match(/^\/(prompts|solutions)\/(?!new$)([^/]+)\/edit$/);
+  if (editMatch) {
+    return `/${editMatch[1]}/${editMatch[2]}`;
+  }
+
+  const newMatch = pathname.match(/^\/(prompts|solutions)\/new$/);
+  if (newMatch) {
+    return `/${newMatch[1]}`;
+  }
+
+  const detailMatch = pathname.match(/^\/(prompts|solutions)\/(?!new$)[^/]+$/);
+  if (detailMatch) {
+    return `/${detailMatch[1]}`;
+  }
+
+  return '';
+}
+
 export function AppLayout() {
   const location = useLocation();
   const pathname = location.pathname;
@@ -62,9 +85,7 @@ export function AppLayout() {
     return false;
   };
 
-  const isPromptDetail = /^\/prompts\/(?!new$)[^/]+$/.test(pathname);
-  const isSolutionDetail = /^\/solutions\/(?!new$)[^/]+$/.test(pathname);
-  const backTarget = isPromptDetail ? '/prompts' : isSolutionDetail ? '/solutions' : '';
+  const backTarget = resolveBackTarget(pathname);
 
   return (
     <div className="app-shell">
