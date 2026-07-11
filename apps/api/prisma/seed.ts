@@ -254,6 +254,83 @@ const solutions = [
   }
 ];
 
+const notes = [
+  {
+    title: 'Linux 文件查找命令 find 常用用法',
+    summary: '整理 find 按名称、类型、时间、大小查找文件的常用组合，便于日常查阅。',
+    category: 'Linux',
+    tags: ['Linux', 'Shell', 'find'],
+    content: [
+      '## 按名称查找',
+      '',
+      '```bash',
+      '# 当前目录及子目录下查找 .log 文件',
+      'find . -name "*.log"',
+      '# 忽略大小写',
+      'find . -iname "*.LOG"',
+      '```',
+      '',
+      '## 按类型查找',
+      '',
+      '```bash',
+      'find . -type f   # 普通文件',
+      'find . -type d   # 目录',
+      '```',
+      '',
+      '## 按时间与大小',
+      '',
+      '```bash',
+      '# 最近 1 天内修改过的文件',
+      'find . -mtime -1',
+      '# 大于 100MB 的文件',
+      'find . -size +100M',
+      '```',
+      '',
+      '## 查找后执行操作',
+      '',
+      '```bash',
+      '# 删除所有 .tmp 文件',
+      'find . -name "*.tmp" -delete',
+      '# 对结果批量执行命令',
+      'find . -name "*.sh" -exec chmod +x {} \\;',
+      '```'
+    ].join('\n')
+  },
+  {
+    title: 'Git 撤销与回退速查',
+    summary: '汇总工作区、暂存区、提交三种状态下的撤销命令，避免误操作丢失改动。',
+    category: 'Git',
+    tags: ['Git', '版本控制'],
+    content: [
+      '## 撤销工作区改动',
+      '',
+      '```bash',
+      '# 丢弃单个文件的未暂存改动',
+      'git restore <file>',
+      '```',
+      '',
+      '## 撤销暂存（保留改动）',
+      '',
+      '```bash',
+      'git restore --staged <file>',
+      '```',
+      '',
+      '## 回退提交',
+      '',
+      '```bash',
+      '# 保留改动到工作区',
+      'git reset --soft HEAD~1',
+      '# 保留改动到暂存区',
+      'git reset --mixed HEAD~1',
+      '# 彻底丢弃改动（不可恢复）',
+      'git reset --hard HEAD~1',
+      '```',
+      '',
+      '> `reset --hard` 会丢失未提交内容，执行前务必确认。'
+    ].join('\n')
+  }
+];
+
 async function ensureInitialVersion(promptId: string) {
   const existing = await prisma.promptVersion.findFirst({ where: { promptId } });
   if (existing) {
@@ -351,6 +428,24 @@ async function main() {
     }
 
     await prisma.solution.create({ data: solution });
+  }
+
+  for (const note of notes) {
+    const existing = await prisma.note.findFirst({ where: { title: note.title } });
+    if (existing) {
+      await prisma.note.update({
+        where: { id: existing.id },
+        data: {
+          summary: note.summary,
+          content: note.content,
+          category: note.category,
+          tags: note.tags
+        }
+      });
+      continue;
+    }
+
+    await prisma.note.create({ data: note });
   }
 }
 

@@ -8,6 +8,7 @@ import {
   House,
   Lightbulb,
   type LucideProps,
+  NotebookPen,
   Search,
   Star,
   Tags
@@ -20,7 +21,7 @@ import { cn } from '@/lib/utils';
 type IconComponent = ComponentType<LucideProps>;
 
 interface PrimaryNavItem {
-  key: 'prompts' | 'favorites' | 'solutions';
+  key: 'prompts' | 'favorites' | 'solutions' | 'notes';
   label: string;
   to: string;
   icon: IconComponent;
@@ -35,7 +36,8 @@ interface ManageNavItem {
 const primaryNav: PrimaryNavItem[] = [
   { key: 'prompts', label: 'Prompt 列表', to: '/prompts', icon: House },
   { key: 'favorites', label: '我的收藏', to: '/prompts?favorite=true', icon: Star },
-  { key: 'solutions', label: '解决方案', to: '/solutions', icon: Lightbulb }
+  { key: 'solutions', label: '解决方案', to: '/solutions', icon: Lightbulb },
+  { key: 'notes', label: '学习笔记', to: '/notes', icon: NotebookPen }
 ];
 
 const manageNav: ManageNavItem[] = [
@@ -57,6 +59,9 @@ export function AppLayout() {
     }
     if (item.key === 'solutions') {
       return pathname.startsWith('/solutions');
+    }
+    if (item.key === 'notes') {
+      return pathname.startsWith('/notes');
     }
     return false;
   };

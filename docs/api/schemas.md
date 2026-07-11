@@ -156,6 +156,50 @@ interface CreateSolutionRequest {
 
 `UpdateSolutionRequest` 与 `CreateSolutionRequest` 字段一致，但所有字段均可选。
 
+## Note
+
+```ts
+interface Note {
+  id: string;
+  title: string;
+  summary: string;
+  content: string;
+  category: string;
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+字段说明：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `id` | `string` | 学习笔记 UUID |
+| `title` | `string` | 标题，长度 `1-200` |
+| `summary` | `string` | 列表摘要，最大长度 `500` |
+| `content` | `string` | Markdown 正文，不能为空 |
+| `category` | `string` | 分类，最大长度 `80`，未设置时为空字符串 |
+| `tags` | `string[]` | 标签数组 |
+| `createdAt` | `string` | 创建时间 |
+| `updatedAt` | `string` | 更新时间 |
+
+## CreateNoteRequest
+
+```ts
+interface CreateNoteRequest {
+  title: string;
+  summary?: string;
+  content: string;
+  category?: string;
+  tags?: string[];
+}
+```
+
+## UpdateNoteRequest
+
+`UpdateNoteRequest` 与 `CreateNoteRequest` 字段一致，但所有字段均可选。
+
 ## CreatePromptRequest
 
 ```ts

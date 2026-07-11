@@ -94,3 +94,18 @@ model Solution {
   @@index([category])
   @@map("solutions")
 }
+
+model Note {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title     String   @db.VarChar(200)
+  summary   String   @default("") @db.VarChar(500)
+  content   String   @db.Text
+  category  String   @default("") @db.VarChar(80)
+  tags      String[] @default([])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@index([title])
+  @@index([category])
+  @@map("notes")
+}

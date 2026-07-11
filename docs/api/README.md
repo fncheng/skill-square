@@ -14,6 +14,7 @@
 - [分类接口](./categories.md)
 - [标签接口](./tags.md)
 - [解决方案接口](./solutions.md)
+- [学习笔记接口](./notes.md)
 - [数据结构](./schemas.md)
 
 ## 通用错误响应

@@ -91,3 +91,27 @@ export interface SolutionFilters {
   search: string;
   category: string;
 }
+
+export interface Note {
+  id: string;
+  title: string;
+  summary: string;
+  content: string;
+  category: string;
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NotePayload {
+  title: string;
+  summary: string;
+  content: string;
+  category: string;
+  tags: string[];
+}
+
+export interface NoteFilters {
+  search: string;
+  category: string;
+}

@@ -1,6 +1,9 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AppLayout } from './components/layout/AppLayout';
 import { CategoryManage } from './views/CategoryManage';
+import { NoteDetail } from './views/NoteDetail';
+import { NoteEditor } from './views/NoteEditor';
+import { NoteList } from './views/NoteList';
 import { PromptDetail } from './views/PromptDetail';
 import { PromptEditor } from './views/PromptEditor';
 import { PromptList } from './views/PromptList';
@@ -22,6 +25,10 @@ export default function App() {
         <Route path="/solutions/new" element={<SolutionEditor />} />
         <Route path="/solutions/:id" element={<SolutionDetail />} />
         <Route path="/solutions/:id/edit" element={<SolutionEditor />} />
+        <Route path="/notes" element={<NoteList />} />
+        <Route path="/notes/new" element={<NoteEditor />} />
+        <Route path="/notes/:id" element={<NoteDetail />} />
+        <Route path="/notes/:id/edit" element={<NoteEditor />} />
         <Route path="/categories" element={<CategoryManage />} />
         <Route path="/tags" element={<TagManage />} />
         <Route path="*" element={<Navigate to="/prompts" replace />} />
