@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Copy, Eye, Pencil, RotateCcw, X } from 'lucide-react';
+import { PageHead } from '@/components/layout/PageHead';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { PromptMonacoEditor } from '@/components/prompt/PromptMonacoEditor';
@@ -81,22 +82,23 @@ export function PromptDetail() {
     <section className="relative">
       {loading ? <div className="loading-panel">正在加载 Prompt...</div> : null}
 
-      <div className="page-head">
-        <div>
-          <h1 className="page-title">{prompt?.name || 'Prompt 详情'}</h1>
-          <p className="page-subtitle">{prompt?.description}</p>
-        </div>
-        <div className="table-actions">
-          <Button variant="outline" onClick={copyContent}>
-            <Copy className="h-4 w-4" />
-            一键复制
-          </Button>
-          <Button onClick={() => navigate(`/prompts/${prompt?.id}/edit`)}>
-            <Pencil className="h-4 w-4" />
-            编辑
-          </Button>
-        </div>
-      </div>
+      <PageHead
+        title={prompt?.name || 'Prompt 详情'}
+        subtitle={prompt?.description}
+        back="/prompts"
+        actions={
+          <>
+            <Button variant="outline" onClick={copyContent}>
+              <Copy className="h-4 w-4" />
+              一键复制
+            </Button>
+            <Button onClick={() => navigate(`/prompts/${prompt?.id}/edit`)}>
+              <Pencil className="h-4 w-4" />
+              编辑
+            </Button>
+          </>
+        }
+      />
 
       {prompt ? (
         <div className="detail-grid">

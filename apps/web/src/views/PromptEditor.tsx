@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { PageHead } from '@/components/layout/PageHead';
 import { PromptMonacoEditor } from '@/components/prompt/PromptMonacoEditor';
 import { useToast } from '@/hooks/use-toast';
 import { createPrompt, getPrompt, updatePrompt } from '@/api/prompts';
@@ -88,18 +89,17 @@ export function PromptEditor() {
 
   return (
     <section>
-      <div className="page-head">
-        <div>
-          <h1 className="page-title">{isEdit ? '编辑 Prompt' : '新建 Prompt'}</h1>
-          <p className="page-subtitle">维护 Prompt 基础信息、分类、标签与正文内容。</p>
-        </div>
-        <div className="table-actions">
+      <PageHead
+        title={isEdit ? '编辑 Prompt' : '新建 Prompt'}
+        subtitle="维护 Prompt 基础信息、分类、标签与正文内容。"
+        back={isEdit && id ? `/prompts/${id}` : '/prompts'}
+        actions={
           <Button disabled={saving} onClick={handleSubmit}>
             <Check className="h-4 w-4" />
             {saving ? '保存中...' : '保存'}
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       <div className="editor-layout">
         <div className="form-surface">

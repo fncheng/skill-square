@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Copy, Pencil, Trash2 } from 'lucide-react';
+import { PageHead } from '@/components/layout/PageHead';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useConfirm } from '@/hooks/use-confirm';
@@ -70,28 +71,29 @@ export function SolutionDetail() {
     <section className="relative">
       {loading ? <div className="loading-panel">正在加载解决方案...</div> : null}
 
-      <div className="page-head">
-        <div>
-          <h1 className="page-title">{solution?.title || '解决方案'}</h1>
-          <p className="page-subtitle">{solution?.summary}</p>
-        </div>
-        {solution ? (
-          <div className="table-actions">
-            <Button variant="outline" onClick={copyContent}>
-              <Copy className="h-4 w-4" />
-              复制 Markdown
-            </Button>
-            <Button variant="outline" onClick={() => navigate(`/solutions/${solution.id}/edit`)}>
-              <Pencil className="h-4 w-4" />
-              编辑
-            </Button>
-            <Button variant="outline" onClick={handleDelete}>
-              <Trash2 className="h-4 w-4" />
-              删除
-            </Button>
-          </div>
-        ) : null}
-      </div>
+      <PageHead
+        title={solution?.title || '解决方案'}
+        subtitle={solution?.summary}
+        back="/solutions"
+        actions={
+          solution ? (
+            <>
+              <Button variant="outline" onClick={copyContent}>
+                <Copy className="h-4 w-4" />
+                复制 Markdown
+              </Button>
+              <Button variant="outline" onClick={() => navigate(`/solutions/${solution.id}/edit`)}>
+                <Pencil className="h-4 w-4" />
+                编辑
+              </Button>
+              <Button variant="outline" onClick={handleDelete}>
+                <Trash2 className="h-4 w-4" />
+                删除
+              </Button>
+            </>
+          ) : null
+        }
+      />
 
       {solution ? (
         <div className="detail-grid">

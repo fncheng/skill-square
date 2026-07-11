@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { PageHead } from '@/components/layout/PageHead';
 import { PromptMonacoEditor } from '@/components/prompt/PromptMonacoEditor';
 import { useToast } from '@/hooks/use-toast';
 import { createSolution, getSolution, getSolutions, updateSolution } from '@/api/solutions';
@@ -93,18 +94,17 @@ export function SolutionEditor() {
 
   return (
     <section>
-      <div className="page-head">
-        <div>
-          <h1 className="page-title">{isEdit ? '编辑解决方案' : '新建解决方案'}</h1>
-          <p className="page-subtitle">维护标题、摘要、分类、标签与 Markdown 正文内容。</p>
-        </div>
-        <div className="table-actions">
+      <PageHead
+        title={isEdit ? '编辑解决方案' : '新建解决方案'}
+        subtitle="维护标题、摘要、分类、标签与 Markdown 正文内容。"
+        back={isEdit && id ? `/solutions/${id}` : '/solutions'}
+        actions={
           <Button disabled={saving} onClick={handleSubmit}>
             <Check className="h-4 w-4" />
             {saving ? '保存中...' : '保存'}
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       <div className="editor-layout">
         <div className="form-surface">
