@@ -95,7 +95,11 @@ export function PromptList() {
     store.resetFilters();
     setSelectedTagId('');
     store.setPageSize(8);
-    navigate('/prompts', { replace: true });
+    if (favoriteQuery === 'true') {
+      store.setFilters({ favorite: 'true' });
+    } else {
+      navigate('/prompts', { replace: true });
+    }
     await store.fetchPrompts();
   };
 
@@ -112,6 +116,9 @@ export function PromptList() {
 
   const handleFavorite = async (prompt: Prompt) => {
     await store.toggleFavorite(prompt);
+    if (favoriteQuery === 'true') {
+      await store.fetchPrompts();
+    }
   };
 
   const handleDelete = async (prompt: Prompt) => {
@@ -188,16 +195,6 @@ export function PromptList() {
                   </button>
                 ))}
               </div>
-              <Select
-                value={store.filters.favorite}
-                options={favoriteFilterOptions}
-                ariaLabel="收藏筛选"
-                className="w-36"
-                onValueChange={(favorite) => {
-                  store.setFilters({ favorite });
-                  void handleSearch();
-                }}
-              />
               <Select
                 value={selectedTagId}
                 options={tagFilterOptions}
