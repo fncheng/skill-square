@@ -117,123 +117,210 @@ export function PromptList() {
 
   return (
     <section className="prompt-home">
-      <section className="prompt-hero">
-        <div className="hero-copy">
-          <h1>
-            发现优质 <span>Prompt</span>
-          </h1>
-          <p>搜索、收藏、管理你的 AI 提示词，让 AI 帮你更高效地完成工作</p>
-
-          <label className="hero-search">
-            <Search className="h-5 w-5 text-slate-500" />
-            <input
-              value={store.filters.search}
-              type="text"
-              placeholder="搜索 Prompt、分类、标签关键词..."
-              onChange={(event) => store.setFilters({ search: event.target.value })}
-              onKeyUp={handleSearchKeyup}
-            />
-            {store.filters.search ? (
-              <button type="button" className="hero-search-clear" onClick={clearSearch}>
-                <X className="h-4 w-4" />
-              </button>
-            ) : null}
-          </label>
-
-          <div className="hot-keywords">
-            <b>热门搜索:</b>
-            {hotKeywords.map((keyword) => (
-              <button key={keyword} type="button" onClick={() => applyKeyword(keyword)}>
-                {keyword}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="hero-art" aria-hidden="true">
-          <div className="art-search">
-            <Search className="h-5 w-5" />
-            <span />
-          </div>
-          <div className="art-card art-card-primary">
-            <div className="art-thumb">&lt;/&gt;</div>
-            <i />
-            <i />
-          </div>
-          <div className="art-card">
-            <div className="art-thumb">
-              <FileText className="h-8 w-8" />
+      {favoriteQuery === 'true' ? (
+        <>
+          <div className="page-head">
+            <div>
+              <h1 className="page-title">我的收藏</h1>
+              <p className="page-subtitle">集中查看已收藏的 Prompt，快速查找并复用常用内容。</p>
             </div>
-            <i />
-            <i />
+            <Button onClick={() => navigate('/prompts/new')}>
+              <Plus className="h-4 w-4" />
+              新建 Prompt
+            </Button>
           </div>
-          <div className="art-card">
-            <div className="art-thumb">
-              <ChartPie className="h-8 w-8" />
-            </div>
-            <i />
-            <i />
-          </div>
-        </div>
-      </section>
 
-      <section className="category-toolbar">
-        <div className="category-main">
-          <h2>分类</h2>
-          <div className="category-chips">
-            <button
-              type="button"
-              className={`category-chip${!store.filters.categoryId ? ' active' : ''}`}
-              onClick={() => applyCategory('')}
-            >
-              全部
-            </button>
-            {store.categories.map((category) => (
-              <button
-                key={category.id}
-                type="button"
-                className={`category-chip${store.filters.categoryId === category.id ? ' active' : ''}`}
-                onClick={() => applyCategory(category.id)}
+          <section className="solution-toolbar">
+            <label className="solution-search">
+              <Search className="h-4 w-4 text-slate-400" />
+              <input
+                value={store.filters.search}
+                type="text"
+                placeholder="搜索 Prompt、分类、标签关键词..."
+                onChange={(event) => store.setFilters({ search: event.target.value })}
+                onKeyUp={handleSearchKeyup}
+              />
+              {store.filters.search ? (
+                <button type="button" className="solution-search-clear" onClick={clearSearch}>
+                  <X className="h-4 w-4" />
+                </button>
+              ) : null}
+            </label>
+
+            <div className="favorite-toolbar-filters">
+              <div className="category-chips">
+                <button
+                  type="button"
+                  className={`category-chip${!store.filters.categoryId ? ' active' : ''}`}
+                  onClick={() => applyCategory('')}
+                >
+                  全部
+                </button>
+                {store.categories.map((category) => (
+                  <button
+                    key={category.id}
+                    type="button"
+                    className={`category-chip${store.filters.categoryId === category.id ? ' active' : ''}`}
+                    onClick={() => applyCategory(category.id)}
+                  >
+                    {category.name}
+                  </button>
+                ))}
+              </div>
+              <select
+                value={store.filters.favorite}
+                className="native-select w-36"
+                aria-label="收藏筛选"
+                onChange={(event) => {
+                  store.setFilters({ favorite: event.target.value as '' | 'true' | 'false' });
+                  void handleSearch();
+                }}
               >
-                {category.name}
-              </button>
-            ))}
-          </div>
-        </div>
+                <option value="">全部收藏</option>
+                <option value="true">已收藏</option>
+                <option value="false">未收藏</option>
+              </select>
+              <select
+                value={selectedTagId}
+                className="native-select w-40"
+                aria-label="标签筛选"
+                onChange={(event) => void applyTagFilter(event.target.value)}
+              >
+                <option value="">全部标签</option>
+                {store.tags.map((tag) => (
+                  <option key={tag.id} value={tag.id}>
+                    {tag.name}
+                  </option>
+                ))}
+              </select>
+              <Button variant="outline" onClick={handleReset}>
+                <RotateCcw className="h-4 w-4" />
+                重置
+              </Button>
+            </div>
+          </section>
+        </>
+      ) : (
+        <>
+          <section className="prompt-hero">
+            <div className="hero-copy">
+              <h1>
+                发现优质 <span>Prompt</span>
+              </h1>
+              <p>搜索、收藏、管理你的 AI 提示词，让 AI 帮你更高效地完成工作</p>
 
-        <div className="card-view-tools">
-          <select
-            value={store.filters.favorite}
-            className="native-select w-36"
-            aria-label="收藏筛选"
-            onChange={(event) => {
-              store.setFilters({ favorite: event.target.value as '' | 'true' | 'false' });
-              void handleSearch();
-            }}
-          >
-            <option value="">全部收藏</option>
-            <option value="true">已收藏</option>
-            <option value="false">未收藏</option>
-          </select>
-          <select
-            value={selectedTagId}
-            className="native-select w-40"
-            aria-label="标签筛选"
-            onChange={(event) => void applyTagFilter(event.target.value)}
-          >
-            <option value="">全部标签</option>
-            {store.tags.map((tag) => (
-              <option key={tag.id} value={tag.id}>
-                {tag.name}
-              </option>
-            ))}
-          </select>
-          <Button variant="outline" onClick={handleReset}>
-            <RotateCcw className="h-4 w-4" />
-            重置
-          </Button>
-        </div>
-      </section>
+              <label className="hero-search">
+                <Search className="h-5 w-5 text-slate-500" />
+                <input
+                  value={store.filters.search}
+                  type="text"
+                  placeholder="搜索 Prompt、分类、标签关键词..."
+                  onChange={(event) => store.setFilters({ search: event.target.value })}
+                  onKeyUp={handleSearchKeyup}
+                />
+                {store.filters.search ? (
+                  <button type="button" className="hero-search-clear" onClick={clearSearch}>
+                    <X className="h-4 w-4" />
+                  </button>
+                ) : null}
+              </label>
+
+              <div className="hot-keywords">
+                <b>热门搜索:</b>
+                {hotKeywords.map((keyword) => (
+                  <button key={keyword} type="button" onClick={() => applyKeyword(keyword)}>
+                    {keyword}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="hero-art" aria-hidden="true">
+              <div className="art-search">
+                <Search className="h-5 w-5" />
+                <span />
+              </div>
+              <div className="art-card art-card-primary">
+                <div className="art-thumb">&lt;/&gt;</div>
+                <i />
+                <i />
+              </div>
+              <div className="art-card">
+                <div className="art-thumb">
+                  <FileText className="h-8 w-8" />
+                </div>
+                <i />
+                <i />
+              </div>
+              <div className="art-card">
+                <div className="art-thumb">
+                  <ChartPie className="h-8 w-8" />
+                </div>
+                <i />
+                <i />
+              </div>
+            </div>
+          </section>
+
+          <section className="category-toolbar">
+            <div className="category-main">
+              <h2>分类</h2>
+              <div className="category-chips">
+                <button
+                  type="button"
+                  className={`category-chip${!store.filters.categoryId ? ' active' : ''}`}
+                  onClick={() => applyCategory('')}
+                >
+                  全部
+                </button>
+                {store.categories.map((category) => (
+                  <button
+                    key={category.id}
+                    type="button"
+                    className={`category-chip${store.filters.categoryId === category.id ? ' active' : ''}`}
+                    onClick={() => applyCategory(category.id)}
+                  >
+                    {category.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="card-view-tools">
+              <select
+                value={store.filters.favorite}
+                className="native-select w-36"
+                aria-label="收藏筛选"
+                onChange={(event) => {
+                  store.setFilters({ favorite: event.target.value as '' | 'true' | 'false' });
+                  void handleSearch();
+                }}
+              >
+                <option value="">全部收藏</option>
+                <option value="true">已收藏</option>
+                <option value="false">未收藏</option>
+              </select>
+              <select
+                value={selectedTagId}
+                className="native-select w-40"
+                aria-label="标签筛选"
+                onChange={(event) => void applyTagFilter(event.target.value)}
+              >
+                <option value="">全部标签</option>
+                {store.tags.map((tag) => (
+                  <option key={tag.id} value={tag.id}>
+                    {tag.name}
+                  </option>
+                ))}
+              </select>
+              <Button variant="outline" onClick={handleReset}>
+                <RotateCcw className="h-4 w-4" />
+                重置
+              </Button>
+            </div>
+          </section>
+        </>
+      )}
 
       <section className="prompt-card-grid">
         {store.loading ? <div className="loading-panel">正在加载 Prompt...</div> : null}
@@ -358,9 +445,11 @@ export function PromptList() {
         </Button>
       </div>
 
-      <button type="button" className="prompt-fab" title="新建 Prompt" onClick={() => navigate('/prompts/new')}>
-        <Plus className="h-7 w-7" />
-      </button>
+      {favoriteQuery !== 'true' ? (
+        <button type="button" className="prompt-fab" title="新建 Prompt" onClick={() => navigate('/prompts/new')}>
+          <Plus className="h-7 w-7" />
+        </button>
+      ) : null}
     </section>
   );
 }

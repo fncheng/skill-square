@@ -473,6 +473,10 @@
     @apply grid h-7 w-7 flex-none place-items-center rounded-full border-0 bg-transparent text-slate-400 transition-colors hover:bg-accent hover:text-primary;
   }
 
+  .favorite-toolbar-filters {
+    @apply ml-auto flex min-w-0 flex-wrap items-center justify-end gap-2.5;
+  }
+
   .solution-grid {
     @apply grid gap-5;
     grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
