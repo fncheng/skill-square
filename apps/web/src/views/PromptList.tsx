@@ -2,16 +2,30 @@ import { useEffect, useMemo, useState, type KeyboardEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ChartPie, Copy, FileText, Plus, RotateCcw, Search, Star, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Select, type SelectOption } from '@/components/ui/select';
 import { useConfirm } from '@/hooks/use-confirm';
 import { useToast } from '@/hooks/use-toast';
 import { deletePrompt } from '@/api/prompts';
-import { usePromptStore } from '@/stores/prompt';
+import { usePromptStore, type FavoriteFilter } from '@/stores/prompt';
 import type { Prompt } from '@/types/domain';
 import { copyText } from '@/utils/clipboard';
 import { formatShortDate } from '@/utils/date';
 import { getTagStyle } from '@/utils/tag-style';
 
 const hotKeywords = ['代码优化', '需求分析', '单元测试', '接口设计', '文档生成', 'Bug排查'];
+
+const favoriteFilterOptions: readonly SelectOption<FavoriteFilter>[] = [
+  { value: '', label: '全部收藏' },
+  { value: 'true', label: '已收藏' },
+  { value: 'false', label: '未收藏' }
+];
+
+const pageSizeOptions: readonly SelectOption<number>[] = [
+  { value: 8, label: '8 条' },
+  { value: 12, label: '12 条' },
+  { value: 24, label: '24 条' },
+  { value: 48, label: '48 条' }
+];
 
 export function PromptList() {
   const navigate = useNavigate();
@@ -25,6 +39,13 @@ export function PromptList() {
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(store.total / store.pageSize)),
     [store.total, store.pageSize]
+  );
+  const tagFilterOptions = useMemo<readonly SelectOption<string>[]>(
+    () => [
+      { value: '', label: '全部标签' },
+      ...store.tags.map((tag) => ({ value: tag.id, label: tag.name }))
+    ],
+    [store.tags]
   );
 
   useEffect(() => {
@@ -167,32 +188,23 @@ export function PromptList() {
                   </button>
                 ))}
               </div>
-              <select
+              <Select
                 value={store.filters.favorite}
-                className="native-select w-36"
-                aria-label="收藏筛选"
-                onChange={(event) => {
-                  store.setFilters({ favorite: event.target.value as '' | 'true' | 'false' });
+                options={favoriteFilterOptions}
+                ariaLabel="收藏筛选"
+                className="w-36"
+                onValueChange={(favorite) => {
+                  store.setFilters({ favorite });
                   void handleSearch();
                 }}
-              >
-                <option value="">全部收藏</option>
-                <option value="true">已收藏</option>
-                <option value="false">未收藏</option>
-              </select>
-              <select
+              />
+              <Select
                 value={selectedTagId}
-                className="native-select w-40"
-                aria-label="标签筛选"
-                onChange={(event) => void applyTagFilter(event.target.value)}
-              >
-                <option value="">全部标签</option>
-                {store.tags.map((tag) => (
-                  <option key={tag.id} value={tag.id}>
-                    {tag.name}
-                  </option>
-                ))}
-              </select>
+                options={tagFilterOptions}
+                ariaLabel="标签筛选"
+                className="w-40"
+                onValueChange={(tagId) => void applyTagFilter(tagId)}
+              />
               <Button variant="outline" onClick={handleReset}>
                 <RotateCcw className="h-4 w-4" />
                 重置
@@ -287,32 +299,23 @@ export function PromptList() {
             </div>
 
             <div className="card-view-tools">
-              <select
+              <Select
                 value={store.filters.favorite}
-                className="native-select w-36"
-                aria-label="收藏筛选"
-                onChange={(event) => {
-                  store.setFilters({ favorite: event.target.value as '' | 'true' | 'false' });
+                options={favoriteFilterOptions}
+                ariaLabel="收藏筛选"
+                className="w-36"
+                onValueChange={(favorite) => {
+                  store.setFilters({ favorite });
                   void handleSearch();
                 }}
-              >
-                <option value="">全部收藏</option>
-                <option value="true">已收藏</option>
-                <option value="false">未收藏</option>
-              </select>
-              <select
+              />
+              <Select
                 value={selectedTagId}
-                className="native-select w-40"
-                aria-label="标签筛选"
-                onChange={(event) => void applyTagFilter(event.target.value)}
-              >
-                <option value="">全部标签</option>
-                {store.tags.map((tag) => (
-                  <option key={tag.id} value={tag.id}>
-                    {tag.name}
-                  </option>
-                ))}
-              </select>
+                options={tagFilterOptions}
+                ariaLabel="标签筛选"
+                className="w-40"
+                onValueChange={(tagId) => void applyTagFilter(tagId)}
+              />
               <Button variant="outline" onClick={handleReset}>
                 <RotateCcw className="h-4 w-4" />
                 重置
@@ -419,16 +422,14 @@ export function PromptList() {
 
       <div className="card-pagination">
         <span className="text-sm text-muted-foreground">共 {store.total} 条</span>
-        <select
+        <Select
           value={store.pageSize}
-          className="native-select w-24"
-          onChange={(event) => void handlePageSizeChange(Number(event.target.value))}
-        >
-          <option value={8}>8 条</option>
-          <option value={12}>12 条</option>
-          <option value={24}>24 条</option>
-          <option value={48}>48 条</option>
-        </select>
+          options={pageSizeOptions}
+          ariaLabel="每页条数"
+          className="w-24"
+          side="top"
+          onValueChange={(size) => void handlePageSizeChange(size)}
+        />
         <Button variant="outline" size="sm" disabled={store.page <= 1} onClick={() => changePage(store.page - 1)}>
           上一页
         </Button>
