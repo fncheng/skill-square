@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Copy, Pencil, Trash2 } from 'lucide-react';
 import { PageHead } from '@/components/layout/PageHead';
+import { MarkdownContent } from '@/components/markdown/MarkdownContent';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useConfirm } from '@/hooks/use-confirm';
@@ -97,7 +98,7 @@ export function SolutionDetail() {
 
       {solution ? (
         <div className="detail-grid">
-          <article className="md-surface" dangerouslySetInnerHTML={{ __html: html }} />
+          <MarkdownContent html={html} />
 
           <aside className="detail-surface">
             <div className="detail-meta">

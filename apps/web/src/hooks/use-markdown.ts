@@ -96,7 +96,29 @@ function parseMarkdown(source: string): ParseResult {
   };
 
   const flushFence = () => {
-    const code = escapeHtml(fenceLines.join('\n'));
+    const rawCode = fenceLines.join('\n');
+    const code = escapeHtml(rawCode);
+    const normalizedLang = fenceLang.toLowerCase();
+
+    if (normalizedLang === 'mermaid') {
+      const encodedCode = encodeURIComponent(rawCode);
+      blocks.push(
+        `<section class="md-mermaid-block">` +
+          `<div class="md-mermaid-controls" role="group" aria-label="Mermaid 显示模式">` +
+            `<button type="button" class="md-mermaid-toggle is-active" data-mermaid-mode="preview" aria-pressed="true">图表</button>` +
+            `<button type="button" class="md-mermaid-toggle" data-mermaid-mode="code" aria-pressed="false">代码</button>` +
+          `</div>` +
+          `<div class="md-mermaid-preview" data-mermaid-code="${encodedCode}" aria-label="Mermaid 图表">` +
+            `<span class="md-mermaid-loading">图表渲染中...</span>` +
+          `</div>` +
+          `<pre class="md-pre md-mermaid-code" hidden><code>${code}</code></pre>` +
+        `</section>`
+      );
+      fenceLines = [];
+      fenceLang = '';
+      return;
+    }
+
     const langAttr = fenceLang ? ` data-lang="${escapeHtml(fenceLang)}"` : '';
     blocks.push(`<pre class="md-pre"${langAttr}><code>${code}</code></pre>`);
     fenceLines = [];

@@ -578,6 +578,56 @@
     @apply font-semibold text-primary underline-offset-2 hover:underline;
   }
 
+  .md-surface .md-mermaid-block {
+    @apply my-4 overflow-hidden rounded-lg border bg-white;
+  }
+
+  .md-surface .md-mermaid-controls {
+    @apply flex h-10 items-stretch border-b bg-slate-50 px-2;
+  }
+
+  .md-surface .md-mermaid-toggle {
+    @apply relative min-w-16 border-0 bg-transparent px-3 text-[13px] font-semibold text-slate-500 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring;
+  }
+
+  .md-surface .md-mermaid-toggle::after {
+    content: "";
+    @apply absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-transparent;
+  }
+
+  .md-surface .md-mermaid-toggle.is-active {
+    @apply text-primary;
+  }
+
+  .md-surface .md-mermaid-toggle.is-active::after {
+    @apply bg-primary;
+  }
+
+  .md-surface .md-mermaid-preview {
+    @apply flex min-h-40 items-center justify-center overflow-auto px-5 py-6;
+  }
+
+  .md-surface .md-mermaid-preview[hidden],
+  .md-surface .md-mermaid-code[hidden] {
+    display: none;
+  }
+
+  .md-surface .md-mermaid-preview svg {
+    @apply h-auto max-w-full;
+  }
+
+  .md-surface .md-mermaid-loading {
+    @apply text-[13px] font-medium text-muted-foreground;
+  }
+
+  .md-surface .md-mermaid-error {
+    @apply rounded-md bg-red-50 px-3 py-2 text-[13px] font-semibold text-red-600;
+  }
+
+  .md-surface .md-mermaid-code {
+    @apply m-0 rounded-none border-0;
+  }
+
   .md-toc {
     @apply grid gap-1.5 border-l-2 border-slate-100 pl-3;
   }
