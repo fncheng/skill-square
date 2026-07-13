@@ -64,6 +64,21 @@ interface ParseResult {
   headings: MarkdownHeading[];
 }
 
+/** 生成代码块右上角的复制按钮，图标使用 Lucide Copy 与 Check 路径。 */
+function renderCodeCopyButton(): string {
+  return (
+    `<button type="button" class="md-code-copy" data-code-copy aria-label="复制代码" title="复制代码">` +
+      `<svg class="md-code-copy-icon" viewBox="0 0 24 24" aria-hidden="true">` +
+        `<rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>` +
+        `<path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>` +
+      `</svg>` +
+      `<svg class="md-code-copy-success" viewBox="0 0 24 24" aria-hidden="true">` +
+        `<path d="m20 6-11 11-5-5"></path>` +
+      `</svg>` +
+    `</button>`
+  );
+}
+
 /** 将 Markdown 文本解析为 HTML，并收集标题用于目录。 */
 function parseMarkdown(source: string): ParseResult {
   const lines = source.replace(/\r\n/g, '\n').split('\n');
@@ -111,7 +126,10 @@ function parseMarkdown(source: string): ParseResult {
           `<div class="md-mermaid-preview" data-mermaid-code="${encodedCode}" aria-label="Mermaid 图表">` +
             `<span class="md-mermaid-loading">图表渲染中...</span>` +
           `</div>` +
-          `<pre class="md-pre md-mermaid-code" hidden><code>${code}</code></pre>` +
+          `<div class="md-code-block md-mermaid-code" hidden>` +
+            renderCodeCopyButton() +
+            `<pre class="md-pre"><code>${code}</code></pre>` +
+          `</div>` +
         `</section>`
       );
       fenceLines = [];
@@ -120,7 +138,12 @@ function parseMarkdown(source: string): ParseResult {
     }
 
     const langAttr = fenceLang ? ` data-lang="${escapeHtml(fenceLang)}"` : '';
-    blocks.push(`<pre class="md-pre"${langAttr}><code>${code}</code></pre>`);
+    blocks.push(
+      `<div class="md-code-block">` +
+        renderCodeCopyButton() +
+        `<pre class="md-pre"${langAttr}><code>${code}</code></pre>` +
+      `</div>`
+    );
     fenceLines = [];
     fenceLang = '';
   };

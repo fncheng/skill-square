@@ -567,15 +567,54 @@
   }
 
   .md-surface .md-pre {
-    @apply my-4 overflow-auto rounded-lg border border-slate-800 bg-slate-900 px-4 py-3.5 text-[13px] leading-6 text-slate-100;
+    @apply my-4 overflow-auto rounded-lg border border-slate-200 bg-slate-50 px-4 py-3.5 text-[13px] leading-6 text-slate-700;
   }
 
   .md-surface .md-pre code {
-    @apply font-mono text-slate-100;
+    @apply font-mono text-slate-700;
   }
 
   .md-surface .md-link {
     @apply font-semibold text-primary underline-offset-2 hover:underline;
+  }
+
+  .md-surface .md-code-block {
+    @apply relative my-4;
+  }
+
+  .md-surface .md-code-block > .md-pre {
+    @apply m-0 pr-14;
+  }
+
+  .md-surface .md-code-copy {
+    @apply absolute right-2 top-2 z-10 grid h-8 w-8 place-items-center rounded-md border border-slate-200 bg-white/90 text-slate-500 shadow-sm transition-colors hover:border-primary/30 hover:bg-white hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-wait disabled:opacity-70;
+  }
+
+  .md-surface .md-code-copy svg {
+    @apply h-4 w-4 fill-none stroke-current;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .md-surface .md-code-copy-success {
+    display: none;
+  }
+
+  .md-surface .md-code-copy.is-copied {
+    @apply border-emerald-500/60 bg-emerald-600 text-white;
+  }
+
+  .md-surface .md-code-copy.is-copied .md-code-copy-icon {
+    display: none;
+  }
+
+  .md-surface .md-code-copy.is-copied .md-code-copy-success {
+    display: block;
+  }
+
+  .md-surface .md-code-copy.is-error {
+    @apply border-red-500/60 bg-red-600 text-white;
   }
 
   .md-surface .md-mermaid-block {
@@ -625,7 +664,11 @@
   }
 
   .md-surface .md-mermaid-code {
-    @apply m-0 rounded-none border-0;
+    @apply m-0;
+  }
+
+  .md-surface .md-mermaid-code > .md-pre {
+    @apply rounded-none border-0;
   }
 
   .md-toc {

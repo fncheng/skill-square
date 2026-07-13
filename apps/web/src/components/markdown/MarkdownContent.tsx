@@ -1,5 +1,6 @@
 import { useEffect, useRef, type MouseEvent } from 'react';
 import { cn } from '@/lib/utils';
+import { copyText } from '@/utils/clipboard';
 
 interface MarkdownContentProps {
   html: string;
@@ -67,6 +68,16 @@ function showMermaidError(preview: HTMLElement): void {
 /** 渲染 Markdown HTML，并为 Mermaid 代码块补充异步渲染与视图切换。 */
 export function MarkdownContent({ html, className }: MarkdownContentProps) {
   const containerRef = useRef<HTMLElement>(null);
+  const copyResetTimers = useRef(new Map<HTMLButtonElement, ReturnType<typeof setTimeout>>());
+
+  useEffect(() => {
+    const timers = copyResetTimers.current;
+
+    return () => {
+      timers.forEach((timer) => clearTimeout(timer));
+      timers.clear();
+    };
+  }, []);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -106,9 +117,50 @@ export function MarkdownContent({ html, className }: MarkdownContentProps) {
     };
   }, [html]);
 
+  const handleCodeCopy = async (button: HTMLButtonElement) => {
+    const code = button.closest('.md-code-block')?.querySelector('pre code')?.textContent;
+    if (code === undefined || button.disabled) {
+      return;
+    }
+
+    button.disabled = true;
+    const previousTimer = copyResetTimers.current.get(button);
+    if (previousTimer) {
+      clearTimeout(previousTimer);
+    }
+
+    try {
+      await copyText(code);
+      button.classList.remove('is-error');
+      button.classList.add('is-copied');
+      button.setAttribute('aria-label', '代码已复制');
+      button.title = '代码已复制';
+    } catch {
+      button.classList.remove('is-copied');
+      button.classList.add('is-error');
+      button.setAttribute('aria-label', '代码复制失败');
+      button.title = '代码复制失败';
+    } finally {
+      button.disabled = false;
+      const timer = setTimeout(() => {
+        button.classList.remove('is-copied', 'is-error');
+        button.setAttribute('aria-label', '复制代码');
+        button.title = '复制代码';
+        copyResetTimers.current.delete(button);
+      }, 1600);
+      copyResetTimers.current.set(button, timer);
+    }
+  };
+
   const handleClick = (event: MouseEvent<HTMLElement>) => {
     const target = event.target;
     if (!(target instanceof Element)) {
+      return;
+    }
+
+    const copyButton = target.closest<HTMLButtonElement>('[data-code-copy]');
+    if (copyButton && event.currentTarget.contains(copyButton)) {
+      void handleCodeCopy(copyButton);
       return;
     }
 
