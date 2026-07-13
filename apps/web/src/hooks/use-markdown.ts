@@ -128,7 +128,7 @@ function parseMarkdown(source: string): ParseResult {
           `</div>` +
           `<div class="md-code-block md-mermaid-code" hidden>` +
             renderCodeCopyButton() +
-            `<pre class="md-pre"><code>${code}</code></pre>` +
+            `<pre class="md-pre" data-lang="mermaid"><code>${code}</code></pre>` +
           `</div>` +
         `</section>`
       );

@@ -8,12 +8,58 @@ interface MarkdownContentProps {
 }
 
 type MermaidApi = (typeof import('mermaid'))['default'];
+type HighlightApi = (typeof import('highlight.js/lib/common'))['default'];
 
 const mermaidSvgCache = new Map<string, string>();
 const mermaidRenderingCache = new Map<string, Promise<string>>();
+const codeLanguageAliases: Record<string, string> = {
+  html: 'xml',
+  js: 'javascript',
+  jsx: 'javascript',
+  sh: 'bash',
+  shell: 'bash',
+  ts: 'typescript',
+  tsx: 'typescript',
+  vue: 'xml',
+  yml: 'yaml'
+};
 
 let mermaidApiPromise: Promise<MermaidApi> | undefined;
+let highlightApiPromise: Promise<HighlightApi> | undefined;
 let mermaidCounter = 0;
+
+/** 按需加载 highlight.js 常用语言包，避免普通页面承担语法高亮开销。 */
+async function getHighlightApi(): Promise<HighlightApi> {
+  if (!highlightApiPromise) {
+    highlightApiPromise = import('highlight.js/lib/common').then(({ default: highlight }) => highlight);
+  }
+
+  return highlightApiPromise;
+}
+
+function highlightCodeBlocks(container: HTMLElement, highlight: HighlightApi): void {
+  container.querySelectorAll<HTMLElement>('.md-code-block pre code').forEach((codeElement) => {
+    const source = codeElement.textContent ?? '';
+    const declaredLanguage =
+      codeElement.closest('pre')?.dataset.lang?.trim().toLowerCase().split(/\s+/)[0] ?? '';
+    const normalizedLanguage = codeLanguageAliases[declaredLanguage] ?? declaredLanguage;
+
+    try {
+      if (normalizedLanguage && highlight.getLanguage(normalizedLanguage)) {
+        codeElement.innerHTML = highlight.highlight(source, {
+          language: normalizedLanguage,
+          ignoreIllegals: true
+        }).value;
+      } else if (!normalizedLanguage && source.trim()) {
+        codeElement.innerHTML = highlight.highlightAuto(source).value;
+      }
+    } catch {
+      // 单个代码块高亮失败时保留其纯文本内容，并继续处理后续代码块。
+    } finally {
+      codeElement.classList.add('hljs');
+    }
+  });
+}
 
 /** 按需加载并初始化 Mermaid，避免普通 Markdown 页面承担图表依赖开销。 */
 async function getMermaidApi(): Promise<MermaidApi> {
@@ -111,6 +157,28 @@ export function MarkdownContent({ html, className }: MarkdownContentProps) {
           }
         });
     });
+
+    return () => {
+      active = false;
+    };
+  }, [html]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) {
+      return;
+    }
+
+    let active = true;
+    void getHighlightApi()
+      .then((highlight) => {
+        if (active) {
+          highlightCodeBlocks(container, highlight);
+        }
+      })
+      .catch(() => {
+        // 高亮失败时保留已经转义的纯文本代码，不影响 Markdown 正文渲染。
+      });
 
     return () => {
       active = false;
