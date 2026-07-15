@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Check } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { MarkdownEditorPanel } from '@/components/markdown/MarkdownEditorPanel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { PageHead } from '@/components/layout/PageHead';
-import { PromptMonacoEditor } from '@/components/prompt/PromptMonacoEditor';
 import { useToast } from '@/hooks/use-toast';
 import { createNote, getNote, getNotes, updateNote } from '@/api/notes';
 import type { NotePayload } from '@/types/domain';
@@ -160,16 +159,11 @@ export function NoteEditor() {
           </div>
         </div>
 
-        <div className="editor-surface">
-          <div className="editor-head">
-            <span>正文内容</span>
-            <Badge variant="outline">Markdown</Badge>
-          </div>
-          <PromptMonacoEditor
-            value={form.content}
-            onChange={(content) => setForm((prev) => ({ ...prev, content }))}
-          />
-        </div>
+        <MarkdownEditorPanel
+          title="正文内容"
+          value={form.content}
+          onChange={(content) => setForm((prev) => ({ ...prev, content }))}
+        />
       </div>
     </section>
   );

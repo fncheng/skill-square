@@ -1,12 +1,11 @@
 import { useEffect, useState, type ChangeEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Check } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { MarkdownEditorPanel } from '@/components/markdown/MarkdownEditorPanel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { PageHead } from '@/components/layout/PageHead';
-import { PromptMonacoEditor } from '@/components/prompt/PromptMonacoEditor';
 import { useToast } from '@/hooks/use-toast';
 import { createPrompt, getPrompt, updatePrompt } from '@/api/prompts';
 import { usePromptStore } from '@/stores/prompt';
@@ -169,16 +168,11 @@ export function PromptEditor() {
           </div>
         </div>
 
-        <div className="editor-surface">
-          <div className="editor-head">
-            <span>Prompt 内容</span>
-            <Badge variant="outline">Markdown</Badge>
-          </div>
-          <PromptMonacoEditor
-            value={form.content}
-            onChange={(content) => setForm((prev) => ({ ...prev, content }))}
-          />
-        </div>
+        <MarkdownEditorPanel
+          title="Prompt 内容"
+          value={form.content}
+          onChange={(content) => setForm((prev) => ({ ...prev, content }))}
+        />
       </div>
     </section>
   );

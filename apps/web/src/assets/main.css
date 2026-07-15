@@ -382,6 +382,30 @@
     @apply inline-grid h-8 w-8 place-items-center rounded-md border bg-white p-0 text-slate-500 transition-colors hover:border-primary hover:bg-accent hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
   }
 
+  .editor-mode-panel {
+    @apply flex min-h-0 flex-1;
+  }
+
+  .editor-mode-panel[hidden] {
+    display: none;
+  }
+
+  .editor-mode-panel .monaco-host {
+    @apply flex-1;
+  }
+
+  .editor-preview-scroll {
+    @apply min-h-0 flex-1 overflow-auto bg-white;
+  }
+
+  .md-surface.editor-preview-content {
+    @apply min-h-full rounded-none border-0 px-6 py-5 shadow-none;
+  }
+
+  .editor-preview-empty {
+    @apply grid min-h-0 flex-1 place-items-center bg-slate-50 px-6 text-sm font-medium text-muted-foreground;
+  }
+
   .monaco-host {
     @apply min-h-0 flex-1;
   }
