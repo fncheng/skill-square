@@ -3,6 +3,7 @@ import {
   useCallback,
   useEffect,
   useImperativeHandle,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -92,6 +93,7 @@ export const MarkdownAnnotationSurface = forwardRef<
   const surfaceRef = useRef<HTMLDivElement>(null);
   const popoverRef = useRef<HTMLElement>(null);
   const activeTriggerRef = useRef<HTMLElement | null>(null);
+  const editorInputRef = useRef<HTMLTextAreaElement>(null);
 
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -116,6 +118,39 @@ export const MarkdownAnnotationSurface = forwardRef<
   const { html: activeAnnotationHtml } = useMarkdown(activeAnnotation?.content ?? '');
   const { html: dialogAnnotationHtml } = useMarkdown(dialogAnnotation?.content ?? '');
   const { html: draftHtml } = useMarkdown(draft);
+
+  const resizeEditorInput = useCallback(() => {
+    const input = editorInputRef.current;
+    if (!input || dialogMode !== 'editor' || previewing) {
+      return;
+    }
+
+    const isMobile = window.matchMedia('(max-width: 760px)').matches;
+    const preferredMinHeight = isMobile ? 240 : 380;
+    const absoluteMaxHeight = isMobile ? 420 : 560;
+    const viewportMaxHeight = window.innerHeight * (isMobile ? 0.52 : 0.58);
+    const maxHeight = Math.max(220, Math.min(absoluteMaxHeight, viewportMaxHeight));
+    const minHeight = Math.min(preferredMinHeight, maxHeight);
+
+    input.style.minHeight = `${minHeight}px`;
+    input.style.maxHeight = `${maxHeight}px`;
+    input.style.height = 'auto';
+    input.style.height = `${Math.max(minHeight, Math.min(input.scrollHeight, maxHeight))}px`;
+    input.style.overflowY = input.scrollHeight > maxHeight ? 'auto' : 'hidden';
+  }, [dialogMode, previewing]);
+
+  useLayoutEffect(() => {
+    resizeEditorInput();
+  }, [draft, resizeEditorInput]);
+
+  useEffect(() => {
+    if (dialogMode !== 'editor' || previewing) {
+      return;
+    }
+
+    window.addEventListener('resize', resizeEditorInput);
+    return () => window.removeEventListener('resize', resizeEditorInput);
+  }, [dialogMode, previewing, resizeEditorInput]);
 
   useEffect(() => {
     let active = true;
@@ -645,6 +680,7 @@ export const MarkdownAnnotationSurface = forwardRef<
                       <>
                         <Textarea
                           autoFocus
+                          ref={editorInputRef}
                           className="md-annotation-editor-input"
                           value={draft}
                           maxLength={50000}

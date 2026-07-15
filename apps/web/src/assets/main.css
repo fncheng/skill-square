@@ -956,7 +956,8 @@
   }
 
   .md-annotation-editor-input {
-    @apply min-h-[330px] resize-y font-mono text-[13px] leading-6;
+    @apply min-h-[380px] resize-none overflow-y-hidden font-mono text-[13px] leading-6;
+    max-height: min(58vh, 560px);
   }
 
   .md-annotation-editor-help {
@@ -1078,5 +1079,10 @@
 
   .md-annotation-dialog-footer {
     padding-bottom: calc(0.625rem + env(safe-area-inset-bottom));
+  }
+
+  .md-annotation-editor-input {
+    min-height: 240px;
+    max-height: min(52vh, 420px);
   }
 }
