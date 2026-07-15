@@ -200,6 +200,29 @@ interface CreateNoteRequest {
 
 `UpdateNoteRequest` 与 `CreateNoteRequest` 字段一致，但所有字段均可选。
 
+## Annotation
+
+```ts
+type AnnotationResourceType = 'NOTE' | 'SOLUTION';
+
+interface Annotation {
+  id: string;
+  resourceType: AnnotationResourceType;
+  resourceId: string;
+  content: string;
+  exact: string;
+  prefix: string;
+  suffix: string;
+  start: number;
+  end: number;
+  documentUpdatedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+批注 `content` 使用 Markdown 格式。`start/end` 与 `exact/prefix/suffix` 共同组成文本双锚点，正文修改后无法唯一匹配的批注仍会保留，等待重新关联。
+
 ## CreatePromptRequest
 
 ```ts

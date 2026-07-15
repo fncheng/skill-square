@@ -81,14 +81,15 @@ model PromptVersion {
 }
 
 model Solution {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  title     String   @db.VarChar(200)
-  summary   String   @default("") @db.VarChar(500)
-  content   String   @db.Text
-  category  String   @default("") @db.VarChar(80)
-  tags      String[] @default([])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
+  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title       String       @db.VarChar(200)
+  summary     String       @default("") @db.VarChar(500)
+  content     String       @db.Text
+  category    String       @default("") @db.VarChar(80)
+  tags        String[]     @default([])
+  annotations Annotation[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @default(now()) @updatedAt
 
   @@index([title])
   @@index([category])
@@ -96,16 +97,45 @@ model Solution {
 }
 
 model Note {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  title     String   @db.VarChar(200)
-  summary   String   @default("") @db.VarChar(500)
-  content   String   @db.Text
-  category  String   @default("") @db.VarChar(80)
-  tags      String[] @default([])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
+  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title       String       @db.VarChar(200)
+  summary     String       @default("") @db.VarChar(500)
+  content     String       @db.Text
+  category    String       @default("") @db.VarChar(80)
+  tags        String[]     @default([])
+  annotations Annotation[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @default(now()) @updatedAt
 
   @@index([title])
   @@index([category])
   @@map("notes")
+}
+
+enum AnnotationResourceType {
+  NOTE
+  SOLUTION
+}
+
+model Annotation {
+  id                String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  resourceType      AnnotationResourceType
+  noteId            String?                @db.Uuid
+  note              Note?                  @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  solutionId        String?                @db.Uuid
+  solution          Solution?              @relation(fields: [solutionId], references: [id], onDelete: Cascade)
+  content           String                 @db.Text
+  exact             String                 @db.Text
+  prefix            String                 @default("") @db.VarChar(500)
+  suffix            String                 @default("") @db.VarChar(500)
+  start             Int
+  end               Int
+  documentUpdatedAt DateTime?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @default(now()) @updatedAt
+
+  @@index([noteId])
+  @@index([solutionId])
+  @@index([resourceType, createdAt])
+  @@map("annotations")
 }

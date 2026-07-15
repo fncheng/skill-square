@@ -115,3 +115,40 @@ export interface NoteFilters {
   search: string;
   category: string;
 }
+
+export type AnnotationResourceType = 'NOTE' | 'SOLUTION';
+
+export interface AnnotationAnchor {
+  exact: string;
+  prefix: string;
+  suffix: string;
+  start: number;
+  end: number;
+}
+
+export interface Annotation extends AnnotationAnchor {
+  id: string;
+  resourceType: AnnotationResourceType;
+  resourceId: string;
+  content: string;
+  documentUpdatedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateAnnotationPayload extends AnnotationAnchor {
+  resourceType: AnnotationResourceType;
+  resourceId: string;
+  content: string;
+  documentUpdatedAt?: string;
+}
+
+export interface UpdateAnnotationPayload {
+  content?: string;
+  exact?: string;
+  prefix?: string;
+  suffix?: string;
+  start?: number;
+  end?: number;
+  documentUpdatedAt?: string;
+}

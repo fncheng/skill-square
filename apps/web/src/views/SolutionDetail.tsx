@@ -1,8 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Copy, Pencil, Trash2 } from 'lucide-react';
+import { Copy, MessageSquareText, Pencil, Trash2 } from 'lucide-react';
 import { PageHead } from '@/components/layout/PageHead';
-import { MarkdownContent } from '@/components/markdown/MarkdownContent';
+import {
+  MarkdownAnnotationSurface,
+  type MarkdownAnnotationSurfaceHandle
+} from '@/components/markdown/MarkdownAnnotationSurface';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useConfirm } from '@/hooks/use-confirm';
@@ -18,9 +21,11 @@ export function SolutionDetail() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { confirm } = useConfirm();
+  const annotationSurfaceRef = useRef<MarkdownAnnotationSurfaceHandle>(null);
 
   const [solution, setSolution] = useState<Solution>();
   const [loading, setLoading] = useState(false);
+  const [annotationCount, setAnnotationCount] = useState(0);
 
   const { html, headings } = useMarkdown(solution?.content ?? '');
 
@@ -87,6 +92,11 @@ export function SolutionDetail() {
                 <Pencil className="h-4 w-4" />
                 编辑
               </Button>
+              <Button variant="outline" onClick={() => annotationSurfaceRef.current?.openList()}>
+                <MessageSquareText className="h-4 w-4" />
+                批注
+                <span className="md-annotation-count">{annotationCount}</span>
+              </Button>
               <Button variant="outline" onClick={handleDelete}>
                 <Trash2 className="h-4 w-4" />
                 删除
@@ -98,7 +108,14 @@ export function SolutionDetail() {
 
       {solution ? (
         <div className="detail-grid">
-          <MarkdownContent html={html} />
+          <MarkdownAnnotationSurface
+            ref={annotationSurfaceRef}
+            html={html}
+            resourceType="SOLUTION"
+            resourceId={solution.id}
+            documentUpdatedAt={solution.updatedAt}
+            onCountChange={setAnnotationCount}
+          />
 
           <aside className="detail-surface">
             <div className="detail-meta">

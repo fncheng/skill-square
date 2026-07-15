@@ -1,10 +1,20 @@
-import { useEffect, useRef, type MouseEvent } from 'react';
+import { useCallback, useEffect, useRef, type KeyboardEvent, type MouseEvent } from 'react';
+import {
+  decorateMarkdownAnnotations,
+  getMarkdownTextSelection,
+  type MarkdownTextSelection
+} from '@/components/markdown/annotation-anchor';
 import { cn } from '@/lib/utils';
+import type { Annotation } from '@/types/domain';
 import { copyText } from '@/utils/clipboard';
 
 interface MarkdownContentProps {
   html: string;
   className?: string;
+  annotations?: Annotation[];
+  onAnnotationActivate?: (annotationId: string, trigger: HTMLElement) => void;
+  onAnnotationResolutionChange?: (orphanIds: string[]) => void;
+  onTextSelection?: (selection: MarkdownTextSelection | null) => void;
 }
 
 type MermaidApi = (typeof import('mermaid'))['default'];
@@ -27,6 +37,7 @@ const codeLanguageAliases: Record<string, string> = {
 let mermaidApiPromise: Promise<MermaidApi> | undefined;
 let highlightApiPromise: Promise<HighlightApi> | undefined;
 let mermaidCounter = 0;
+const emptyAnnotations: Annotation[] = [];
 
 /** 按需加载 highlight.js 常用语言包，避免普通页面承担语法高亮开销。 */
 async function getHighlightApi(): Promise<HighlightApi> {
@@ -111,10 +122,32 @@ function showMermaidError(preview: HTMLElement): void {
   preview.replaceChildren(error);
 }
 
-/** 渲染 Markdown HTML，并为 Mermaid 代码块补充异步渲染与视图切换。 */
-export function MarkdownContent({ html, className }: MarkdownContentProps) {
+/** 渲染 Markdown HTML，并为代码高亮、Mermaid 和可选批注补充交互能力。 */
+export function MarkdownContent({
+  html,
+  className,
+  annotations = emptyAnnotations,
+  onAnnotationActivate,
+  onAnnotationResolutionChange,
+  onTextSelection
+}: MarkdownContentProps) {
   const containerRef = useRef<HTMLElement>(null);
   const copyResetTimers = useRef(new Map<HTMLButtonElement, ReturnType<typeof setTimeout>>());
+  const resolutionKeyRef = useRef('');
+
+  const applyAnnotations = useCallback(() => {
+    const container = containerRef.current;
+    if (!container) {
+      return;
+    }
+
+    const orphanIds = decorateMarkdownAnnotations(container, annotations);
+    const resolutionKey = orphanIds.slice().sort().join(',');
+    if (resolutionKey !== resolutionKeyRef.current) {
+      resolutionKeyRef.current = resolutionKey;
+      onAnnotationResolutionChange?.(orphanIds);
+    }
+  }, [annotations, onAnnotationResolutionChange]);
 
   useEffect(() => {
     const timers = copyResetTimers.current;
@@ -164,6 +197,11 @@ export function MarkdownContent({ html, className }: MarkdownContentProps) {
   }, [html]);
 
   useEffect(() => {
+    const frame = requestAnimationFrame(applyAnnotations);
+    return () => cancelAnimationFrame(frame);
+  }, [html, applyAnnotations]);
+
+  useEffect(() => {
     const container = containerRef.current;
     if (!container) {
       return;
@@ -174,16 +212,20 @@ export function MarkdownContent({ html, className }: MarkdownContentProps) {
       .then((highlight) => {
         if (active) {
           highlightCodeBlocks(container, highlight);
+          applyAnnotations();
         }
       })
       .catch(() => {
         // 高亮失败时保留已经转义的纯文本代码，不影响 Markdown 正文渲染。
+        if (active) {
+          applyAnnotations();
+        }
       });
 
     return () => {
       active = false;
     };
-  }, [html]);
+  }, [html, applyAnnotations]);
 
   const handleCodeCopy = async (button: HTMLButtonElement) => {
     const code = button.closest('.md-code-block')?.querySelector('pre code')?.textContent;
@@ -226,6 +268,12 @@ export function MarkdownContent({ html, className }: MarkdownContentProps) {
       return;
     }
 
+    const annotationTrigger = target.closest<HTMLElement>('[data-annotation-id]');
+    if (annotationTrigger && event.currentTarget.contains(annotationTrigger)) {
+      onAnnotationActivate?.(annotationTrigger.dataset.annotationId ?? '', annotationTrigger);
+      return;
+    }
+
     const copyButton = target.closest<HTMLButtonElement>('[data-code-copy]');
     if (copyButton && event.currentTarget.contains(copyButton)) {
       void handleCodeCopy(copyButton);
@@ -255,11 +303,33 @@ export function MarkdownContent({ html, className }: MarkdownContentProps) {
     });
   };
 
+  const publishSelection = () => {
+    const container = containerRef.current;
+    const selection = window.getSelection();
+    onTextSelection?.(container && selection ? getMarkdownTextSelection(container, selection) : null);
+  };
+
+  const handleKeyUp = (event: KeyboardEvent<HTMLElement>) => {
+    const target = event.target;
+    if (
+      target instanceof HTMLElement &&
+      target.matches('.md-annotation-mark') &&
+      (event.key === 'Enter' || event.key === ' ')
+    ) {
+      event.preventDefault();
+      onAnnotationActivate?.(target.dataset.annotationId ?? '', target);
+      return;
+    }
+    publishSelection();
+  };
+
   return (
     <article
       ref={containerRef}
-      className={cn('md-surface', className)}
+      className={cn('md-surface', annotations.length > 0 || onTextSelection ? 'md-annotation-enabled' : '', className)}
       onClick={handleClick}
+      onMouseUp={publishSelection}
+      onKeyUp={handleKeyUp}
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );

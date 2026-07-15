@@ -107,7 +107,7 @@ Content-Type: application/json
 
 ## DELETE /api/notes/:id
 
-删除学习笔记。该操作不可恢复。
+删除学习笔记及其全部 Markdown 批注。该操作不可恢复。
 
 ### Path 参数
 
