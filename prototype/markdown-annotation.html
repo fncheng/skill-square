@@ -1,0 +1,2051 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Markdown 单人批注 UI 原型</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7fb;
+      --surface: #ffffff;
+      --surface-soft: #f8fafc;
+      --line: #e2e8f0;
+      --line-strong: #cbd5e1;
+      --text: #172033;
+      --muted: #64748b;
+      --muted-soft: #94a3b8;
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --primary-soft: #eef2ff;
+      --annotation: #b45309;
+      --annotation-soft: #fef3c7;
+      --danger: #dc2626;
+      --success: #15803d;
+      --shadow-sm: 0 5px 18px rgba(15, 23, 42, .06);
+      --shadow-lg: 0 20px 54px rgba(15, 23, 42, .18);
+      --radius: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      min-width: 320px;
+      background: var(--bg);
+    }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      color: var(--text);
+      background: var(--bg);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 14px;
+    }
+
+    button,
+    textarea,
+    select {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    button:focus-visible,
+    textarea:focus-visible,
+    select:focus-visible,
+    [tabindex]:focus-visible {
+      outline: 2px solid rgba(79, 70, 229, .42);
+      outline-offset: 2px;
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+
+    .icon {
+      width: 17px;
+      height: 17px;
+      display: block;
+      fill: none;
+      stroke: currentColor;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-width: 1.8;
+    }
+
+    .topbar {
+      position: fixed;
+      inset: 0 0 auto 0;
+      z-index: 50;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 22px;
+      background: rgba(255, 255, 255, .96);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(10px);
+    }
+
+    .brand,
+    .user,
+    .nav-item,
+    .button,
+    .icon-button,
+    .status,
+    .tag-list,
+    .page-actions,
+    .popover-actions,
+    .dialog-actions,
+    .segmented {
+      display: flex;
+      align-items: center;
+    }
+
+    .brand {
+      gap: 10px;
+      font-size: 15px;
+      font-weight: 850;
+    }
+
+    .brand-mark {
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      background: var(--primary);
+      border-radius: 7px;
+    }
+
+    .user {
+      gap: 9px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .avatar {
+      width: 30px;
+      height: 30px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      background: #334155;
+      border-radius: 50%;
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .sidebar {
+      position: fixed;
+      inset: 64px auto 0 0;
+      z-index: 30;
+      width: 208px;
+      padding: 20px 12px;
+      background: #fff;
+      border-right: 1px solid var(--line);
+    }
+
+    .nav-label {
+      margin: 0 10px 8px;
+      color: var(--muted-soft);
+      font-size: 10px;
+      font-weight: 850;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .nav-item {
+      gap: 10px;
+      min-height: 38px;
+      margin-bottom: 3px;
+      padding: 0 11px;
+      color: #475569;
+      border-radius: 6px;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 680;
+    }
+
+    .nav-item:hover {
+      color: var(--primary);
+      background: var(--primary-soft);
+    }
+
+    .nav-item.active {
+      color: var(--primary);
+      background: var(--primary-soft);
+      font-weight: 800;
+    }
+
+    .main {
+      max-width: 1500px;
+      min-height: 100vh;
+      margin-left: 208px;
+      padding: 88px 30px 56px;
+    }
+
+    .page-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 22px;
+      margin-bottom: 18px;
+    }
+
+    .page-head-main {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .page-title {
+      margin: 0;
+      font-size: 24px;
+      line-height: 34px;
+      font-weight: 900;
+      letter-spacing: -.02em;
+    }
+
+    .page-subtitle {
+      margin: 4px 0 0;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .page-actions {
+      flex: none;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .button,
+    .icon-button {
+      justify-content: center;
+      gap: 7px;
+      min-height: 36px;
+      padding: 0 12px;
+      color: #475569;
+      background: #fff;
+      border: 1px solid var(--line-strong);
+      border-radius: 7px;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, .03);
+      font-size: 13px;
+      font-weight: 750;
+    }
+
+    .button:hover,
+    .icon-button:hover {
+      color: var(--primary);
+      background: #fafaff;
+      border-color: #c7d2fe;
+    }
+
+    .button.primary {
+      color: #fff;
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .button.primary:hover {
+      color: #fff;
+      background: var(--primary-hover);
+    }
+
+    .button.danger {
+      color: #fff;
+      background: var(--danger);
+      border-color: var(--danger);
+    }
+
+    .button.ghost,
+    .icon-button.ghost {
+      background: transparent;
+      border-color: transparent;
+      box-shadow: none;
+    }
+
+    .button.small,
+    .icon-button.small {
+      min-height: 30px;
+      padding: 0 9px;
+      font-size: 12px;
+    }
+
+    .icon-button {
+      width: 34px;
+      padding: 0;
+    }
+
+    .icon-button.small {
+      width: 30px;
+      padding: 0;
+    }
+
+    .button:disabled {
+      cursor: not-allowed;
+      opacity: .48;
+    }
+
+    .annotation-total {
+      min-width: 20px;
+      height: 20px;
+      display: inline-grid;
+      place-items: center;
+      padding: 0 6px;
+      color: var(--primary);
+      background: var(--primary-soft);
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .workspace {
+      display: grid;
+      align-items: start;
+      grid-template-columns: minmax(0, 1fr) 286px;
+      gap: 18px;
+    }
+
+    .document-surface,
+    .detail-surface {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .document-toolbar {
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .status {
+      gap: 7px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      background: #22c55e;
+      border-radius: 50%;
+    }
+
+    .article-body {
+      max-width: 900px;
+      min-height: 640px;
+      padding: 27px 70px 48px 34px;
+      color: #334155;
+      font-size: 15px;
+      line-height: 1.82;
+    }
+
+    .article-body h2 {
+      margin: 28px 0 10px;
+      color: #172033;
+      font-size: 20px;
+      line-height: 1.45;
+    }
+
+    .article-body h2:first-child {
+      margin-top: 0;
+    }
+
+    .article-body p {
+      margin: 12px 0;
+    }
+
+    .annotatable {
+      position: relative;
+    }
+
+    .annotation-mark {
+      padding: 1px 0;
+      color: inherit;
+      background: linear-gradient(180deg, transparent 48%, rgba(251, 191, 36, .31) 48%);
+      border-bottom: 1px solid #f59e0b;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: background .16s, box-shadow .16s;
+    }
+
+    .annotation-mark:hover,
+    .annotation-mark.active {
+      background: var(--annotation-soft);
+      box-shadow: 0 0 0 2px rgba(245, 158, 11, .13);
+    }
+
+    .annotation-pin-stack {
+      position: absolute;
+      top: 6px;
+      right: -50px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .annotation-pin {
+      width: 31px;
+      height: 31px;
+      display: grid;
+      place-items: center;
+      padding: 0;
+      color: #92400e;
+      background: #fffbeb;
+      border: 1px solid #fcd34d;
+      border-radius: 50%;
+      box-shadow: 0 4px 12px rgba(146, 64, 14, .12);
+      transition: transform .16s, color .16s, background .16s;
+    }
+
+    .annotation-pin:hover {
+      transform: translateY(-1px);
+      background: var(--annotation-soft);
+    }
+
+    .annotation-pin.active {
+      color: #fff;
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .code-block {
+      position: relative;
+      margin: 15px 0;
+      overflow: auto;
+      padding: 15px 52px 15px 16px;
+      color: #334155;
+      background: #f8fafc;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      font: 13px/1.7 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      white-space: pre;
+    }
+
+    .code-copy {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 30px;
+      height: 30px;
+      display: grid;
+      place-items: center;
+      padding: 0;
+      color: var(--muted);
+      background: rgba(255, 255, 255, .94);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+    }
+
+    .code-block .annotation-pin-stack {
+      top: 8px;
+      right: 46px;
+      z-index: 2;
+    }
+
+    .note-callout {
+      margin: 16px 0;
+      padding: 12px 14px;
+      color: #475569;
+      background: #f8fafc;
+      border-left: 3px solid #94a3b8;
+      border-radius: 0 6px 6px 0;
+    }
+
+    .detail-surface {
+      position: sticky;
+      top: 82px;
+      padding: 18px;
+    }
+
+    .detail-heading {
+      margin: 0 0 16px;
+      font-size: 14px;
+      font-weight: 850;
+    }
+
+    .meta-grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    .meta-item {
+      display: grid;
+      gap: 6px;
+    }
+
+    .meta-label {
+      color: var(--muted-soft);
+      font-size: 11px;
+      font-weight: 850;
+    }
+
+    .meta-value {
+      color: #475569;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .tag-list {
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .tag {
+      padding: 3px 7px;
+      color: #475569;
+      background: #f1f5f9;
+      border-radius: 5px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .toc {
+      display: grid;
+      gap: 7px;
+    }
+
+    .toc a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 12px;
+    }
+
+    .toc a:hover {
+      color: var(--primary);
+    }
+
+    .selection-toolbar {
+      position: fixed;
+      z-index: 120;
+      display: none;
+      padding: 5px;
+      background: #172033;
+      border-radius: 7px;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .selection-toolbar.visible {
+      display: block;
+    }
+
+    .selection-action {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 32px;
+      padding: 0 10px;
+      color: #fff;
+      background: transparent;
+      border: 0;
+      border-radius: 5px;
+      font-size: 12px;
+      font-weight: 780;
+    }
+
+    .selection-action:hover {
+      background: rgba(255, 255, 255, .11);
+    }
+
+    .popover-scrim {
+      position: fixed;
+      inset: 0;
+      z-index: 88;
+      background: rgba(15, 23, 42, .22);
+    }
+
+    .annotation-popover {
+      position: fixed;
+      z-index: 100;
+      width: min(460px, calc(100vw - 28px));
+      max-height: min(620px, calc(100vh - 28px));
+      overflow: hidden;
+      background: #fff;
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .popover-head {
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 0 10px 0 15px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .popover-title-wrap {
+      min-width: 0;
+    }
+
+    .popover-title {
+      margin: 0;
+      font-size: 13px;
+      font-weight: 850;
+    }
+
+    .popover-time {
+      display: block;
+      margin-top: 2px;
+      color: var(--muted-soft);
+      font-size: 10px;
+    }
+
+    .popover-actions {
+      flex: none;
+      gap: 2px;
+    }
+
+    .popover-body {
+      max-height: min(470px, calc(100vh - 150px));
+      overflow: auto;
+      padding: 17px 18px;
+    }
+
+    .anchor-quote {
+      margin: 0 0 14px;
+      padding: 9px 11px;
+      color: #92400e;
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-radius: 6px;
+      font-size: 11px;
+      line-height: 1.55;
+    }
+
+    .anchor-quote strong {
+      display: block;
+      margin-bottom: 3px;
+      color: #a16207;
+      font-size: 10px;
+      letter-spacing: .03em;
+    }
+
+    .annotation-render {
+      color: #334155;
+      font-size: 13px;
+      line-height: 1.7;
+      overflow-wrap: anywhere;
+    }
+
+    .annotation-render > :first-child {
+      margin-top: 0;
+    }
+
+    .annotation-render > :last-child {
+      margin-bottom: 0;
+    }
+
+    .annotation-render h1,
+    .annotation-render h2,
+    .annotation-render h3,
+    .annotation-render h4 {
+      margin: 17px 0 7px;
+      color: #172033;
+      line-height: 1.4;
+    }
+
+    .annotation-render h1 { font-size: 18px; }
+    .annotation-render h2 { font-size: 16px; }
+    .annotation-render h3,
+    .annotation-render h4 { font-size: 14px; }
+
+    .annotation-render p {
+      margin: 8px 0;
+    }
+
+    .annotation-render ul,
+    .annotation-render ol {
+      margin: 8px 0;
+      padding-left: 20px;
+    }
+
+    .annotation-render li {
+      margin: 3px 0;
+    }
+
+    .annotation-render blockquote {
+      margin: 10px 0;
+      padding: 8px 11px;
+      color: #475569;
+      background: #f8fafc;
+      border-left: 3px solid #94a3b8;
+    }
+
+    .annotation-render code {
+      padding: 2px 5px;
+      color: #9f1239;
+      background: #f1f5f9;
+      border-radius: 4px;
+      font: 12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    .mini-code {
+      margin: 10px 0;
+      overflow: hidden;
+      background: #f8fafc;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+    }
+
+    .mini-code-head {
+      min-height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 7px 0 11px;
+      color: var(--muted);
+      background: #f1f5f9;
+      border-bottom: 1px solid var(--line);
+      font-size: 10px;
+      font-weight: 750;
+    }
+
+    .mini-code-copy {
+      width: 26px;
+      height: 26px;
+      display: grid;
+      place-items: center;
+      padding: 0;
+      color: var(--muted);
+      background: transparent;
+      border: 0;
+      border-radius: 5px;
+    }
+
+    .mini-code-copy:hover {
+      color: var(--primary);
+      background: #fff;
+    }
+
+    .mini-code pre {
+      margin: 0;
+      overflow: auto;
+      padding: 11px 13px;
+    }
+
+    .mini-code pre code {
+      padding: 0;
+      color: #334155;
+      background: transparent;
+      font-size: 12px;
+      line-height: 1.65;
+    }
+
+    .dialog-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 140;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      background: rgba(15, 23, 42, .46);
+    }
+
+    .dialog {
+      width: min(760px, 100%);
+      max-height: min(760px, calc(100vh - 36px));
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: #fff;
+      border: 1px solid rgba(255, 255, 255, .62);
+      border-radius: 8px;
+      box-shadow: 0 28px 70px rgba(15, 23, 42, .28);
+    }
+
+    .dialog-head {
+      min-height: 54px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 0 15px 0 18px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .dialog-title {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 880;
+    }
+
+    .dialog-content {
+      min-height: 260px;
+      overflow: auto;
+      padding: 18px;
+    }
+
+    .dialog-footer {
+      min-height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      padding: 10px 16px;
+      border-top: 1px solid var(--line);
+    }
+
+    .segmented {
+      width: max-content;
+      gap: 2px;
+      margin-bottom: 12px;
+      padding: 3px;
+      background: #f1f5f9;
+      border-radius: 7px;
+    }
+
+    .segment {
+      min-height: 30px;
+      padding: 0 13px;
+      color: var(--muted);
+      background: transparent;
+      border: 0;
+      border-radius: 5px;
+      font-size: 12px;
+      font-weight: 750;
+    }
+
+    .segment.active {
+      color: #334155;
+      background: #fff;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, .09);
+    }
+
+    .annotation-input {
+      width: 100%;
+      min-height: 310px;
+      resize: vertical;
+      padding: 13px 14px;
+      color: #334155;
+      background: #fff;
+      border: 1px solid var(--line-strong);
+      border-radius: 7px;
+      font: 13px/1.7 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    .editor-help {
+      margin: 7px 0 0;
+      color: var(--muted-soft);
+      font-size: 11px;
+    }
+
+    .dialog-preview {
+      min-height: 310px;
+      padding: 14px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+    }
+
+    .annotation-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .annotation-list-item {
+      width: 100%;
+      display: grid;
+      gap: 6px;
+      padding: 12px 13px;
+      color: inherit;
+      text-align: left;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+    }
+
+    .annotation-list-item:hover {
+      background: #fafaff;
+      border-color: #c7d2fe;
+    }
+
+    .annotation-list-quote {
+      color: #92400e;
+      font-size: 12px;
+      font-weight: 780;
+      line-height: 1.5;
+    }
+
+    .annotation-list-preview {
+      display: -webkit-box;
+      overflow: hidden;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+    }
+
+    .panel-state {
+      min-height: 280px;
+      display: grid;
+      place-items: center;
+      padding: 30px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .panel-state-inner {
+      max-width: 280px;
+    }
+
+    .state-icon {
+      width: 44px;
+      height: 44px;
+      display: grid;
+      place-items: center;
+      margin: 0 auto 12px;
+      color: var(--primary);
+      background: var(--primary-soft);
+      border-radius: 50%;
+    }
+
+    .state-icon .icon {
+      width: 20px;
+      height: 20px;
+    }
+
+    .panel-state strong {
+      display: block;
+      margin-bottom: 6px;
+      color: #334155;
+      font-size: 14px;
+    }
+
+    .panel-state p {
+      margin: 0;
+      font-size: 12px;
+      line-height: 1.65;
+    }
+
+    .skeleton-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .skeleton-card {
+      height: 82px;
+      background: linear-gradient(90deg, #f1f5f9 25%, #f8fafc 42%, #f1f5f9 60%);
+      background-size: 300% 100%;
+      border-radius: 7px;
+      animation: skeleton 1.25s infinite linear;
+    }
+
+    .prototype-switcher {
+      position: fixed;
+      bottom: 16px;
+      left: 224px;
+      z-index: 70;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 9px;
+      color: var(--muted);
+      background: rgba(255, 255, 255, .96);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow-sm);
+      font-size: 11px;
+      font-weight: 750;
+      backdrop-filter: blur(8px);
+    }
+
+    .prototype-switcher select {
+      height: 28px;
+      padding: 0 8px;
+      color: #334155;
+      background: #fff;
+      border: 1px solid var(--line-strong);
+      border-radius: 6px;
+      font-size: 12px;
+    }
+
+    .toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 180;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 13px;
+      color: #fff;
+      background: #172033;
+      border-radius: 7px;
+      box-shadow: var(--shadow-lg);
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(8px);
+      transition: opacity .18s, transform .18s;
+      font-size: 12px;
+      font-weight: 720;
+    }
+
+    .toast.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .marks-hidden .annotation-mark {
+      background: transparent;
+      border-bottom-color: transparent;
+      box-shadow: none;
+    }
+
+    .marks-hidden .annotation-pin-stack {
+      display: none;
+    }
+
+    .demo-empty .annotation-mark {
+      background: transparent;
+      border-bottom-color: transparent;
+      pointer-events: none;
+    }
+
+    .demo-empty .annotation-pin-stack {
+      display: none;
+    }
+
+    @keyframes skeleton {
+      from { background-position: 100% 0; }
+      to { background-position: 0 0; }
+    }
+
+    @media (max-width: 1120px) {
+      .main {
+        padding-right: 20px;
+        padding-left: 20px;
+      }
+
+      .workspace {
+        grid-template-columns: minmax(0, 1fr) 250px;
+      }
+
+      .page-actions .button-label {
+        display: none;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .sidebar {
+        display: none;
+      }
+
+      .main {
+        margin-left: 0;
+        padding: 82px 14px 48px;
+      }
+
+      .topbar {
+        padding: 0 16px;
+      }
+
+      .prototype-switcher {
+        left: 14px;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .workspace {
+        display: block;
+      }
+
+      .detail-surface {
+        position: static;
+        margin-top: 14px;
+      }
+
+      .article-body {
+        padding-right: 58px;
+        padding-left: 22px;
+      }
+
+      .annotation-pin-stack {
+        right: -43px;
+      }
+
+      .popover-scrim:not([hidden]) {
+        display: block;
+      }
+
+      .annotation-popover {
+        inset: auto 0 0 0 !important;
+        width: 100%;
+        max-height: 76vh;
+        border-right: 0;
+        border-bottom: 0;
+        border-left: 0;
+        border-radius: 12px 12px 0 0;
+      }
+
+      .popover-body {
+        max-height: calc(76vh - 48px);
+        padding-bottom: calc(20px + env(safe-area-inset-bottom));
+      }
+
+      .dialog-backdrop {
+        align-items: end;
+        padding: 0;
+      }
+
+      .dialog {
+        max-height: 90vh;
+        border-radius: 12px 12px 0 0;
+      }
+
+      .dialog-footer {
+        padding-bottom: calc(10px + env(safe-area-inset-bottom));
+      }
+
+      .annotation-input,
+      .dialog-preview {
+        min-height: 260px;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .brand span:last-child,
+      .user span:last-child {
+        display: none;
+      }
+
+      .page-head {
+        align-items: flex-start;
+      }
+
+      .page-title {
+        font-size: 21px;
+      }
+
+      .page-actions .mobile-hide {
+        display: none;
+      }
+
+      .document-toolbar {
+        padding: 0 10px 0 13px;
+      }
+
+      .dialog-content {
+        padding: 14px;
+      }
+
+      .popover-actions .hide-mobile {
+        display: none;
+      }
+
+      .prototype-switcher {
+        bottom: 10px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <svg width="0" height="0" aria-hidden="true" style="position:absolute">
+    <symbol id="i-note" viewBox="0 0 24 24"><path d="M5 3h10l4 4v14H5z"/><path d="M15 3v5h5M8 13h8M8 17h6"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10M9 20v-6h6v6"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 5.5A3.5 3.5 0 0 1 7.5 2H20v17H7.5A3.5 3.5 0 0 0 4 22z"/><path d="M4 5.5v13A3.5 3.5 0 0 1 7.5 15H20"/></symbol>
+    <symbol id="i-comment" viewBox="0 0 24 24"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/><path d="M8 9h8M8 13h5"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4z"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 15H6L5 6M10 11v6M14 11v6"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    <symbol id="i-eye-off" viewBox="0 0 24 24"><path d="m3 3 18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.9 4.2A10.8 10.8 0 0 1 12 4c5.5 0 9 6 9 6a15 15 0 0 1-2.1 2.8M6.6 6.6C4.2 8.2 3 10 3 10s3.5 6 9 6a9.6 9.6 0 0 0 3.4-.6"/></symbol>
+    <symbol id="i-expand" viewBox="0 0 24 24"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3 2 21h20z"/><path d="M12 9v5M12 18h.01"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+  </svg>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark"><svg class="icon"><use href="#i-note"></use></svg></span>
+      <span>Prompt Skill Manager</span>
+    </div>
+    <div class="user"><span class="avatar">管</span><span>管理员</span></div>
+  </header>
+
+  <aside class="sidebar">
+    <p class="nav-label">工作区</p>
+    <a class="nav-item" href="#"><svg class="icon"><use href="#i-home"></use></svg>概览</a>
+    <a class="nav-item" href="#"><svg class="icon"><use href="#i-search"></use></svg>Prompt</a>
+    <a class="nav-item active" href="#"><svg class="icon"><use href="#i-book"></use></svg>知识笔记</a>
+  </aside>
+
+  <main class="main">
+    <header class="page-head">
+      <div class="page-head-main">
+        <button class="icon-button" type="button" aria-label="返回笔记列表"><svg class="icon"><use href="#i-arrow-left"></use></svg></button>
+        <div>
+          <h1 class="page-title">UFW 防火墙使用指南</h1>
+          <p class="page-subtitle">Ubuntu 服务器常用防火墙配置、启用与故障处理说明。</p>
+        </div>
+      </div>
+      <div class="page-actions">
+        <button class="button mobile-hide" type="button"><svg class="icon"><use href="#i-copy"></use></svg><span class="button-label">复制 Markdown</span></button>
+        <button class="button mobile-hide" type="button"><svg class="icon"><use href="#i-edit"></use></svg><span class="button-label">编辑</span></button>
+        <button class="button" id="open-annotation-list" type="button"><svg class="icon"><use href="#i-comment"></use></svg><span>批注</span><span class="annotation-total" id="annotation-total">3</span></button>
+      </div>
+    </header>
+
+    <div class="workspace">
+      <section class="document-surface" aria-label="Markdown 正文">
+        <div class="document-toolbar">
+          <div class="status"><span class="status-dot"></span><span>原文与批注分别保存</span></div>
+          <button class="button ghost small" id="toggle-marks" type="button"><svg class="icon"><use href="#i-eye-off"></use></svg><span>隐藏标记</span></button>
+        </div>
+
+        <article class="article-body" id="article-body">
+          <h2 id="install">安装与启用</h2>
+          <div class="annotatable">
+            <p>Ubuntu 通常已经预装 UFW。如果系统中没有该命令，可以先执行以下安装操作。</p>
+          </div>
+          <div class="code-block"><button class="code-copy" type="button" aria-label="复制代码"><svg class="icon"><use href="#i-copy"></use></svg></button>sudo apt update
+sudo apt install ufw</div>
+
+          <div class="annotatable">
+            <p><mark class="annotation-mark" data-annotation-id="a1" role="button" tabindex="0">在远程服务器上启用 UFW 前，必须先放行 SSH 端口，否则当前连接可能被中断。</mark></p>
+            <div class="annotation-pin-stack">
+              <button class="annotation-pin" type="button" data-annotation-id="a1" aria-label="查看 SSH 端口批注"><svg class="icon"><use href="#i-comment"></use></svg></button>
+            </div>
+          </div>
+          <div class="code-block"><button class="code-copy" type="button" aria-label="复制代码"><svg class="icon"><use href="#i-copy"></use></svg></button>sudo ufw allow OpenSSH</div>
+
+          <h2 id="policy">设置默认策略</h2>
+          <div class="annotatable">
+            <p>建议默认拒绝所有入站连接，同时允许服务器主动发起的出站连接。</p>
+          </div>
+          <div class="code-block"><button class="code-copy" type="button" aria-label="复制代码"><svg class="icon"><use href="#i-copy"></use></svg></button>sudo ufw default deny incoming
+sudo ufw default allow outgoing</div>
+
+          <h2 id="enable">启用防火墙</h2>
+          <div class="annotatable">
+            <p>规则确认无误后，执行 <mark class="annotation-mark active" data-annotation-id="a2" role="button" tabindex="0">sudo ufw enable</mark> 启用防火墙。正常情况下会提示防火墙已启用并将在系统启动时自动加载。</p>
+            <div class="annotation-pin-stack">
+              <button class="annotation-pin active" type="button" data-annotation-id="a2" aria-label="查看启用防火墙批注"><svg class="icon"><use href="#i-comment"></use></svg></button>
+            </div>
+          </div>
+          <div class="code-block"><button class="code-copy" type="button" aria-label="复制代码"><svg class="icon"><use href="#i-copy"></use></svg></button>sudo ufw enable</div>
+          <div class="note-callout">启用后建议保留当前 SSH 会话，再新开一个终端验证远程连接，确认无误后再关闭原会话。</div>
+
+          <h2 id="status">查看状态与规则</h2>
+          <div class="annotatable">
+            <p>使用以下命令查看当前状态、默认策略以及已经生效的规则编号。</p>
+          </div>
+          <div class="code-block"><button class="code-copy" type="button" aria-label="复制代码"><svg class="icon"><use href="#i-copy"></use></svg></button>sudo ufw status numbered</div>
+
+          <div class="annotatable">
+            <p>如果输出中显示 <mark class="annotation-mark" data-annotation-id="a3" role="button" tabindex="0">Status: inactive</mark>，说明规则尚未正式启用；如果服务状态异常，还需要同时检查 systemd 服务和内核模块。</p>
+            <div class="annotation-pin-stack">
+              <button class="annotation-pin" type="button" data-annotation-id="a3" aria-label="查看 inactive 状态批注"><svg class="icon"><use href="#i-comment"></use></svg></button>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <aside class="detail-surface" aria-label="文档信息">
+        <h2 class="detail-heading">文档信息</h2>
+        <div class="meta-grid">
+          <div class="meta-item"><span class="meta-label">分类</span><span class="meta-value">Linux 运维</span></div>
+          <div class="meta-item"><span class="meta-label">标签</span><div class="tag-list"><span class="tag">Ubuntu</span><span class="tag">UFW</span><span class="tag">服务器</span></div></div>
+          <div class="meta-item"><span class="meta-label">创建时间</span><span class="meta-value">2026-07-10 10:32</span></div>
+          <div class="meta-item"><span class="meta-label">更新时间</span><span class="meta-value">2026-07-14 18:20</span></div>
+          <div class="meta-item">
+            <span class="meta-label">目录</span>
+            <nav class="toc">
+              <a href="#install">安装与启用</a>
+              <a href="#policy">设置默认策略</a>
+              <a href="#enable">启用防火墙</a>
+              <a href="#status">查看状态与规则</a>
+            </nav>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <div class="selection-toolbar" id="selection-toolbar" role="toolbar" aria-label="文本操作">
+    <button class="selection-action" id="create-annotation" type="button"><svg class="icon"><use href="#i-comment"></use></svg>添加批注</button>
+  </div>
+
+  <div class="popover-scrim" id="popover-scrim" hidden></div>
+  <aside class="annotation-popover" id="annotation-popover" role="dialog" aria-modal="false" aria-labelledby="popover-title" hidden>
+    <header class="popover-head">
+      <div class="popover-title-wrap">
+        <h2 class="popover-title" id="popover-title">批注</h2>
+        <time class="popover-time" id="popover-time"></time>
+      </div>
+      <div class="popover-actions">
+        <button class="icon-button ghost small" id="popover-edit" type="button" aria-label="编辑批注" title="编辑批注"><svg class="icon"><use href="#i-edit"></use></svg></button>
+        <button class="icon-button ghost small hide-mobile" id="popover-expand" type="button" aria-label="展开批注" title="展开查看"><svg class="icon"><use href="#i-expand"></use></svg></button>
+        <button class="icon-button ghost small" id="popover-delete" type="button" aria-label="删除批注" title="删除批注"><svg class="icon"><use href="#i-trash"></use></svg></button>
+        <button class="icon-button ghost small" id="popover-close" type="button" aria-label="关闭批注"><svg class="icon"><use href="#i-x"></use></svg></button>
+      </div>
+    </header>
+    <div class="popover-body" id="popover-body"></div>
+  </aside>
+
+  <div class="dialog-backdrop" id="dialog-backdrop" hidden>
+    <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+      <header class="dialog-head">
+        <h2 class="dialog-title" id="dialog-title">批注</h2>
+        <button class="icon-button ghost small" id="dialog-close" type="button" aria-label="关闭弹窗"><svg class="icon"><use href="#i-x"></use></svg></button>
+      </header>
+      <div class="dialog-content" id="dialog-content"></div>
+      <footer class="dialog-footer" id="dialog-footer"></footer>
+    </section>
+  </div>
+
+  <label class="prototype-switcher">
+    原型状态
+    <select id="prototype-state" aria-label="切换原型状态">
+      <option value="normal">正常</option>
+      <option value="empty">暂无批注</option>
+      <option value="loading">加载中</option>
+      <option value="error">加载失败</option>
+    </select>
+  </label>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"><svg class="icon"><use href="#i-check"></use></svg><span id="toast-text">操作成功</span></div>
+
+  <script>
+    const annotations = {
+      a1: {
+        quote: "在远程服务器上启用 UFW 前，必须先放行 SSH 端口，否则当前连接可能被中断。",
+        updatedAt: "今天 09:42",
+        content: [
+          "### 自定义 SSH 端口",
+          "",
+          "如果 SSH 使用的不是默认端口，需要先放行真实端口，例如：",
+          "",
+          "```bash",
+          "sudo ufw allow 2222/tcp",
+          "```",
+          "",
+          "> 保留当前 SSH 会话，确认新连接成功后再关闭原会话。"
+        ].join("\n")
+      },
+      a2: {
+        quote: "sudo ufw enable",
+        updatedAt: "今天 10:18",
+        content: [
+          "### 云服务器启用后仍无法访问",
+          "",
+          "UFW 与云厂商的**安全组**是两层独立规则。启用后外网仍然无法访问时，依次检查：",
+          "",
+          "1. 安全组是否放行目标端口",
+          "2. UFW 规则是否使用了正确协议",
+          "3. 服务是否监听在 `0.0.0.0`",
+          "",
+          "```bash",
+          "sudo ufw status numbered",
+          "sudo ss -lntp",
+          "```",
+          "",
+          "> 如果命令一直无响应，再执行 `systemctl status ufw` 检查服务状态。"
+        ].join("\n")
+      },
+      a3: {
+        quote: "Status: inactive",
+        updatedAt: "7 月 12 日",
+        content: [
+          "### WSL 环境说明",
+          "",
+          "WSL 中即使命令可用，也可能因为内核网络能力不同，无法获得与 Ubuntu Server 完全一致的效果。",
+          "",
+          "- 优先在真实 Linux 虚拟机中验证规则",
+          "- 同时检查 Windows Defender Firewall",
+          "- 不要直接把生产服务器结果类推到 WSL"
+        ].join("\n")
+      }
+    };
+
+    const article = document.getElementById("article-body");
+    const popover = document.getElementById("annotation-popover");
+    const popoverBody = document.getElementById("popover-body");
+    const popoverTime = document.getElementById("popover-time");
+    const popoverScrim = document.getElementById("popover-scrim");
+    const dialogBackdrop = document.getElementById("dialog-backdrop");
+    const dialogTitle = document.getElementById("dialog-title");
+    const dialogContent = document.getElementById("dialog-content");
+    const dialogFooter = document.getElementById("dialog-footer");
+    const annotationTotal = document.getElementById("annotation-total");
+    const prototypeState = document.getElementById("prototype-state");
+    const selectionToolbar = document.getElementById("selection-toolbar");
+    const toast = document.getElementById("toast");
+    const toastText = document.getElementById("toast-text");
+
+    let activeAnnotationId = "";
+    let activeTrigger = null;
+    let selectedRange = null;
+    let selectedText = "";
+    let editorAnnotationId = "";
+    let dialogMode = "";
+    let toastTimer = null;
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>'"]/g, function (character) {
+        return {
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          "'": "&#39;",
+          '"': "&quot;"
+        }[character];
+      });
+    }
+
+    function renderInline(value) {
+      const codeTokens = [];
+      let html = escapeHtml(value).replace(/`([^`]+)`/g, function (_, code) {
+        const token = "%%CODE" + codeTokens.length + "%%";
+        codeTokens.push("<code>" + code + "</code>");
+        return token;
+      });
+      html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+      codeTokens.forEach(function (code, index) {
+        html = html.replace("%%CODE" + index + "%%", code);
+      });
+      return html;
+    }
+
+    function renderMarkdown(source) {
+      const lines = String(source || "").replace(/\r\n/g, "\n").split("\n");
+      const output = [];
+      let paragraph = [];
+      let listItems = [];
+      let listType = "";
+      let inFence = false;
+      let fenceLanguage = "";
+      let fenceLines = [];
+
+      function flushParagraph() {
+        if (!paragraph.length) return;
+        output.push("<p>" + renderInline(paragraph.join(" ")) + "</p>");
+        paragraph = [];
+      }
+
+      function flushList() {
+        if (!listItems.length) return;
+        output.push("<" + listType + ">" + listItems.map(function (item) {
+          return "<li>" + renderInline(item) + "</li>";
+        }).join("") + "</" + listType + ">");
+        listItems = [];
+        listType = "";
+      }
+
+      function flushFence() {
+        const language = escapeHtml(fenceLanguage || "text");
+        const code = escapeHtml(fenceLines.join("\n"));
+        output.push(
+          '<div class="mini-code">' +
+            '<div class="mini-code-head"><span>' + language + '</span>' +
+            '<button class="mini-code-copy" type="button" data-copy-code aria-label="复制批注代码"><svg class="icon"><use href="#i-copy"></use></svg></button></div>' +
+            "<pre><code>" + code + "</code></pre>" +
+          "</div>"
+        );
+        fenceLanguage = "";
+        fenceLines = [];
+      }
+
+      lines.forEach(function (line) {
+        const fence = line.match(/^```(.*)$/);
+        if (fence) {
+          if (inFence) {
+            flushFence();
+            inFence = false;
+          } else {
+            flushParagraph();
+            flushList();
+            fenceLanguage = fence[1].trim();
+            inFence = true;
+          }
+          return;
+        }
+
+        if (inFence) {
+          fenceLines.push(line);
+          return;
+        }
+
+        if (!line.trim()) {
+          flushParagraph();
+          flushList();
+          return;
+        }
+
+        const heading = line.match(/^(#{1,4})\s+(.+)$/);
+        if (heading) {
+          flushParagraph();
+          flushList();
+          const level = heading[1].length;
+          output.push("<h" + level + ">" + renderInline(heading[2]) + "</h" + level + ">");
+          return;
+        }
+
+        const quote = line.match(/^>\s?(.*)$/);
+        if (quote) {
+          flushParagraph();
+          flushList();
+          output.push("<blockquote>" + renderInline(quote[1]) + "</blockquote>");
+          return;
+        }
+
+        const unordered = line.match(/^\s*[-*]\s+(.+)$/);
+        if (unordered) {
+          flushParagraph();
+          if (listType && listType !== "ul") flushList();
+          listType = "ul";
+          listItems.push(unordered[1]);
+          return;
+        }
+
+        const ordered = line.match(/^\s*\d+\.\s+(.+)$/);
+        if (ordered) {
+          flushParagraph();
+          if (listType && listType !== "ol") flushList();
+          listType = "ol";
+          listItems.push(ordered[1]);
+          return;
+        }
+
+        flushList();
+        paragraph.push(line.trim());
+      });
+
+      if (inFence) flushFence();
+      flushParagraph();
+      flushList();
+      return output.join("");
+    }
+
+    function plainPreview(source) {
+      return String(source || "")
+        .replace(/^```.*$/gm, "")
+        .replace(/^#{1,4}\s+/gm, "")
+        .replace(/^>\s?/gm, "")
+        .replace(/^\s*[-*]\s+/gm, "")
+        .replace(/^\s*\d+\.\s+/gm, "")
+        .replace(/[`*]/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function showToast(message) {
+      toastText.textContent = message;
+      toast.classList.add("visible");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(function () {
+        toast.classList.remove("visible");
+      }, 1800);
+    }
+
+    function setActiveMarker(id) {
+      document.querySelectorAll("[data-annotation-id]").forEach(function (element) {
+        const active = element.dataset.annotationId === id;
+        element.classList.toggle("active", active);
+        element.setAttribute("aria-expanded", String(active));
+      });
+    }
+
+    function closePopover() {
+      popover.hidden = true;
+      popoverScrim.hidden = true;
+      setActiveMarker("");
+      activeAnnotationId = "";
+      activeTrigger = null;
+    }
+
+    function positionPopover(trigger) {
+      if (window.matchMedia("(max-width: 760px)").matches) {
+        popover.style.left = "";
+        popover.style.top = "";
+        return;
+      }
+
+      const rect = trigger.getBoundingClientRect();
+      const width = popover.offsetWidth;
+      const height = popover.offsetHeight;
+      const gap = 12;
+      let left = rect.right + gap;
+      if (left + width > window.innerWidth - 14) {
+        left = rect.left - width - gap;
+      }
+      left = Math.max(14, Math.min(left, window.innerWidth - width - 14));
+      const top = Math.max(14, Math.min(rect.top - 20, window.innerHeight - height - 14));
+      popover.style.left = left + "px";
+      popover.style.top = top + "px";
+    }
+
+    function popoverStateMarkup(state) {
+      if (state === "loading") {
+        return '<div class="skeleton-list" aria-label="批注加载中"><div class="skeleton-card"></div><div class="skeleton-card"></div></div>';
+      }
+      return (
+        '<div class="panel-state"><div class="panel-state-inner">' +
+          '<span class="state-icon"><svg class="icon"><use href="#i-alert"></use></svg></span>' +
+          "<strong>暂时无法加载批注</strong>" +
+          "<p>正文仍可正常阅读，可以稍后重试。</p>" +
+          '<div style="margin-top:12px"><button class="button small" type="button" data-action="retry">重新加载</button></div>' +
+        "</div></div>"
+      );
+    }
+
+    function openAnnotation(id, trigger) {
+      const annotation = annotations[id];
+      if (!annotation) return;
+      activeAnnotationId = id;
+      activeTrigger = trigger;
+      setActiveMarker(id);
+      popover.hidden = false;
+      popoverScrim.hidden = !window.matchMedia("(max-width: 760px)").matches;
+
+      if (prototypeState.value === "loading" || prototypeState.value === "error") {
+        popoverTime.textContent = "";
+        popoverBody.innerHTML = popoverStateMarkup(prototypeState.value);
+      } else {
+        popoverTime.textContent = "更新于 " + annotation.updatedAt;
+        popoverBody.innerHTML =
+          '<div class="anchor-quote"><strong>关联原文</strong>“' + escapeHtml(annotation.quote) + "”</div>" +
+          '<div class="annotation-render">' + renderMarkdown(annotation.content) + "</div>";
+      }
+
+      document.getElementById("popover-edit").hidden = prototypeState.value !== "normal";
+      document.getElementById("popover-expand").hidden = prototypeState.value !== "normal";
+      document.getElementById("popover-delete").hidden = prototypeState.value !== "normal";
+      requestAnimationFrame(function () {
+        positionPopover(trigger);
+      });
+    }
+
+    function openDialog(title, mode) {
+      dialogMode = mode;
+      dialogTitle.textContent = title;
+      dialogBackdrop.hidden = false;
+      document.body.style.overflow = "hidden";
+    }
+
+    function closeDialog() {
+      dialogBackdrop.hidden = true;
+      dialogContent.innerHTML = "";
+      dialogFooter.innerHTML = "";
+      dialogMode = "";
+      document.body.style.overflow = "";
+    }
+
+    function renderDialogState(state) {
+      openDialog(state === "loading" ? "正在加载批注" : "批注加载失败", state);
+      if (state === "loading") {
+        dialogContent.innerHTML = '<div class="skeleton-list" aria-label="批注加载中"><div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div></div>';
+        dialogFooter.innerHTML = '<button class="button" type="button" data-action="dialog-close">关闭</button>';
+      } else {
+        dialogContent.innerHTML =
+          '<div class="panel-state"><div class="panel-state-inner">' +
+            '<span class="state-icon"><svg class="icon"><use href="#i-alert"></use></svg></span>' +
+            "<strong>暂时无法加载批注</strong><p>Markdown 正文仍可正常阅读，请稍后重新加载。</p>" +
+          "</div></div>";
+        dialogFooter.innerHTML =
+          '<button class="button" type="button" data-action="dialog-close">关闭</button>' +
+          '<button class="button primary" type="button" data-action="retry-list">重新加载</button>';
+      }
+    }
+
+    function openAnnotationList() {
+      const state = prototypeState.value;
+      if (state === "loading" || state === "error") {
+        renderDialogState(state);
+        return;
+      }
+
+      openDialog("全部批注", "list");
+      if (state === "empty") {
+        dialogContent.innerHTML =
+          '<div class="panel-state"><div class="panel-state-inner">' +
+            '<span class="state-icon"><svg class="icon"><use href="#i-comment"></use></svg></span>' +
+            "<strong>这篇文档还没有批注</strong><p>关闭弹窗后选择正文内容，即可添加一篇 Markdown 补充。</p>" +
+          "</div></div>";
+      } else {
+        dialogContent.innerHTML = '<div class="annotation-list">' +
+          Object.keys(annotations).map(function (id) {
+            const annotation = annotations[id];
+            return (
+              '<button class="annotation-list-item" type="button" data-open-reader="' + id + '">' +
+                '<span class="annotation-list-quote">“' + escapeHtml(annotation.quote) + "”</span>" +
+                '<span class="annotation-list-preview">' + escapeHtml(plainPreview(annotation.content)) + "</span>" +
+              "</button>"
+            );
+          }).join("") +
+        "</div>";
+      }
+      dialogFooter.innerHTML = '<button class="button" type="button" data-action="dialog-close">关闭</button>';
+    }
+
+    function openReader(id) {
+      const annotation = annotations[id];
+      if (!annotation) return;
+      editorAnnotationId = id;
+      openDialog("批注详情", "reader");
+      dialogContent.innerHTML =
+        '<div class="anchor-quote"><strong>关联原文</strong>“' + escapeHtml(annotation.quote) + "”</div>" +
+        '<div class="annotation-render dialog-preview">' + renderMarkdown(annotation.content) + "</div>";
+      dialogFooter.innerHTML =
+        '<button class="button" type="button" data-action="dialog-close">关闭</button>' +
+        '<button class="button primary" type="button" data-action="reader-edit"><svg class="icon"><use href="#i-edit"></use></svg>编辑</button>';
+    }
+
+    function openEditor(id, quote) {
+      const annotation = id ? annotations[id] : null;
+      editorAnnotationId = id || "";
+      openDialog(annotation ? "编辑批注" : "新增批注", "editor");
+      const initialContent = annotation ? annotation.content : [
+        "### 补充说明",
+        "",
+        ""
+      ].join("\n");
+      const anchor = annotation ? annotation.quote : quote;
+
+      dialogContent.innerHTML =
+        '<div class="anchor-quote"><strong>关联原文</strong>“' + escapeHtml(anchor) + "”</div>" +
+        '<div class="segmented" role="tablist">' +
+          '<button class="segment active" type="button" data-editor-tab="edit" role="tab" aria-selected="true">编辑</button>' +
+          '<button class="segment" type="button" data-editor-tab="preview" role="tab" aria-selected="false">预览</button>' +
+        "</div>" +
+        '<div id="editor-pane"><textarea class="annotation-input" id="annotation-input" aria-label="批注 Markdown 内容">' + escapeHtml(initialContent) + "</textarea>" +
+          '<p class="editor-help">支持标题、列表、引用、行内代码和代码块等 Markdown 语法。</p></div>' +
+        '<div class="annotation-render dialog-preview" id="preview-pane" hidden></div>';
+
+      dialogFooter.innerHTML =
+        '<button class="button" type="button" data-action="dialog-close">取消</button>' +
+        '<button class="button primary" id="save-annotation" type="button" data-action="save-annotation">保存批注</button>';
+
+      requestAnimationFrame(function () {
+        const input = document.getElementById("annotation-input");
+        input.focus();
+        input.setSelectionRange(input.value.length, input.value.length);
+      });
+    }
+
+    function openDeleteConfirm(id) {
+      const annotation = annotations[id];
+      if (!annotation) return;
+      editorAnnotationId = id;
+      openDialog("删除批注", "delete");
+      dialogContent.innerHTML =
+        '<div class="panel-state"><div class="panel-state-inner">' +
+          '<span class="state-icon" style="color:#dc2626;background:#fef2f2"><svg class="icon"><use href="#i-trash"></use></svg></span>' +
+          "<strong>确认删除这条批注？</strong>" +
+          '<p>关联原文“' + escapeHtml(annotation.quote) + "”不会被修改，删除后批注内容无法恢复。</p>" +
+        "</div></div>";
+      dialogFooter.innerHTML =
+        '<button class="button" type="button" data-action="dialog-close">取消</button>' +
+        '<button class="button danger" type="button" data-action="confirm-delete">删除</button>';
+    }
+
+    function addMarkerToBlock(block, id) {
+      let stack = block.querySelector(".annotation-pin-stack");
+      if (!stack) {
+        stack = document.createElement("div");
+        stack.className = "annotation-pin-stack";
+        block.appendChild(stack);
+      }
+      const button = document.createElement("button");
+      button.className = "annotation-pin";
+      button.type = "button";
+      button.dataset.annotationId = id;
+      button.setAttribute("aria-label", "查看批注");
+      button.innerHTML = '<svg class="icon"><use href="#i-comment"></use></svg>';
+      stack.appendChild(button);
+    }
+
+    function saveAnnotation() {
+      const input = document.getElementById("annotation-input");
+      const content = input ? input.value.trim() : "";
+      if (!content) {
+        input.focus();
+        showToast("请填写批注内容");
+        return;
+      }
+
+      if (editorAnnotationId) {
+        annotations[editorAnnotationId].content = content;
+        annotations[editorAnnotationId].updatedAt = "刚刚";
+        const id = editorAnnotationId;
+        closeDialog();
+        showToast("批注已更新");
+        const trigger = activeTrigger || document.querySelector('[data-annotation-id="' + id + '"]');
+        if (trigger) openAnnotation(id, trigger);
+        return;
+      }
+
+      const id = "a" + (Date.now());
+      annotations[id] = {
+        quote: selectedText,
+        updatedAt: "刚刚",
+        content: content
+      };
+
+      if (selectedRange && !selectedRange.collapsed) {
+        try {
+          const mark = document.createElement("mark");
+          mark.className = "annotation-mark";
+          mark.dataset.annotationId = id;
+          mark.tabIndex = 0;
+          mark.setAttribute("role", "button");
+          const fragment = selectedRange.extractContents();
+          mark.appendChild(fragment);
+          selectedRange.insertNode(mark);
+          const block = mark.closest(".annotatable, .code-block");
+          if (block) addMarkerToBlock(block, id);
+        } catch (error) {
+          console.warn("Prototype selection wrapping failed", error);
+        }
+      }
+
+      prototypeState.value = "normal";
+      document.body.classList.remove("demo-empty");
+      annotationTotal.textContent = Object.keys(annotations).length;
+      window.getSelection().removeAllRanges();
+      selectedRange = null;
+      selectedText = "";
+      closeDialog();
+      showToast("批注已保存，Markdown 原文未修改");
+      const trigger = document.querySelector('[data-annotation-id="' + id + '"]');
+      if (trigger) openAnnotation(id, trigger);
+    }
+
+    function deleteAnnotation(id) {
+      const annotation = annotations[id];
+      if (!annotation) return;
+      document.querySelectorAll('[data-annotation-id="' + id + '"]').forEach(function (element) {
+        if (element.matches(".annotation-mark")) {
+          element.replaceWith(document.createTextNode(element.textContent || ""));
+        } else if (element.matches(".annotation-pin")) {
+          const stack = element.parentElement;
+          element.remove();
+          if (stack && !stack.children.length) stack.remove();
+        }
+      });
+      delete annotations[id];
+      annotationTotal.textContent = Object.keys(annotations).length;
+      closeDialog();
+      closePopover();
+      showToast("批注已删除，原文保持不变");
+    }
+
+    function showSelectionToolbar() {
+      if (prototypeState.value === "loading" || prototypeState.value === "error") {
+        selectionToolbar.classList.remove("visible");
+        return;
+      }
+
+      const selection = window.getSelection();
+      if (!selection || selection.isCollapsed || !selection.rangeCount) {
+        selectionToolbar.classList.remove("visible");
+        return;
+      }
+
+      const range = selection.getRangeAt(0);
+      if (!article.contains(range.commonAncestorContainer)) {
+        selectionToolbar.classList.remove("visible");
+        return;
+      }
+
+      const startElement = range.startContainer.nodeType === Node.ELEMENT_NODE ? range.startContainer : range.startContainer.parentElement;
+      const endElement = range.endContainer.nodeType === Node.ELEMENT_NODE ? range.endContainer : range.endContainer.parentElement;
+      const startBlock = startElement ? startElement.closest(".annotatable, .code-block") : null;
+      const endBlock = endElement ? endElement.closest(".annotatable, .code-block") : null;
+      const text = selection.toString().trim();
+
+      if (!startBlock || startBlock !== endBlock || !text || text.length > 500) {
+        selectionToolbar.classList.remove("visible");
+        return;
+      }
+
+      selectedRange = range.cloneRange();
+      selectedText = text;
+      const rect = range.getBoundingClientRect();
+      selectionToolbar.style.left = Math.max(76, Math.min(window.innerWidth - 76, rect.left + rect.width / 2)) + "px";
+      selectionToolbar.style.top = Math.max(12, rect.top - 47) + "px";
+      selectionToolbar.style.transform = "translateX(-50%)";
+      selectionToolbar.classList.add("visible");
+    }
+
+    document.addEventListener("click", function (event) {
+      const target = event.target;
+      const trigger = target.closest("[data-annotation-id]");
+      if (trigger) {
+        event.preventDefault();
+        openAnnotation(trigger.dataset.annotationId, trigger);
+        return;
+      }
+
+      const readerTrigger = target.closest("[data-open-reader]");
+      if (readerTrigger) {
+        openReader(readerTrigger.dataset.openReader);
+        return;
+      }
+
+      const copyButton = target.closest("[data-copy-code]");
+      if (copyButton) {
+        const code = copyButton.closest(".mini-code").querySelector("code").textContent;
+        navigator.clipboard && navigator.clipboard.writeText(code);
+        showToast("代码已复制");
+        return;
+      }
+
+      const tab = target.closest("[data-editor-tab]");
+      if (tab) {
+        const editPane = document.getElementById("editor-pane");
+        const previewPane = document.getElementById("preview-pane");
+        const input = document.getElementById("annotation-input");
+        const preview = tab.dataset.editorTab === "preview";
+        document.querySelectorAll("[data-editor-tab]").forEach(function (button) {
+          const active = button === tab;
+          button.classList.toggle("active", active);
+          button.setAttribute("aria-selected", String(active));
+        });
+        editPane.hidden = preview;
+        previewPane.hidden = !preview;
+        if (preview) previewPane.innerHTML = renderMarkdown(input.value);
+        else input.focus();
+        return;
+      }
+
+      const actionButton = target.closest("[data-action]");
+      const action = actionButton ? actionButton.dataset.action : "";
+      if (action === "dialog-close") closeDialog();
+      if (action === "save-annotation") saveAnnotation();
+      if (action === "reader-edit") openEditor(editorAnnotationId, "");
+      if (action === "confirm-delete") deleteAnnotation(editorAnnotationId);
+      if (action === "retry" || action === "retry-list") {
+        prototypeState.value = "normal";
+        document.body.classList.remove("demo-empty");
+        annotationTotal.textContent = Object.keys(annotations).length;
+        closePopover();
+        closeDialog();
+        if (action === "retry-list") openAnnotationList();
+        showToast("批注已重新加载");
+      }
+
+      if (!target.closest("#annotation-popover") && !target.closest("#selection-toolbar") && popover.hidden === false) {
+        closePopover();
+      }
+    });
+
+    article.addEventListener("mouseup", function () {
+      setTimeout(showSelectionToolbar, 0);
+    });
+
+    article.addEventListener("keyup", function (event) {
+      if ((event.key === "Enter" || event.key === " ") && event.target.matches(".annotation-mark")) {
+        event.preventDefault();
+        openAnnotation(event.target.dataset.annotationId, event.target);
+      } else {
+        showSelectionToolbar();
+      }
+    });
+
+    document.getElementById("create-annotation").addEventListener("click", function () {
+      selectionToolbar.classList.remove("visible");
+      if (selectedText) openEditor("", selectedText);
+    });
+
+    document.getElementById("open-annotation-list").addEventListener("click", openAnnotationList);
+    document.getElementById("popover-close").addEventListener("click", closePopover);
+    document.getElementById("popover-edit").addEventListener("click", function () {
+      const id = activeAnnotationId;
+      closePopover();
+      openEditor(id, "");
+    });
+    document.getElementById("popover-expand").addEventListener("click", function () {
+      const id = activeAnnotationId;
+      closePopover();
+      openReader(id);
+    });
+    document.getElementById("popover-delete").addEventListener("click", function () {
+      const id = activeAnnotationId;
+      closePopover();
+      openDeleteConfirm(id);
+    });
+    popoverScrim.addEventListener("click", closePopover);
+    document.getElementById("dialog-close").addEventListener("click", closeDialog);
+    dialogBackdrop.addEventListener("mousedown", function (event) {
+      if (event.target === dialogBackdrop) closeDialog();
+    });
+
+    document.getElementById("toggle-marks").addEventListener("click", function (event) {
+      document.body.classList.toggle("marks-hidden");
+      const hidden = document.body.classList.contains("marks-hidden");
+      event.currentTarget.querySelector("span").textContent = hidden ? "显示标记" : "隐藏标记";
+      if (hidden) closePopover();
+    });
+
+    prototypeState.addEventListener("change", function () {
+      closePopover();
+      closeDialog();
+      const empty = prototypeState.value === "empty";
+      document.body.classList.toggle("demo-empty", empty);
+      annotationTotal.textContent = empty ? "0" : Object.keys(annotations).length;
+      if (prototypeState.value !== "normal") openAnnotationList();
+    });
+
+    document.querySelectorAll(".code-copy").forEach(function (button) {
+      button.addEventListener("click", function () {
+        showToast("命令已复制");
+      });
+    });
+
+    document.addEventListener("mousedown", function (event) {
+      if (!event.target.closest("#selection-toolbar") && !event.target.closest("#article-body")) {
+        selectionToolbar.classList.remove("visible");
+      }
+    });
+
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape") {
+        selectionToolbar.classList.remove("visible");
+        if (!dialogBackdrop.hidden) closeDialog();
+        else closePopover();
+      }
+    });
+
+    window.addEventListener("resize", function () {
+      if (!popover.hidden && activeTrigger) {
+        popoverScrim.hidden = !window.matchMedia("(max-width: 760px)").matches;
+        positionPopover(activeTrigger);
+      }
+    });
+
+    if (!window.matchMedia("(max-width: 760px)").matches) {
+      openAnnotation("a2", document.querySelector('[data-annotation-id="a2"].annotation-pin'));
+    }
+  </script>
+</body>
+</html>
