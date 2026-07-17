@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Copy, MessageSquareText, Pencil, Trash2 } from 'lucide-react';
+import { Copy, Download, MessageSquareText, Pencil, Trash2 } from 'lucide-react';
 import { PageHead } from '@/components/layout/PageHead';
 import {
   MarkdownAnnotationSurface,
@@ -11,7 +11,8 @@ import { Button } from '@/components/ui/button';
 import { useConfirm } from '@/hooks/use-confirm';
 import { useToast } from '@/hooks/use-toast';
 import { useMarkdown } from '@/hooks/use-markdown';
-import { deleteSolution, getSolution } from '@/api/solutions';
+import { useContentExport } from '@/hooks/use-content-transfer';
+import { deleteSolution, exportSolution, getSolution } from '@/api/solutions';
 import type { Solution } from '@/types/domain';
 import { copyText } from '@/utils/clipboard';
 import { formatDateTime } from '@/utils/date';
@@ -28,6 +29,15 @@ export function SolutionDetail() {
   const [annotationCount, setAnnotationCount] = useState(0);
 
   const { html, headings } = useMarkdown(solution?.content ?? '');
+  const { exporting, exportFile } = useContentExport({
+    resourceLabel: '解决方案',
+    exporter: async () => {
+      if (!solution) {
+        throw new Error('解决方案尚未加载。');
+      }
+      return exportSolution(solution.id);
+    }
+  });
 
   useEffect(() => {
     const load = async () => {
@@ -84,6 +94,10 @@ export function SolutionDetail() {
         actions={
           solution ? (
             <>
+              <Button variant="outline" disabled={exporting} onClick={() => void exportFile()}>
+                <Download className="h-4 w-4" />
+                {exporting ? '正在导出...' : '导出'}
+              </Button>
               <Button variant="outline" onClick={copyContent}>
                 <Copy className="h-4 w-4" />
                 复制 Markdown

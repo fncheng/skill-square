@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, Lightbulb, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
+import { Clock, Lightbulb, Pencil, Plus, Search, Trash2, Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useConfirm } from '@/hooks/use-confirm';
 import { useToast } from '@/hooks/use-toast';
-import { deleteSolution, getSolutions } from '@/api/solutions';
+import { useContentImport } from '@/hooks/use-content-transfer';
+import { deleteSolution, getSolutions, importSolution } from '@/api/solutions';
 import type { Solution, SolutionFilters } from '@/types/domain';
 import { formatShortDate } from '@/utils/date';
 
@@ -25,6 +26,13 @@ export function SolutionList() {
       setLoading(false);
     }
   };
+
+  const { fileInputRef, importing, openFilePicker, importFile } = useContentImport({
+    resourceType: 'SOLUTION',
+    resourceLabel: '解决方案',
+    importer: importSolution,
+    onImported: loadSolutions
+  });
 
   useEffect(() => {
     void loadSolutions();
@@ -74,10 +82,23 @@ export function SolutionList() {
           <h1 className="page-title">解决方案</h1>
           <p className="page-subtitle">沉淀常见问题的处理方式，以 Markdown 文档形式供随时查阅。</p>
         </div>
-        <Button onClick={() => navigate('/solutions/new')}>
-          <Plus className="h-4 w-4" />
-          新建方案
-        </Button>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/json,.json"
+            className="hidden"
+            onChange={(event) => void importFile(event)}
+          />
+          <Button variant="outline" disabled={importing} onClick={openFilePicker}>
+            <Upload className="h-4 w-4" />
+            {importing ? '正在导入...' : '导入'}
+          </Button>
+          <Button onClick={() => navigate('/solutions/new')}>
+            <Plus className="h-4 w-4" />
+            新建方案
+          </Button>
+        </div>
       </div>
 
       <div className="solution-toolbar">

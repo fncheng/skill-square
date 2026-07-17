@@ -12,6 +12,7 @@ import {
   Query
 } from '@nestjs/common';
 import { ApiCreatedResponse, ApiNoContentResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ContentTransferDto } from '../common/dto/content-transfer.dto';
 import { CreateNoteDto } from './dto/create-note.dto';
 import { NoteQueryDto } from './dto/note-query.dto';
 import { NoteResponseDto } from './dto/note-response.dto';
@@ -28,6 +29,20 @@ export class NotesController {
   @ApiOkResponse({ type: NoteResponseDto, isArray: true })
   findAll(@Query() query: NoteQueryDto) {
     return this.notesService.findAll(query);
+  }
+
+  @Post('import')
+  @ApiOperation({ summary: '从迁移文件导入学习笔记' })
+  @ApiCreatedResponse({ type: NoteResponseDto })
+  importOne(@Body() dto: ContentTransferDto) {
+    return this.notesService.importOne(dto);
+  }
+
+  @Get(':id/export')
+  @ApiOperation({ summary: '导出学习笔记迁移文件数据' })
+  @ApiOkResponse({ type: ContentTransferDto })
+  exportOne(@Param('id', ParseUUIDPipe) id: string) {
+    return this.notesService.exportOne(id);
   }
 
   @Get(':id')

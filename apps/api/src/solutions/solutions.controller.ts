@@ -12,6 +12,7 @@ import {
   Query
 } from '@nestjs/common';
 import { ApiCreatedResponse, ApiNoContentResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ContentTransferDto } from '../common/dto/content-transfer.dto';
 import { CreateSolutionDto } from './dto/create-solution.dto';
 import { SolutionQueryDto } from './dto/solution-query.dto';
 import { SolutionResponseDto } from './dto/solution-response.dto';
@@ -28,6 +29,20 @@ export class SolutionsController {
   @ApiOkResponse({ type: SolutionResponseDto, isArray: true })
   findAll(@Query() query: SolutionQueryDto) {
     return this.solutionsService.findAll(query);
+  }
+
+  @Post('import')
+  @ApiOperation({ summary: '从迁移文件导入解决方案' })
+  @ApiCreatedResponse({ type: SolutionResponseDto })
+  importOne(@Body() dto: ContentTransferDto) {
+    return this.solutionsService.importOne(dto);
+  }
+
+  @Get(':id/export')
+  @ApiOperation({ summary: '导出解决方案迁移文件数据' })
+  @ApiOkResponse({ type: ContentTransferDto })
+  exportOne(@Param('id', ParseUUIDPipe) id: string) {
+    return this.solutionsService.exportOne(id);
   }
 
   @Get(':id')

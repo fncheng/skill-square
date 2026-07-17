@@ -312,3 +312,36 @@ interface CreateTagRequest {
 ## UpdateTagRequest
 
 `UpdateTagRequest` 与 `CreateTagRequest` 字段一致，但所有字段均可选。
+
+## ContentTransferFile
+
+```ts
+interface ContentTransferFile {
+  format: 'prompt-skill-manager-transfer';
+  version: 1;
+  resourceType: 'NOTE' | 'SOLUTION';
+  exportedAt: string;
+  resource: {
+    title: string;
+    summary: string;
+    content: string;
+    category: string;
+    tags: string[];
+    createdAt: string;
+    updatedAt: string;
+  };
+  annotations: Array<{
+    content: string;
+    exact: string;
+    prefix: string;
+    suffix: string;
+    start: number;
+    end: number;
+    documentUpdatedAt: string | null;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+}
+```
+
+迁移文件不包含资源和批注 UUID。导入时生成新的 UUID，避免覆盖目标环境已有数据；`format` 与 `version` 用于校验文件来源和后续格式兼容。

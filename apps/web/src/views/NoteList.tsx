@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, NotebookPen, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
+import { Clock, NotebookPen, Pencil, Plus, Search, Trash2, Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useConfirm } from '@/hooks/use-confirm';
 import { useToast } from '@/hooks/use-toast';
-import { deleteNote, getNotes } from '@/api/notes';
+import { useContentImport } from '@/hooks/use-content-transfer';
+import { deleteNote, getNotes, importNote } from '@/api/notes';
 import type { Note, NoteFilters } from '@/types/domain';
 import { formatShortDate } from '@/utils/date';
 
@@ -25,6 +26,13 @@ export function NoteList() {
       setLoading(false);
     }
   };
+
+  const { fileInputRef, importing, openFilePicker, importFile } = useContentImport({
+    resourceType: 'NOTE',
+    resourceLabel: '学习笔记',
+    importer: importNote,
+    onImported: loadNotes
+  });
 
   useEffect(() => {
     void loadNotes();
@@ -74,10 +82,23 @@ export function NoteList() {
           <h1 className="page-title">学习笔记</h1>
           <p className="page-subtitle">沉淀日常学习的知识点总结，以 Markdown 文档形式随时查阅。</p>
         </div>
-        <Button onClick={() => navigate('/notes/new')}>
-          <Plus className="h-4 w-4" />
-          新建笔记
-        </Button>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/json,.json"
+            className="hidden"
+            onChange={(event) => void importFile(event)}
+          />
+          <Button variant="outline" disabled={importing} onClick={openFilePicker}>
+            <Upload className="h-4 w-4" />
+            {importing ? '正在导入...' : '导入'}
+          </Button>
+          <Button onClick={() => navigate('/notes/new')}>
+            <Plus className="h-4 w-4" />
+            新建笔记
+          </Button>
+        </div>
       </div>
 
       <div className="solution-toolbar">

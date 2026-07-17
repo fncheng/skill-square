@@ -1,4 +1,5 @@
 import { http } from './request';
+import type { ContentTransferFile } from '@/types/content-transfer';
 import type { Note, NotePayload } from '@/types/domain';
 
 export interface NoteQuery {
@@ -13,6 +14,16 @@ export async function getNotes(query: NoteQuery = {}) {
 
 export async function getNote(id: string) {
   const response = await http.get<Note>(`/notes/${id}`);
+  return response.data;
+}
+
+export async function exportNote(id: string) {
+  const response = await http.get<ContentTransferFile>(`/notes/${id}/export`);
+  return response.data;
+}
+
+export async function importNote(payload: ContentTransferFile) {
+  const response = await http.post<Note>('/notes/import', payload);
   return response.data;
 }
 

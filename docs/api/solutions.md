@@ -50,6 +50,20 @@ GET /api/solutions?search=codex&category=Codex
 
 返回 `Solution` 对象。结构见 [Solution](./schemas.md#solution)。
 
+## GET /api/solutions/:id/export
+
+导出单个解决方案的迁移数据。响应包含标题、摘要、Markdown 正文、分类、标签、原始时间和全部批注，不包含源环境 UUID。
+
+### Path 参数
+
+| 参数 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `id` | `string` | 是 | 解决方案 UUID |
+
+### 响应
+
+返回 `ContentTransferFile` 对象，`resourceType` 固定为 `SOLUTION`。结构见 [ContentTransferFile](./schemas.md#contenttransferfile)。
+
 ## POST /api/solutions
 
 创建解决方案。
@@ -86,6 +100,20 @@ Content-Type: application/json
 状态码：`201 Created`
 
 返回创建后的 `Solution` 对象。
+
+## POST /api/solutions/import
+
+从版本化迁移文件数据导入解决方案。解决方案与批注在同一事务内写入，并生成新的 UUID；标题、内容、分类、标签和原始时间保持不变。
+
+### 请求体
+
+请求体为 `ContentTransferFile`，且 `resourceType` 必须为 `SOLUTION`。
+
+### 响应
+
+状态码：`201 Created`
+
+返回导入后的 `Solution` 对象。
 
 ## PUT /api/solutions/:id
 
