@@ -200,6 +200,53 @@ interface CreateNoteRequest {
 
 `UpdateNoteRequest` 与 `CreateNoteRequest` 字段一致，但所有字段均可选。
 
+## UiPrototype
+
+```ts
+interface UiPrototype {
+  id: string;
+  title: string;
+  summary: string;
+  html: string;
+  category: string;
+  tags: string[];
+  allowExternal: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+字段说明：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `id` | `string` | UI 原型 UUID |
+| `title` | `string` | 原型名称，长度 `1-160` |
+| `summary` | `string` | 原型描述，最大长度 `500` |
+| `html` | `string` | 完整单文件 HTML，UTF-8 编码后最大 `2 MB` |
+| `category` | `string` | 分类，最大长度 `80`，未设置时为空字符串 |
+| `tags` | `string[]` | 标签数组 |
+| `allowExternal` | `boolean` | 是否允许预览加载远程资源 |
+| `createdAt` | `string` | 创建时间 |
+| `updatedAt` | `string` | 更新时间 |
+
+## CreateUiPrototypeRequest
+
+```ts
+interface CreateUiPrototypeRequest {
+  title: string;
+  summary?: string;
+  html: string;
+  category?: string;
+  tags?: string[];
+  allowExternal?: boolean;
+}
+```
+
+## UpdateUiPrototypeRequest
+
+`UpdateUiPrototypeRequest` 与 `CreateUiPrototypeRequest` 字段一致，但所有字段均可选。
+
 ## Annotation
 
 ```ts

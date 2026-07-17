@@ -15,6 +15,7 @@
 - [标签接口](./tags.md)
 - [解决方案接口](./solutions.md)
 - [学习笔记接口](./notes.md)
+- [UI 原型接口](./ui-prototypes.md)
 - [Markdown 批注接口](./annotations.md)
 - [数据结构](./schemas.md)
 
@@ -69,4 +70,5 @@
 - 删除标签后，Prompt 与该标签的关联会被删除。
 - 删除 Prompt 后，该 Prompt 的标签关联和版本历史会被级联删除。
 - 删除学习笔记或解决方案后，其 Markdown 批注会被级联删除。
+- UI 原型以单文件 HTML 保存，预览由前端沙箱隔离，默认阻止外部资源。
 - 创建 Prompt、编辑 Prompt、回滚 Prompt 都会生成版本快照。

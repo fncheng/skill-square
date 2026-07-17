@@ -6,6 +6,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { PromptsModule } from './prompts/prompts.module';
 import { SolutionsModule } from './solutions/solutions.module';
 import { TagsModule } from './tags/tags.module';
+import { UiPrototypesModule } from './ui-prototypes/ui-prototypes.module';
 
 @Module({
   imports: [
@@ -15,7 +16,8 @@ import { TagsModule } from './tags/tags.module';
     TagsModule,
     SolutionsModule,
     NotesModule,
-    AnnotationsModule
+    AnnotationsModule,
+    UiPrototypesModule
   ]
 })
 export class AppModule {}

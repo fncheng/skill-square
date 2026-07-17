@@ -116,6 +116,32 @@ export interface NoteFilters {
   category: string;
 }
 
+export interface UiPrototype {
+  id: string;
+  title: string;
+  summary: string;
+  html: string;
+  category: string;
+  tags: string[];
+  allowExternal: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UiPrototypePayload {
+  title: string;
+  summary: string;
+  html: string;
+  category: string;
+  tags: string[];
+  allowExternal: boolean;
+}
+
+export interface UiPrototypeFilters {
+  search: string;
+  category: string;
+}
+
 export type AnnotationResourceType = 'NOTE' | 'SOLUTION';
 
 export interface AnnotationAnchor {

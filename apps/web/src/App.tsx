@@ -11,6 +11,9 @@ import { SolutionDetail } from './views/SolutionDetail';
 import { SolutionEditor } from './views/SolutionEditor';
 import { SolutionList } from './views/SolutionList';
 import { TagManage } from './views/TagManage';
+import { UiPrototypeDetail } from './views/UiPrototypeDetail';
+import { UiPrototypeEditor } from './views/UiPrototypeEditor';
+import { UiPrototypeList } from './views/UiPrototypeList';
 
 export default function App() {
   return (
@@ -29,6 +32,10 @@ export default function App() {
         <Route path="/notes/new" element={<NoteEditor />} />
         <Route path="/notes/:id" element={<NoteDetail />} />
         <Route path="/notes/:id/edit" element={<NoteEditor />} />
+        <Route path="/ui-prototypes" element={<UiPrototypeList />} />
+        <Route path="/ui-prototypes/new" element={<UiPrototypeEditor />} />
+        <Route path="/ui-prototypes/:id" element={<UiPrototypeDetail />} />
+        <Route path="/ui-prototypes/:id/edit" element={<UiPrototypeEditor />} />
         <Route path="/categories" element={<CategoryManage />} />
         <Route path="/tags" element={<TagManage />} />
         <Route path="*" element={<Navigate to="/prompts" replace />} />
