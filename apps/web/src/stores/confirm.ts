@@ -1,11 +1,17 @@
 import { create } from 'zustand';
 
+export interface ConfirmVerification {
+  expectedText: string;
+  instruction?: string;
+}
+
 export interface ConfirmOptions {
   title: string;
   description?: string;
   confirmText?: string;
   cancelText?: string;
   destructive?: boolean;
+  verification?: ConfirmVerification;
 }
 
 interface ConfirmState {
@@ -15,6 +21,7 @@ interface ConfirmState {
   confirmText: string;
   cancelText: string;
   destructive: boolean;
+  verification?: ConfirmVerification;
   resolver: ((value: boolean) => void) | null;
   confirm: (options: ConfirmOptions) => Promise<boolean>;
   close: (result: boolean) => void;
@@ -31,6 +38,7 @@ export const useConfirmStore = create<ConfirmState>((set, get) => ({
   confirmText: '确认',
   cancelText: '取消',
   destructive: false,
+  verification: undefined,
   resolver: null,
   confirm: (options) => {
     set({
@@ -39,12 +47,13 @@ export const useConfirmStore = create<ConfirmState>((set, get) => ({
       description: options.description,
       confirmText: options.confirmText ?? '确认',
       cancelText: options.cancelText ?? '取消',
-      destructive: options.destructive ?? false
+      destructive: options.destructive ?? false,
+      verification: options.verification
     });
     return new Promise<boolean>((resolve) => set({ resolver: resolve }));
   },
   close: (result) => {
     get().resolver?.(result);
-    set({ open: false, resolver: null });
+    set({ open: false, verification: undefined, resolver: null });
   }
 }));

@@ -13,7 +13,7 @@ const emptyForm: TagPayload = { name: '', color: '#3b82f6' };
 
 export function TagManage() {
   const { toast } = useToast();
-  const { confirm } = useConfirm();
+  const { confirmDeletion } = useConfirm();
 
   const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(false);
@@ -79,11 +79,10 @@ export function TagManage() {
   };
 
   const handleDelete = async (tag: Tag) => {
-    const confirmed = await confirm({
+    const confirmed = await confirmDeletion({
       title: '删除标签',
-      description: `确认删除标签「${tag.name}」？Prompt 与该标签的关联将被删除。`,
-      confirmText: '删除',
-      destructive: true
+      description: `删除标签「${tag.name}」后，Prompt 与该标签的关联将被删除，且该标签无法恢复。`,
+      expectedText: tag.name
     });
 
     if (!confirmed) {

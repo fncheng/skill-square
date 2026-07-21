@@ -12,7 +12,7 @@ import { formatShortDate } from '@/utils/date';
 export function NoteList() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { confirm } = useConfirm();
+  const { confirmDeletion } = useConfirm();
 
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(false);
@@ -59,11 +59,10 @@ export function NoteList() {
   }, [notes, filters]);
 
   const handleDelete = async (note: Note) => {
-    const confirmed = await confirm({
+    const confirmed = await confirmDeletion({
       title: '删除笔记',
-      description: `确认删除「${note.title}」？该操作不可恢复。`,
-      confirmText: '删除',
-      destructive: true
+      description: `删除「${note.title}」后将同时删除其全部批注，该操作不可恢复。`,
+      expectedText: note.title
     });
 
     if (!confirmed) {

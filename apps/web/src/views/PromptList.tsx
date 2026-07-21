@@ -31,7 +31,7 @@ export function PromptList() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
-  const { confirm } = useConfirm();
+  const { confirmDeletion } = useConfirm();
   const store = usePromptStore();
   const [selectedTagId, setSelectedTagId] = useState('');
 
@@ -122,11 +122,10 @@ export function PromptList() {
   };
 
   const handleDelete = async (prompt: Prompt) => {
-    const confirmed = await confirm({
+    const confirmed = await confirmDeletion({
       title: '删除 Prompt',
-      description: `确认删除「${prompt.name}」？删除后将同时删除该 Prompt 的历史版本。`,
-      confirmText: '删除',
-      destructive: true
+      description: `删除「${prompt.name}」后将同时删除该 Prompt 的历史版本和标签关联，该操作不可恢复。`,
+      expectedText: prompt.name
     });
 
     if (!confirmed) {

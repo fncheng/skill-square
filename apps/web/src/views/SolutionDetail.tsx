@@ -21,7 +21,7 @@ export function SolutionDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { confirm } = useConfirm();
+  const { confirmDeletion } = useConfirm();
   const annotationSurfaceRef = useRef<MarkdownAnnotationSurfaceHandle>(null);
 
   const [solution, setSolution] = useState<Solution>();
@@ -67,11 +67,10 @@ export function SolutionDetail() {
       return;
     }
 
-    const confirmed = await confirm({
+    const confirmed = await confirmDeletion({
       title: '删除解决方案',
-      description: `确认删除「${solution.title}」？该操作不可恢复。`,
-      confirmText: '删除',
-      destructive: true
+      description: `删除「${solution.title}」后将同时删除其全部批注，该操作不可恢复。`,
+      expectedText: solution.title
     });
 
     if (!confirmed) {

@@ -20,7 +20,7 @@ const emptyForm: CategoryPayload = { name: '', description: '' };
 
 export function CategoryManage() {
   const { toast } = useToast();
-  const { confirm } = useConfirm();
+  const { confirmDeletion } = useConfirm();
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
@@ -81,11 +81,10 @@ export function CategoryManage() {
   };
 
   const handleDelete = async (category: Category) => {
-    const confirmed = await confirm({
+    const confirmed = await confirmDeletion({
       title: '删除分类',
-      description: `确认删除分类「${category.name}」？相关 Prompt 将变为未分类。`,
-      confirmText: '删除',
-      destructive: true
+      description: `删除分类「${category.name}」后，相关 Prompt 将变为未分类，且该分类无法恢复。`,
+      expectedText: category.name
     });
 
     if (!confirmed) {

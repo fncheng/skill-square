@@ -12,7 +12,7 @@ import { formatShortDate } from '@/utils/date';
 export function UiPrototypeList() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { confirm } = useConfirm();
+  const { confirmDeletion } = useConfirm();
 
   const [prototypes, setPrototypes] = useState<UiPrototype[]>([]);
   const [loading, setLoading] = useState(false);
@@ -47,11 +47,10 @@ export function UiPrototypeList() {
   }, [filters, prototypes]);
 
   const handleDelete = async (prototype: UiPrototype) => {
-    const confirmed = await confirm({
+    const confirmed = await confirmDeletion({
       title: '删除 UI 原型',
-      description: `确认删除「${prototype.title}」？该操作不可恢复。`,
-      confirmText: '删除',
-      destructive: true
+      description: `删除「${prototype.title}」后无法恢复。`,
+      expectedText: prototype.title
     });
 
     if (!confirmed) {

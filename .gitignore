@@ -48,6 +48,7 @@ Thumbs.db
 *.swo
 .idea/
 .vscode/
+.codex/
 
 # WSL and Windows downloaded file metadata
 *:Zone.Identifier

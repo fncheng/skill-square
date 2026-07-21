@@ -91,7 +91,7 @@ export const MarkdownAnnotationSurface = forwardRef<
   ref
 ) {
   const { toast } = useToast();
-  const { confirm } = useConfirm();
+  const { confirmDeletion } = useConfirm();
   const surfaceRef = useRef<HTMLDivElement>(null);
   const popoverRef = useRef<HTMLElement>(null);
   const activeTriggerRef = useRef<HTMLElement | null>(null);
@@ -393,11 +393,10 @@ export const MarkdownAnnotationSurface = forwardRef<
   };
 
   const handleDelete = async (annotation: Annotation) => {
-    const confirmed = await confirm({
+    const confirmed = await confirmDeletion({
       title: '删除批注',
-      description: `确认删除关联“${annotation.exact.slice(0, 80)}”的批注？Markdown 原文不会被修改。`,
-      confirmText: '删除',
-      destructive: true
+      description: `删除关联“${annotation.exact.slice(0, 80)}”的批注后无法恢复，Markdown 原文不会被修改。`,
+      expectedText: '删除批注'
     });
     if (!confirmed) {
       return;
