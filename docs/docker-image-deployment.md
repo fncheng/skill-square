@@ -205,11 +205,16 @@ docker images | grep postgres
 POSTGRES_USER=prompt_admin
 POSTGRES_PASSWORD=change_me_to_a_strong_password
 POSTGRES_DB=prompt_skill_manager
+IMAGE_TAG=0.1.0
+CORS_ORIGIN=https://你的域名
+WEB_PORT=5173
 ```
 
 注意：
 
 - 不要继续使用示例密码 `postgres`。
+- `IMAGE_TAG` 必须与已经加载到服务器的离线镜像版本一致。
+- `WEB_PORT` 是前端容器映射到宿主机的端口；使用本文的宿主机 Nginx 配置时保持为 `5173`。
 - 不需要在生产服务器 `.env` 中配置 `DATABASE_URL`，Compose 会在 API 服务中生成容器内数据库连接地址。
 - 不需要配置 `VITE_API_BASE_URL`，因为前端镜像已经在构建时固定为 `/api`。
 
@@ -236,23 +241,23 @@ services:
       retries: 5
 
   api:
-    image: prompt-skill-manager-api:0.1.0
+    image: "prompt-skill-manager-api:${IMAGE_TAG}"
     container_name: prompt-skill-manager-api
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
       PORT: 3000
-      CORS_ORIGIN: https://你的域名
+      CORS_ORIGIN: ${CORS_ORIGIN}
     depends_on:
       db:
         condition: service_healthy
 
   web:
-    image: prompt-skill-manager-web:0.1.0
+    image: "prompt-skill-manager-web:${IMAGE_TAG}"
     container_name: prompt-skill-manager-web
     restart: unless-stopped
     ports:
-      - "127.0.0.1:5173:80"
+      - "127.0.0.1:${WEB_PORT:-5173}:80"
     depends_on:
       - api
 
@@ -260,16 +265,16 @@ volumes:
   postgres_data:
 ```
 
-如果暂时没有域名，只通过宿主机 Nginx 使用服务器 IP 测试，可以把 `CORS_ORIGIN` 改成：
+如果暂时没有域名，只通过宿主机 Nginx 使用服务器 IP 测试，可以把 `.env` 中的 `CORS_ORIGIN` 改成：
 
-```yaml
-CORS_ORIGIN: http://服务器IP
+```env
+CORS_ORIGIN=http://服务器IP
 ```
 
 如果后续配置了 HTTPS 域名，需要改成：
 
-```yaml
-CORS_ORIGIN: https://你的域名
+```env
+CORS_ORIGIN=https://你的域名
 ```
 
 如果不使用宿主机 Nginx，而是直接通过 `http://服务器IP:10086` 访问，可以把生产 `docker-compose.yml` 改成：
@@ -279,11 +284,18 @@ api:
   environment:
     DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
     PORT: 3000
-    CORS_ORIGIN: http://服务器IP:10086
+    CORS_ORIGIN: ${CORS_ORIGIN}
 
 web:
   ports:
-    - "10086:80"
+    - "${WEB_PORT:-10086}:80"
+```
+
+同时在 `.env` 中设置：
+
+```env
+CORS_ORIGIN=http://服务器IP:10086
+WEB_PORT=10086
 ```
 
 此时不需要暴露 API 容器的 `3000` 端口，前端容器内的 Nginx 会继续把 `/api/` 转发到 `api:3000`。
@@ -461,9 +473,11 @@ chmod +x server-update-images.sh
 该脚本会自动完成：
 
 - 加载 `/tmp/prompt-skill-manager-images-0.1.1.tar.gz`。
-- 备份 `/opt/prompt-skill-manager/docker-compose.yml`。
-- 将 `api` 和 `web` 服务镜像版本更新为 `0.1.1`。
-- 执行 `docker compose up -d --pull never`。
+- 校验镜像包中存在 `api` 和 `web` 的目标版本镜像。
+- 备份 `/opt/prompt-skill-manager/.env`。
+- 只把 `.env` 中的 `IMAGE_TAG` 更新为 `0.1.1`，保留 `WEB_PORT`、数据库和 CORS 等其他配置。
+- 校验 Compose 能够把镜像变量解析为目标版本。
+- 使用指定的 Compose 文件和 `.env` 执行 `docker compose up -d --pull never`。
 - 输出 `docker compose ps` 结果。
 
 如果镜像包不在默认路径，可以显式传入路径：
@@ -471,6 +485,15 @@ chmod +x server-update-images.sh
 ```bash
 ./server-update-images.sh 0.1.1 /tmp/prompt-skill-manager-images-0.1.1.tar.gz
 ```
+
+如果服务器保留的文件名是 `docker-compose.offline.yml`，可以显式指定 Compose 文件：
+
+```bash
+COMPOSE_FILE=/opt/prompt-skill-manager/docker-compose.offline.yml \
+  ./server-update-images.sh 0.1.1
+```
+
+如果 `.env` 不在部署目录，也可以通过 `ENV_FILE` 指定其路径。
 
 ## 十二、数据库备份与恢复
 

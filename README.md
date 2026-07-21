@@ -40,6 +40,11 @@ docker compose up -d --build
 
 API 容器启动时会执行 Prisma 迁移和初始化种子数据。
 
+## 部署文档
+
+- [Docker GHCR 在线部署指南](docs/docker-ghcr-deployment.md)
+- [Docker 镜像离线部署指南](docs/docker-image-deployment.md)
+
 ## 本地开发
 
 ```bash
