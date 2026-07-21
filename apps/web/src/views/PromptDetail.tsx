@@ -112,7 +112,9 @@ export function PromptDetail() {
                 </button>
               </div>
             </div>
-            <PromptMonacoEditor value={prompt.content} readOnly />
+            <div className="editor-mode-panel">
+              <PromptMonacoEditor value={prompt.content} readOnly />
+            </div>
           </div>
 
           <aside className="detail-surface">

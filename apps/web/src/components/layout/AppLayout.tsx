@@ -10,7 +10,6 @@ import {
   type LucideProps,
   NotebookPen,
   PanelsTopLeft,
-  Search,
   Star,
   Tags
 } from 'lucide-react';
@@ -18,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Toaster } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
+import { GlobalSearch } from './GlobalSearch';
 
 type IconComponent = ComponentType<LucideProps>;
 
@@ -81,10 +81,9 @@ export function AppLayout() {
           <span>Prompt Skill Manager</span>
         </Link>
 
+        <GlobalSearch />
+
         <div className="topbar-actions">
-          <Button variant="ghost" size="icon">
-            <Search className="h-4 w-4" />
-          </Button>
           <Button variant="ghost" size="icon">
             <Bell className="h-4 w-4" />
           </Button>

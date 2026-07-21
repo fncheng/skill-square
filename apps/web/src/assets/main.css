@@ -55,11 +55,11 @@
   }
 
   .app-topbar {
-    @apply fixed inset-x-0 top-0 z-40 flex h-16 items-center justify-between border-b bg-white/90 px-7 backdrop-blur-xl;
+    @apply fixed inset-x-0 top-0 z-40 flex h-16 items-center border-b bg-white/90 px-7 backdrop-blur-xl;
   }
 
   .brand {
-    @apply flex items-center gap-2.5 text-base font-extrabold;
+    @apply flex w-[220px] flex-none items-center gap-2.5 text-base font-extrabold;
   }
 
   .brand-mark {
@@ -67,7 +67,75 @@
   }
 
   .topbar-actions {
-    @apply flex items-center gap-2.5;
+    @apply ml-auto flex flex-none items-center gap-2.5;
+  }
+
+  .global-search {
+    @apply relative mx-8 w-full max-w-[560px];
+  }
+
+  .global-search-input-wrap {
+    @apply relative;
+  }
+
+  .global-search-input-icon {
+    @apply pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400;
+  }
+
+  .global-search-input {
+    @apply h-10 w-full appearance-none rounded-md border border-slate-200 bg-slate-50 pl-10 pr-10 text-sm font-medium text-slate-800 outline-none transition-colors placeholder:font-normal placeholder:text-slate-400 hover:border-slate-300 hover:bg-white focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/15;
+  }
+
+  .global-search-input::-webkit-search-cancel-button {
+    display: none;
+  }
+
+  .global-search-clear {
+    @apply absolute right-1.5 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-md border-0 bg-transparent p-0 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+  }
+
+  .global-search-panel {
+    @apply absolute left-0 right-0 top-[calc(100%+8px)] overflow-hidden rounded-lg border bg-white shadow-2xl shadow-slate-950/15;
+  }
+
+  .global-search-results {
+    @apply max-h-[420px] overflow-y-auto p-1.5;
+  }
+
+  .global-search-state {
+    @apply grid min-h-28 place-items-center content-center gap-2 px-5 text-center text-sm font-medium text-slate-500;
+  }
+
+  .global-search-state.is-error {
+    @apply text-destructive;
+  }
+
+  .global-search-result {
+    @apply flex w-full items-center gap-3 rounded-md border-0 bg-transparent px-3 py-2.5 text-left transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring;
+  }
+
+  .global-search-result.is-active {
+    @apply bg-accent;
+  }
+
+  .global-search-result-icon {
+    @apply grid h-8 w-8 flex-none place-items-center rounded-md border bg-white text-slate-500 shadow-sm;
+  }
+
+  .global-search-result.is-active .global-search-result-icon {
+    @apply border-primary/20 text-primary;
+  }
+
+  .global-search-result-copy {
+    @apply grid min-w-0 flex-1 gap-0.5;
+  }
+
+  .global-search-result-copy strong {
+    @apply truncate text-sm font-bold text-slate-800;
+  }
+
+  .global-search-result-copy span {
+    @apply text-xs font-medium text-slate-400;
   }
 
   .admin-badge {

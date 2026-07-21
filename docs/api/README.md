@@ -16,6 +16,7 @@
 - [解决方案接口](./solutions.md)
 - [学习笔记接口](./notes.md)
 - [UI 原型接口](./ui-prototypes.md)
+- [全局搜索接口](./search.md)
 - [Markdown 批注接口](./annotations.md)
 - [数据结构](./schemas.md)
 

@@ -142,6 +142,19 @@ export interface UiPrototypeFilters {
   category: string;
 }
 
+export type GlobalSearchResourceType = 'PROMPT' | 'SOLUTION' | 'NOTE' | 'UI_PROTOTYPE';
+
+export interface GlobalSearchItem {
+  id: string;
+  title: string;
+  resourceType: GlobalSearchResourceType;
+  updatedAt: string;
+}
+
+export interface GlobalSearchResponse {
+  items: GlobalSearchItem[];
+}
+
 export type AnnotationResourceType = 'NOTE' | 'SOLUTION';
 
 export interface AnnotationAnchor {
