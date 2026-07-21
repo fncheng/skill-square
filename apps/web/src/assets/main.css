@@ -962,6 +962,46 @@
     @apply font-semibold text-primary underline-offset-2 hover:underline;
   }
 
+  .md-surface .md-table-scroll {
+    @apply my-4 overflow-x-auto rounded-lg border border-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+  }
+
+  .md-surface .md-table {
+    @apply w-full min-w-[520px] border-collapse text-sm leading-6;
+  }
+
+  .md-surface .md-table-cell {
+    @apply max-w-[420px] break-words border-b border-r border-slate-200 px-3.5 py-2.5 text-left align-top;
+  }
+
+  .md-surface th.md-table-cell {
+    @apply bg-slate-50 font-extrabold text-slate-700;
+  }
+
+  .md-surface td.md-table-cell {
+    @apply text-slate-600;
+  }
+
+  .md-surface .md-table-cell:last-child {
+    @apply border-r-0;
+  }
+
+  .md-surface .md-table tbody tr:last-child .md-table-cell {
+    @apply border-b-0;
+  }
+
+  .md-surface .md-table tbody tr:hover {
+    @apply bg-slate-50/70;
+  }
+
+  .md-surface .md-table-cell.is-center {
+    @apply text-center;
+  }
+
+  .md-surface .md-table-cell.is-right {
+    @apply text-right;
+  }
+
   .md-surface .md-code-block {
     @apply relative my-4;
   }

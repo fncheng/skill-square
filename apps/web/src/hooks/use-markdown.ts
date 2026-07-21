@@ -64,6 +64,108 @@ interface ParseResult {
   headings: MarkdownHeading[];
 }
 
+type TableAlignment = 'left' | 'center' | 'right' | null;
+
+/**
+ * 拆分 GFM 表格行，并保留行内代码或反斜杠转义中的竖线。
+ * 返回 null 表示当前行不具备表格行结构。
+ */
+function splitTableRow(line: string): string[] | null {
+  const trimmed = line.trim();
+  if (!trimmed.includes('|')) {
+    return null;
+  }
+
+  const cells: string[] = [];
+  let cell = '';
+  let codeDelimiterLength = 0;
+  let index = trimmed.startsWith('|') ? 1 : 0;
+  const end = trimmed.endsWith('|') && !trimmed.endsWith('\\|') ? trimmed.length - 1 : trimmed.length;
+
+  while (index < end) {
+    const character = trimmed[index];
+
+    if (character === '\\' && trimmed[index + 1] === '|') {
+      cell += '|';
+      index += 2;
+      continue;
+    }
+
+    if (character === '`') {
+      let runLength = 1;
+      while (trimmed[index + runLength] === '`') {
+        runLength += 1;
+      }
+      if (codeDelimiterLength === 0) {
+        codeDelimiterLength = runLength;
+      } else if (codeDelimiterLength === runLength) {
+        codeDelimiterLength = 0;
+      }
+      cell += '`'.repeat(runLength);
+      index += runLength;
+      continue;
+    }
+
+    if (character === '|' && codeDelimiterLength === 0) {
+      cells.push(cell.trim());
+      cell = '';
+      index += 1;
+      continue;
+    }
+
+    cell += character;
+    index += 1;
+  }
+
+  cells.push(cell.trim());
+  return cells.length > 0 ? cells : null;
+}
+
+/** 解析 GFM 表头分隔行，同时提取每一列的对齐方式。 */
+function parseTableAlignments(line: string, columnCount: number): TableAlignment[] | null {
+  const cells = splitTableRow(line);
+  if (!cells || cells.length !== columnCount) {
+    return null;
+  }
+
+  const alignments: TableAlignment[] = [];
+  for (const cell of cells) {
+    const delimiter = cell.trim();
+    if (!/^:?-+:?$/.test(delimiter)) {
+      return null;
+    }
+    const leftAligned = delimiter.startsWith(':');
+    const rightAligned = delimiter.endsWith(':');
+    alignments.push(leftAligned && rightAligned ? 'center' : rightAligned ? 'right' : leftAligned ? 'left' : null);
+  }
+
+  return alignments;
+}
+
+/** 渲染带可访问横向滚动容器的 GFM 表格。 */
+function renderTable(headers: string[], alignments: TableAlignment[], rows: string[][]): string {
+  const renderCells = (cells: string[], tag: 'th' | 'td') =>
+    headers
+      .map((_header, index) => {
+        const alignment = alignments[index];
+        const alignmentClass = alignment ? ` is-${alignment}` : '';
+        const scope = tag === 'th' ? ' scope="col"' : '';
+        return `<${tag}${scope} class="md-table-cell${alignmentClass}">${renderInline(cells[index] ?? '')}</${tag}>`;
+      })
+      .join('');
+
+  const body = rows.map((row) => `<tr>${renderCells(row, 'td')}</tr>`).join('');
+
+  return (
+    `<div class="md-table-scroll" role="region" aria-label="Markdown 表格" tabindex="0">` +
+      `<table class="md-table">` +
+        `<thead><tr>${renderCells(headers, 'th')}</tr></thead>` +
+        (body ? `<tbody>${body}</tbody>` : '') +
+      `</table>` +
+    `</div>`
+  );
+}
+
 /** 生成代码块右上角的复制按钮，图标使用 Lucide Copy 与 Check 路径。 */
 function renderCodeCopyButton(): string {
   return (
@@ -148,7 +250,8 @@ function parseMarkdown(source: string): ParseResult {
     fenceLang = '';
   };
 
-  for (const line of lines) {
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
+    const line = lines[lineIndex];
     const fenceMatch = line.match(/^```(.*)$/);
     if (fenceMatch) {
       if (inFence) {
@@ -171,6 +274,30 @@ function parseMarkdown(source: string): ParseResult {
     if (line.trim() === '') {
       flushParagraph();
       flushList();
+      continue;
+    }
+
+    const tableHeaders = splitTableRow(line);
+    const tableAlignments = tableHeaders
+      ? parseTableAlignments(lines[lineIndex + 1] ?? '', tableHeaders.length)
+      : null;
+    if (tableHeaders && tableAlignments) {
+      flushParagraph();
+      flushList();
+
+      const tableRows: string[][] = [];
+      let nextLineIndex = lineIndex + 2;
+      while (nextLineIndex < lines.length) {
+        const row = splitTableRow(lines[nextLineIndex]);
+        if (!row) {
+          break;
+        }
+        tableRows.push(row.slice(0, tableHeaders.length));
+        nextLineIndex += 1;
+      }
+
+      blocks.push(renderTable(tableHeaders, tableAlignments, tableRows));
+      lineIndex = nextLineIndex - 1;
       continue;
     }
 
