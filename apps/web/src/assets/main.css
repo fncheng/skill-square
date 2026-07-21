@@ -480,12 +480,26 @@
 
   .detail-grid {
     @apply grid items-start gap-4;
-    grid-template-columns: minmax(0, 1fr) 360px;
+    grid-template-columns: minmax(0, 1fr) 300px;
   }
 
   .detail-meta,
   .form-grid {
     @apply grid gap-4;
+  }
+
+  .detail-meta .meta-item {
+    @apply grid items-start gap-x-2;
+    grid-template-columns: max-content minmax(0, 1fr);
+  }
+
+  .detail-meta .meta-label {
+    @apply leading-6;
+  }
+
+  .detail-meta .meta-item-toc {
+    @apply gap-y-1.5;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .form-field {

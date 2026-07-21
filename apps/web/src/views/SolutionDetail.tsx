@@ -161,7 +161,7 @@ export function SolutionDetail() {
               </div>
 
               {headings.length > 0 ? (
-                <div className="meta-item">
+                <div className="meta-item meta-item-toc">
                   <span className="meta-label">目录</span>
                   <nav className="md-toc">
                     {headings.map((heading) => (
