@@ -51,6 +51,8 @@ export interface MarkdownAnnotationSurfaceHandle {
 type DialogMode = 'list' | 'reader' | 'editor' | null;
 
 const emptyDraft = '';
+const popoverMaxWidth = 560;
+const popoverMaxHeight = 620;
 
 function markdownPreview(content: string): string {
   return content
@@ -66,8 +68,8 @@ function markdownPreview(content: string): string {
 
 function calculatePopoverPosition(trigger: HTMLElement): CSSProperties {
   const rect = trigger.getBoundingClientRect();
-  const width = Math.min(440, window.innerWidth - 28);
-  const estimatedHeight = Math.min(560, window.innerHeight - 28);
+  const width = Math.min(popoverMaxWidth, window.innerWidth - 28);
+  const estimatedHeight = Math.min(popoverMaxHeight, window.innerHeight - 28);
   const gap = 12;
   let left = rect.right + gap;
   if (left + width > window.innerWidth - 14) {

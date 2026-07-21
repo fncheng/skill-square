@@ -1074,7 +1074,7 @@
   }
 
   .md-annotation-popover {
-    @apply fixed z-[82] flex max-h-[min(620px,calc(100vh-28px))] w-[min(440px,calc(100vw-28px))] flex-col overflow-hidden rounded-lg border bg-white shadow-2xl shadow-slate-950/20;
+    @apply fixed z-[82] flex max-h-[min(620px,calc(100vh-28px))] w-[min(560px,calc(100vw-28px))] flex-col overflow-hidden rounded-lg border bg-white shadow-2xl shadow-slate-950/20;
   }
 
   .md-annotation-popover-head {
