@@ -483,6 +483,14 @@
     grid-template-columns: minmax(0, 1fr) 300px;
   }
 
+  .detail-surface {
+    position: sticky;
+    top: 80px;
+    max-height: calc(100vh - 96px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
   .detail-meta,
   .form-grid {
     @apply grid gap-4;
@@ -1369,6 +1377,12 @@
 
   .detail-grid {
     @apply grid-cols-1;
+  }
+
+  .detail-surface {
+    position: static;
+    max-height: none;
+    overflow-y: visible;
   }
 
   .prompt-hero {
