@@ -53,7 +53,7 @@ export function Login() {
   };
 
   return (
-    <section className="mx-auto grid min-h-[calc(100vh-128px)] max-w-md place-items-center">
+    <main className="mx-auto grid min-h-screen w-full max-w-md place-items-center px-6 py-10">
       <div className="w-full rounded-xl border bg-white p-7 shadow-xl shadow-slate-950/5">
         <div className="mb-6 grid justify-items-center gap-3 text-center">
           <span className="grid h-12 w-12 place-items-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-indigo-500/20">
@@ -108,6 +108,6 @@ export function Login() {
           </Button>
         </form>
       </div>
-    </section>
+    </main>
   );
 }

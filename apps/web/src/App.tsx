@@ -20,9 +20,9 @@ import { UiPrototypeList } from './views/UiPrototypeList';
 export default function App() {
   return (
     <Routes>
+      <Route path="/login" element={<Login />} />
       <Route element={<AppLayout />}>
         <Route index element={<Navigate to="/prompts" replace />} />
-        <Route path="/login" element={<Login />} />
         <Route path="/prompts" element={<PromptList />} />
         <Route path="/prompts/:id" element={<PromptDetail />} />
         <Route path="/solutions" element={<SolutionList />} />
