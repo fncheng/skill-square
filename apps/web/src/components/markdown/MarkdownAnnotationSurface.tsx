@@ -41,6 +41,7 @@ interface MarkdownAnnotationSurfaceProps {
   resourceType: AnnotationResourceType;
   resourceId: string;
   documentUpdatedAt: string;
+  readOnly?: boolean;
   onCountChange?: (count: number) => void;
 }
 
@@ -87,7 +88,7 @@ export const MarkdownAnnotationSurface = forwardRef<
   MarkdownAnnotationSurfaceHandle,
   MarkdownAnnotationSurfaceProps
 >(function MarkdownAnnotationSurface(
-  { html, resourceType, resourceId, documentUpdatedAt, onCountChange },
+  { html, resourceType, resourceId, documentUpdatedAt, readOnly = false, onCountChange },
   ref
 ) {
   const { toast } = useToast();
@@ -282,6 +283,17 @@ export const MarkdownAnnotationSurface = forwardRef<
     };
   }, [selection]);
 
+  useEffect(() => {
+    if (!readOnly) {
+      return;
+    }
+    setSelection(null);
+    setReattachId('');
+    if (dialogMode === 'editor') {
+      setDialogMode(null);
+    }
+  }, [dialogMode, readOnly]);
+
   const handleAnnotationActivate = useCallback((annotationId: string, trigger: HTMLElement) => {
     if (!annotationId) {
       return;
@@ -293,12 +305,19 @@ export const MarkdownAnnotationSurface = forwardRef<
     setReattachId('');
   }, []);
 
-  const handleSelection = useCallback((nextSelection: MarkdownTextSelection | null) => {
-    setSelection(nextSelection);
-    if (nextSelection) {
-      closePopover();
-    }
-  }, [closePopover]);
+  const handleSelection = useCallback(
+    (nextSelection: MarkdownTextSelection | null) => {
+      if (readOnly) {
+        setSelection(null);
+        return;
+      }
+      setSelection(nextSelection);
+      if (nextSelection) {
+        closePopover();
+      }
+    },
+    [closePopover, readOnly]
+  );
 
   const openList = useCallback(() => {
     closePopover();
@@ -315,6 +334,9 @@ export const MarkdownAnnotationSurface = forwardRef<
   };
 
   const openEditor = (annotation?: Annotation, anchor?: AnnotationAnchor) => {
+    if (readOnly) {
+      return;
+    }
     const isReattaching = Boolean(annotation && anchor && annotation.id === reattachId);
     if (!isReattaching) {
       setReattachId('');
@@ -334,6 +356,9 @@ export const MarkdownAnnotationSurface = forwardRef<
   };
 
   const beginReattach = (annotationId: string) => {
+    if (readOnly) {
+      return;
+    }
     setReattachId(annotationId);
     setDialogMode(null);
     setSelection(null);
@@ -356,6 +381,9 @@ export const MarkdownAnnotationSurface = forwardRef<
   };
 
   const handleSave = async () => {
+    if (readOnly) {
+      return;
+    }
     if (!draft.trim() || !editorAnchor) {
       toast({ title: !draft.trim() ? '请输入批注内容' : '批注原文定位信息缺失', variant: 'destructive' });
       return;
@@ -393,6 +421,9 @@ export const MarkdownAnnotationSurface = forwardRef<
   };
 
   const handleDelete = async (annotation: Annotation) => {
+    if (readOnly) {
+      return;
+    }
     const confirmed = await confirmDeletion({
       title: '删除批注',
       description: `删除关联“${annotation.exact.slice(0, 80)}”的批注后无法恢复，Markdown 原文不会被修改。`,
@@ -449,7 +480,7 @@ export const MarkdownAnnotationSurface = forwardRef<
         <div className="md-annotation-dialog-state">
           <MessageSquareText className="h-7 w-7 text-primary" />
           <strong>这篇文档还没有批注</strong>
-          <span>关闭弹窗并选择正文内容，即可添加 Markdown 补充。</span>
+          <span>{readOnly ? '当前为访客只读模式。' : '关闭弹窗并选择正文内容，即可添加 Markdown 补充。'}</span>
         </div>
       );
     }
@@ -465,7 +496,7 @@ export const MarkdownAnnotationSurface = forwardRef<
                 <span className="md-annotation-list-preview">{markdownPreview(annotation.content)}</span>
                 <span className="md-annotation-list-time">更新于 {formatDateTime(annotation.updatedAt)}</span>
               </button>
-              {orphaned ? (
+              {orphaned && !readOnly ? (
                 <div className="md-annotation-orphan-row">
                   <Badge variant="outline" className="border-amber-300 text-amber-700">
                     待重新关联
@@ -495,7 +526,9 @@ export const MarkdownAnnotationSurface = forwardRef<
             className={`md-annotation-status-dot${loadError ? ' is-error' : ''}${reattachId ? ' is-reattaching' : ''}`}
           />
           <span>
-            {reattachId
+            {readOnly
+              ? '访客只读模式，可查看已有批注'
+              : reattachId
               ? '正在重新关联批注，请选择新的原文'
               : loading
                 ? '正在加载批注...'
@@ -503,7 +536,7 @@ export const MarkdownAnnotationSurface = forwardRef<
                   ? '批注加载失败'
                   : '原文与批注分别保存'}
           </span>
-          {reattachId ? (
+          {!readOnly && reattachId ? (
             <button type="button" className="md-annotation-reattach-cancel" onClick={() => setReattachId('')}>
               取消
             </button>
@@ -523,10 +556,10 @@ export const MarkdownAnnotationSurface = forwardRef<
         annotations={annotations}
         onAnnotationActivate={handleAnnotationActivate}
         onAnnotationResolutionChange={setOrphanIds}
-        onTextSelection={handleSelection}
+        onTextSelection={readOnly ? undefined : handleSelection}
       />
 
-      {selection && !dialogMode ? (
+      {!readOnly && selection && !dialogMode ? (
         <div className="md-annotation-selection-toolbar" style={selectionStyle}>
           <button
             type="button"
@@ -562,15 +595,17 @@ export const MarkdownAnnotationSurface = forwardRef<
                   <span>更新于 {formatDateTime(activeAnnotation.updatedAt)}</span>
                 </div>
                 <div className="md-annotation-popover-actions">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    title="编辑批注"
-                    aria-label="编辑批注"
-                    onClick={() => openEditor(activeAnnotation)}
-                  >
-                    <Edit3 className="h-4 w-4" />
-                  </Button>
+                  {!readOnly ? (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      title="编辑批注"
+                      aria-label="编辑批注"
+                      onClick={() => openEditor(activeAnnotation)}
+                    >
+                      <Edit3 className="h-4 w-4" />
+                    </Button>
+                  ) : null}
                   <Button
                     variant="ghost"
                     size="icon"
@@ -580,15 +615,17 @@ export const MarkdownAnnotationSurface = forwardRef<
                   >
                     <Expand className="h-4 w-4" />
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    title="删除批注"
-                    aria-label="删除批注"
-                    onClick={() => void handleDelete(activeAnnotation)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  {!readOnly ? (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      title="删除批注"
+                      aria-label="删除批注"
+                      onClick={() => void handleDelete(activeAnnotation)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  ) : null}
                   <Button variant="ghost" size="icon" title="关闭" aria-label="关闭批注" onClick={closePopover}>
                     <X className="h-4 w-4" />
                   </Button>
@@ -700,16 +737,20 @@ export const MarkdownAnnotationSurface = forwardRef<
               <footer className="md-annotation-dialog-footer">
                 {dialogMode === 'reader' && dialogAnnotation ? (
                   <>
-                    <Button variant="outline" onClick={() => void handleDelete(dialogAnnotation)}>
-                      <Trash2 className="h-4 w-4" />
-                      删除
-                    </Button>
+                    {!readOnly ? (
+                      <Button variant="outline" onClick={() => void handleDelete(dialogAnnotation)}>
+                        <Trash2 className="h-4 w-4" />
+                        删除
+                      </Button>
+                    ) : null}
                     <span className="flex-1" />
                     <Button variant="outline" onClick={() => setDialogMode(null)}>关闭</Button>
-                    <Button onClick={() => openEditor(dialogAnnotation)}>
-                      <Edit3 className="h-4 w-4" />
-                      编辑
-                    </Button>
+                    {!readOnly ? (
+                      <Button onClick={() => openEditor(dialogAnnotation)}>
+                        <Edit3 className="h-4 w-4" />
+                        编辑
+                      </Button>
+                    ) : null}
                   </>
                 ) : null}
                 {dialogMode === 'editor' ? (

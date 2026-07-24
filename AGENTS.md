@@ -16,17 +16,17 @@
 
 ### 前端
 
-- Vue 3
+- React 18
 - TypeScript
 - Vite
-- Vue Router
-- Pinia
+- React Router
+- Zustand
 - Monaco Editor
-- shadcn-vue 风格本地组件
+- shadcn/ui 风格本地 React 组件
 - Tailwind CSS
-- lucide-vue-next
+- lucide-react
 
-前端不再使用 Element Plus。新增或修改 UI 时，不要引入 `element-plus` 或 `@element-plus/icons-vue`。
+前端不使用 Element Plus。新增或修改 UI 时，不要引入 `element-plus` 或 `@element-plus/icons-vue`。
 
 ### 后端
 
@@ -45,10 +45,10 @@
 
 - 前端页面放在 `apps/web/src/views`。
 - 前端通用布局组件放在 `apps/web/src/components/layout`。
-- shadcn-vue 风格基础 UI 组件放在 `apps/web/src/components/ui`。
+- shadcn/ui 风格基础 UI 组件放在 `apps/web/src/components/ui`。
 - 前端 API 封装放在 `apps/web/src/api`。
 - 前端类型定义放在 `apps/web/src/types`。
-- Pinia Store 放在 `apps/web/src/stores`。
+- Zustand Store 放在 `apps/web/src/stores`。
 - 后端模块按业务资源放在 `apps/api/src` 下，例如 `prompts`、`categories`、`tags`。
 - Prisma Schema、迁移和种子数据放在 `apps/api/prisma`。
 - API 文档放在 `docs/api`。
@@ -57,14 +57,14 @@
 ## 前端实现规则
 
 - UI 统一使用 Tailwind CSS 与 `apps/web/src/components/ui` 下的本地组件。
-- 图标统一使用 `lucide-vue-next`。
+- 图标统一使用 `lucide-react`。
 - 样式优先使用 Tailwind class；跨页面复用或复杂布局样式写入 `apps/web/src/assets/main.css`。
 - 不要重新引入 Element Plus。
 - 不要引入新的 UI 框架，除非用户明确要求。
 - 保持后台工具型产品的界面风格：克制、清晰、易扫描、操作路径短。
 - Prompt 内容编辑继续使用 Monaco Editor，不要替换为普通 textarea。
-- Toast 使用 `apps/web/src/composables/use-toast.ts` 与 `Toaster.vue`。
-- 确认弹窗使用 `apps/web/src/composables/use-confirm.ts` 与 `ConfirmDialog.vue`。
+- Toast 使用 `apps/web/src/hooks/use-toast.ts`、`apps/web/src/stores/toast.ts` 与 `Toaster.tsx`。
+- 确认弹窗使用 `apps/web/src/hooks/use-confirm.ts`、`apps/web/src/stores/confirm.ts` 与 `confirm-dialog.tsx`。
 
 ## 后端实现规则
 

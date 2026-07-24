@@ -9,6 +9,7 @@ import { PromptMonacoEditor } from '@/components/prompt/PromptMonacoEditor';
 import { useConfirm } from '@/hooks/use-confirm';
 import { useToast } from '@/hooks/use-toast';
 import { getPrompt, getPromptVersions, rollbackPrompt } from '@/api/prompts';
+import { useAuthStore } from '@/stores/auth';
 import type { Prompt, PromptVersion } from '@/types/domain';
 import { copyText } from '@/utils/clipboard';
 import { formatDateTime } from '@/utils/date';
@@ -19,6 +20,7 @@ export function PromptDetail() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { confirm } = useConfirm();
+  const isAdmin = useAuthStore((state) => state.status === 'admin');
 
   const [prompt, setPrompt] = useState<Prompt>();
   const [versions, setVersions] = useState<PromptVersion[]>([]);
@@ -92,10 +94,12 @@ export function PromptDetail() {
               <Copy className="h-4 w-4" />
               一键复制
             </Button>
-            <Button onClick={() => navigate(`/prompts/${prompt?.id}/edit`)}>
-              <Pencil className="h-4 w-4" />
-              编辑
-            </Button>
+            {isAdmin ? (
+              <Button onClick={() => navigate(`/prompts/${prompt?.id}/edit`)}>
+                <Pencil className="h-4 w-4" />
+                编辑
+              </Button>
+            ) : null}
           </>
         }
       />
@@ -200,9 +204,11 @@ export function PromptDetail() {
                     <Button variant="outline" size="icon" title="查看版本" onClick={() => openVersion(version)}>
                       <Eye className="h-4 w-4" />
                     </Button>
-                    <Button variant="outline" size="icon" title="回滚" onClick={() => handleRollback(version)}>
-                      <RotateCcw className="h-4 w-4" />
-                    </Button>
+                    {isAdmin ? (
+                      <Button variant="outline" size="icon" title="回滚" onClick={() => handleRollback(version)}>
+                        <RotateCcw className="h-4 w-4" />
+                      </Button>
+                    ) : null}
                   </div>
                 </td>
               </tr>

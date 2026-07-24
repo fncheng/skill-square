@@ -139,7 +139,19 @@
   }
 
   .admin-badge {
-    @apply inline-flex h-9 items-center gap-2 rounded-full border bg-slate-50 px-3 font-bold text-slate-800;
+    @apply inline-flex h-9 items-center gap-2 rounded-full border bg-slate-50 px-3 font-bold text-slate-800 transition-colors;
+  }
+
+  a.admin-badge:hover {
+    @apply border-primary/30 bg-accent text-primary;
+  }
+
+  .admin-badge.is-loading {
+    @apply text-slate-400;
+  }
+
+  .admin-session {
+    @apply flex items-center gap-1;
   }
 
   .app-sidebar {

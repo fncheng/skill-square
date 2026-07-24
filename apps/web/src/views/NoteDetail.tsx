@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useMarkdown } from '@/hooks/use-markdown';
 import { useContentExport } from '@/hooks/use-content-transfer';
 import { deleteNote, exportNote, getNote } from '@/api/notes';
+import { useAuthStore } from '@/stores/auth';
 import type { Note } from '@/types/domain';
 import { copyText } from '@/utils/clipboard';
 import { formatDateTime } from '@/utils/date';
@@ -23,6 +24,7 @@ export function NoteDetail() {
   const { toast } = useToast();
   const { confirmDeletion } = useConfirm();
   const annotationSurfaceRef = useRef<MarkdownAnnotationSurfaceHandle>(null);
+  const isAdmin = useAuthStore((state) => state.status === 'admin');
 
   const [note, setNote] = useState<Note>();
   const [loading, setLoading] = useState(false);
@@ -101,19 +103,23 @@ export function NoteDetail() {
                 <Copy className="h-4 w-4" />
                 复制 Markdown
               </Button>
-              <Button variant="outline" onClick={() => navigate(`/notes/${note.id}/edit`)}>
-                <Pencil className="h-4 w-4" />
-                编辑
-              </Button>
+              {isAdmin ? (
+                <Button variant="outline" onClick={() => navigate(`/notes/${note.id}/edit`)}>
+                  <Pencil className="h-4 w-4" />
+                  编辑
+                </Button>
+              ) : null}
               <Button variant="outline" onClick={() => annotationSurfaceRef.current?.openList()}>
                 <MessageSquareText className="h-4 w-4" />
                 批注
                 <span className="md-annotation-count">{annotationCount}</span>
               </Button>
-              <Button variant="outline" onClick={handleDelete}>
-                <Trash2 className="h-4 w-4" />
-                删除
-              </Button>
+              {isAdmin ? (
+                <Button variant="outline" onClick={handleDelete}>
+                  <Trash2 className="h-4 w-4" />
+                  删除
+                </Button>
+              ) : null}
             </>
           ) : null
         }
@@ -127,6 +133,7 @@ export function NoteDetail() {
             resourceType="NOTE"
             resourceId={note.id}
             documentUpdatedAt={note.updatedAt}
+            readOnly={!isAdmin}
             onCountChange={setAnnotationCount}
           />
 

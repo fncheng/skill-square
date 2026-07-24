@@ -199,6 +199,15 @@ docker images | grep postgres
 
 ## 六、创建环境变量文件
 
+先在已经安装项目依赖的开发机上交互式生成管理员密码哈希，避免把明文密码写进命令历史：
+
+```bash
+read -s ADMIN_PASSWORD_INPUT
+echo
+ADMIN_PASSWORD_INPUT="$ADMIN_PASSWORD_INPUT" pnpm --filter @prompt-skill-manager/api exec node -e "const bcrypt = require('bcryptjs'); console.log(bcrypt.hashSync(process.env.ADMIN_PASSWORD_INPUT, 12))"
+unset ADMIN_PASSWORD_INPUT
+```
+
 在 `/opt/prompt-skill-manager/.env` 写入生产环境变量：
 
 ```env
@@ -208,11 +217,18 @@ POSTGRES_DB=prompt_skill_manager
 IMAGE_TAG=0.1.0
 CORS_ORIGIN=https://你的域名
 WEB_PORT=5173
+ADMIN_PASSWORD_HASH=替换成管理员密码的bcrypt哈希
+AUTH_JWT_SECRET=替换成至少32字符的高强度随机值
+AUTH_SESSION_TTL_SECONDS=28800
+AUTH_COOKIE_SECURE=true
 ```
 
 注意：
 
 - 不要继续使用示例密码 `postgres`。
+- `ADMIN_PASSWORD_HASH` 必须是 bcrypt 哈希，不能填写管理员明文密码。
+- `AUTH_JWT_SECRET` 可以使用 `openssl rand -base64 48` 生成；轮换该值会让全部现有会话失效。
+- 使用 HTTP 地址临时测试时必须把 `AUTH_COOKIE_SECURE` 改为 `false`；启用 HTTPS 后改回 `true`。
 - `IMAGE_TAG` 必须与已经加载到服务器的离线镜像版本一致。
 - `WEB_PORT` 是前端容器映射到宿主机的端口；使用本文的宿主机 Nginx 配置时保持为 `5173`。
 - 不需要在生产服务器 `.env` 中配置 `DATABASE_URL`，Compose 会在 API 服务中生成容器内数据库连接地址。
@@ -248,6 +264,10 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
       PORT: 3000
       CORS_ORIGIN: ${CORS_ORIGIN}
+      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH}
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET}
+      AUTH_SESSION_TTL_SECONDS: ${AUTH_SESSION_TTL_SECONDS:-28800}
+      AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE}
     depends_on:
       db:
         condition: service_healthy
@@ -269,12 +289,14 @@ volumes:
 
 ```env
 CORS_ORIGIN=http://服务器IP
+AUTH_COOKIE_SECURE=false
 ```
 
 如果后续配置了 HTTPS 域名，需要改成：
 
 ```env
 CORS_ORIGIN=https://你的域名
+AUTH_COOKIE_SECURE=true
 ```
 
 如果不使用宿主机 Nginx，而是直接通过 `http://服务器IP:10086` 访问，可以把生产 `docker-compose.yml` 改成：
@@ -285,6 +307,10 @@ api:
     DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
     PORT: 3000
     CORS_ORIGIN: ${CORS_ORIGIN}
+    ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH}
+    AUTH_JWT_SECRET: ${AUTH_JWT_SECRET}
+    AUTH_SESSION_TTL_SECONDS: ${AUTH_SESSION_TTL_SECONDS:-28800}
+    AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE}
 
 web:
   ports:
@@ -296,6 +322,7 @@ web:
 ```env
 CORS_ORIGIN=http://服务器IP:10086
 WEB_PORT=10086
+AUTH_COOKIE_SECURE=false
 ```
 
 此时不需要暴露 API 容器的 `3000` 端口，前端容器内的 Nginx 会继续把 `/api/` 转发到 `api:3000`。

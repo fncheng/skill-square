@@ -17,6 +17,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useConfirm } from '@/hooks/use-confirm';
 import { useToast } from '@/hooks/use-toast';
+import { useAuthStore } from '@/stores/auth';
 import { cn } from '@/lib/utils';
 import type { UiPrototype } from '@/types/domain';
 import { formatDateTime } from '@/utils/date';
@@ -35,6 +36,7 @@ export function UiPrototypeDetail() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { confirmDeletion } = useConfirm();
+  const isAdmin = useAuthStore((state) => state.status === 'admin');
 
   const [prototype, setPrototype] = useState<UiPrototype>();
   const [loading, setLoading] = useState(false);
@@ -94,14 +96,18 @@ export function UiPrototypeDetail() {
                 <ExternalLink className="h-4 w-4" />
                 新窗口打开
               </Button>
-              <Button variant="outline" onClick={() => navigate(`/ui-prototypes/${prototype.id}/edit`)}>
-                <Pencil className="h-4 w-4" />
-                编辑
-              </Button>
-              <Button variant="outline" onClick={handleDelete}>
-                <Trash2 className="h-4 w-4" />
-                删除
-              </Button>
+              {isAdmin ? (
+                <>
+                  <Button variant="outline" onClick={() => navigate(`/ui-prototypes/${prototype.id}/edit`)}>
+                    <Pencil className="h-4 w-4" />
+                    编辑
+                  </Button>
+                  <Button variant="outline" onClick={handleDelete}>
+                    <Trash2 className="h-4 w-4" />
+                    删除
+                  </Button>
+                </>
+              ) : null}
             </>
           ) : null
         }

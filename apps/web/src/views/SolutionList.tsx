@@ -6,6 +6,7 @@ import { useConfirm } from '@/hooks/use-confirm';
 import { useToast } from '@/hooks/use-toast';
 import { useContentImport } from '@/hooks/use-content-transfer';
 import { deleteSolution, getSolutions, importSolution } from '@/api/solutions';
+import { useAuthStore } from '@/stores/auth';
 import type { Solution, SolutionFilters } from '@/types/domain';
 import { formatShortDate } from '@/utils/date';
 
@@ -13,6 +14,7 @@ export function SolutionList() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { confirmDeletion } = useConfirm();
+  const isAdmin = useAuthStore((state) => state.status === 'admin');
 
   const [solutions, setSolutions] = useState<Solution[]>([]);
   const [loading, setLoading] = useState(false);
@@ -81,23 +83,25 @@ export function SolutionList() {
           <h1 className="page-title">解决方案</h1>
           <p className="page-subtitle">沉淀常见问题的处理方式，以 Markdown 文档形式供随时查阅。</p>
         </div>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="application/json,.json"
-            className="hidden"
-            onChange={(event) => void importFile(event)}
-          />
-          <Button variant="outline" disabled={importing} onClick={openFilePicker}>
-            <Upload className="h-4 w-4" />
-            {importing ? '正在导入...' : '导入'}
-          </Button>
-          <Button onClick={() => navigate('/solutions/new')}>
-            <Plus className="h-4 w-4" />
-            新建方案
-          </Button>
-        </div>
+        {isAdmin ? (
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/json,.json"
+              className="hidden"
+              onChange={(event) => void importFile(event)}
+            />
+            <Button variant="outline" disabled={importing} onClick={openFilePicker}>
+              <Upload className="h-4 w-4" />
+              {importing ? '正在导入...' : '导入'}
+            </Button>
+            <Button onClick={() => navigate('/solutions/new')}>
+              <Plus className="h-4 w-4" />
+              新建方案
+            </Button>
+          </div>
+        ) : null}
       </div>
 
       <div className="solution-toolbar">
@@ -180,7 +184,7 @@ export function SolutionList() {
                 <Clock className="h-3.5 w-3.5" />
                 {formatShortDate(item.updatedAt)}
               </span>
-              <div className="solution-card-actions" aria-label="解决方案操作">
+              {isAdmin ? <div className="solution-card-actions" aria-label="解决方案操作">
                 <button
                   type="button"
                   title="编辑"
@@ -203,7 +207,7 @@ export function SolutionList() {
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
-              </div>
+              </div> : null}
             </footer>
           </article>
         ))}

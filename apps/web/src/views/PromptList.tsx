@@ -7,6 +7,7 @@ import { useConfirm } from '@/hooks/use-confirm';
 import { useToast } from '@/hooks/use-toast';
 import { deletePrompt } from '@/api/prompts';
 import { usePromptStore, type FavoriteFilter } from '@/stores/prompt';
+import { useAuthStore } from '@/stores/auth';
 import type { Prompt } from '@/types/domain';
 import { copyText } from '@/utils/clipboard';
 import { formatShortDate } from '@/utils/date';
@@ -33,6 +34,7 @@ export function PromptList() {
   const { toast } = useToast();
   const { confirmDeletion } = useConfirm();
   const store = usePromptStore();
+  const isAdmin = useAuthStore((state) => state.status === 'admin');
   const [selectedTagId, setSelectedTagId] = useState('');
 
   const favoriteQuery = searchParams.get('favorite');
@@ -151,10 +153,12 @@ export function PromptList() {
               <h1 className="page-title">我的收藏</h1>
               <p className="page-subtitle">集中查看已收藏的 Prompt，快速查找并复用常用内容。</p>
             </div>
-            <Button onClick={() => navigate('/prompts/new')}>
-              <Plus className="h-4 w-4" />
-              新建 Prompt
-            </Button>
+            {isAdmin ? (
+              <Button onClick={() => navigate('/prompts/new')}>
+                <Plus className="h-4 w-4" />
+                新建 Prompt
+              </Button>
+            ) : null}
           </div>
 
           <section className="solution-toolbar">
@@ -345,17 +349,19 @@ export function PromptList() {
               >
                 {prompt.name}
               </Link>
-              <button
-                type="button"
-                title={prompt.isFavorite ? '取消收藏' : '收藏'}
-                className={`card-star-button${prompt.isFavorite ? ' active' : ''}`}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  void handleFavorite(prompt);
-                }}
-              >
-                <Star className="h-4 w-4" fill={prompt.isFavorite ? 'currentColor' : 'none'} />
-              </button>
+              {isAdmin ? (
+                <button
+                  type="button"
+                  title={prompt.isFavorite ? '取消收藏' : '收藏'}
+                  className={`card-star-button${prompt.isFavorite ? ' active' : ''}`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    void handleFavorite(prompt);
+                  }}
+                >
+                  <Star className="h-4 w-4" fill={prompt.isFavorite ? 'currentColor' : 'none'} />
+                </button>
+              ) : null}
             </header>
 
             <p className="prompt-card-desc">{prompt.description || '暂无描述'}</p>
@@ -390,17 +396,19 @@ export function PromptList() {
                 >
                   <Copy className="h-4 w-4" />
                 </button>
-                <button
-                  type="button"
-                  title="删除"
-                  className="card-icon-button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    void handleDelete(prompt);
-                  }}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                {isAdmin ? (
+                  <button
+                    type="button"
+                    title="删除"
+                    className="card-icon-button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      void handleDelete(prompt);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                ) : null}
               </div>
             </footer>
           </article>
@@ -442,7 +450,7 @@ export function PromptList() {
         </Button>
       </div>
 
-      {favoriteQuery !== 'true' ? (
+      {isAdmin && favoriteQuery !== 'true' ? (
         <button type="button" className="prompt-fab" title="新建 Prompt" onClick={() => navigate('/prompts/new')}>
           <Plus className="h-7 w-7" />
         </button>

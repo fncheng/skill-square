@@ -247,6 +247,15 @@ volumes:
 
 ## 六、创建生产环境变量
 
+先在已经安装项目依赖的开发机上交互式生成管理员密码哈希，避免把明文密码写进命令历史：
+
+```bash
+read -s ADMIN_PASSWORD_INPUT
+echo
+ADMIN_PASSWORD_INPUT="$ADMIN_PASSWORD_INPUT" pnpm --filter @prompt-skill-manager/api exec node -e "const bcrypt = require('bcryptjs'); console.log(bcrypt.hashSync(process.env.ADMIN_PASSWORD_INPUT, 12))"
+unset ADMIN_PASSWORD_INPUT
+```
+
 先限制文件权限：
 
 ```bash
@@ -266,15 +275,22 @@ POSTGRES_DB=prompt_skill_manager
 IMAGE_TAG=0.1.0
 CORS_ORIGIN=https://你的域名
 WEB_PORT=5173
+ADMIN_PASSWORD_HASH=替换成管理员密码的bcrypt哈希
+AUTH_JWT_SECRET=替换成至少32字符的高强度随机值
+AUTH_SESSION_TTL_SECONDS=28800
+AUTH_COOKIE_SECURE=true
 ```
 
 如果暂时没有域名，可以使用：
 
 ```env
 CORS_ORIGIN=http://服务器IP
+AUTH_COOKIE_SECURE=false
 ```
 
-不要将服务器 `.env`、GitHub Token、数据库密码提交到 Git 仓库。
+`ADMIN_PASSWORD_HASH` 必须是 bcrypt 哈希，不能填写明文密码。`AUTH_JWT_SECRET` 可以使用 `openssl rand -base64 48` 生成；轮换密码哈希或 JWT secret 会让已有管理员会话失效。正式 HTTPS 域名必须配置 `AUTH_COOKIE_SECURE=true`。
+
+不要将服务器 `.env`、GitHub Token、数据库密码或认证密钥提交到 Git 仓库。
 
 ## 七、首次拉取并启动
 

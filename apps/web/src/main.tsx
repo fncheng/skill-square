@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
+import { AuthBootstrap } from './components/auth/AuthBootstrap';
 import './assets/main.css';
 
 const container = document.getElementById('root');
@@ -13,6 +14,7 @@ if (!container) {
 createRoot(container).render(
   <StrictMode>
     <BrowserRouter>
+      <AuthBootstrap />
       <App />
     </BrowserRouter>
   </StrictMode>

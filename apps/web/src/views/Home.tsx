@@ -17,6 +17,7 @@ import { getSolutions } from '@/api/solutions';
 import { getNotes } from '@/api/notes';
 import { getCategories } from '@/api/categories';
 import { getTags } from '@/api/tags';
+import { useAuthStore } from '@/stores/auth';
 import type { Note, Prompt, Solution } from '@/types/domain';
 import { formatShortDate } from '@/utils/date';
 
@@ -43,6 +44,7 @@ function sortByUpdated<T extends { updatedAt: string }>(items: T[]): T[] {
 
 export function Home() {
   const navigate = useNavigate();
+  const isAdmin = useAuthStore((state) => state.status === 'admin');
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<HomeStats>({ prompts: 0, solutions: 0, notes: 0, categories: 0, tags: 0 });
   const [recentPrompts, setRecentPrompts] = useState<Prompt[]>([]);
@@ -150,10 +152,12 @@ export function Home() {
           </h1>
           <p>搜索、收藏、沉淀提示词、解决方案与学习笔记，让每一次 AI 协作都有迹可循、随取随用。</p>
           <div className="home-hero-actions">
-            <Button onClick={() => navigate('/prompts/new')}>
-              <Plus className="h-4 w-4" />
-              新建 Prompt
-            </Button>
+            {isAdmin ? (
+              <Button onClick={() => navigate('/prompts/new')}>
+                <Plus className="h-4 w-4" />
+                新建 Prompt
+              </Button>
+            ) : null}
             <Button variant="outline" onClick={() => navigate('/prompts')}>
               浏览 Prompt 广场
               <ArrowRight className="h-4 w-4" />

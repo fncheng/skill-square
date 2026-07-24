@@ -7,6 +7,8 @@ import {
   Folder,
   House,
   Lightbulb,
+  LogIn,
+  LogOut,
   type LucideProps,
   NotebookPen,
   PanelsTopLeft,
@@ -17,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Toaster } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/stores/auth';
 import { GlobalSearch } from './GlobalSearch';
 
 type IconComponent = ComponentType<LucideProps>;
@@ -51,6 +54,9 @@ export function AppLayout() {
   const location = useLocation();
   const pathname = location.pathname;
   const favorite = new URLSearchParams(location.search).get('favorite');
+  const authStatus = useAuthStore((state) => state.status);
+  const logout = useAuthStore((state) => state.logout);
+  const isAdmin = authStatus === 'admin';
 
   const isPrimaryActive = (item: PrimaryNavItem) => {
     if (item.key === 'favorites') {
@@ -87,10 +93,27 @@ export function AppLayout() {
           <Button variant="ghost" size="icon">
             <Bell className="h-4 w-4" />
           </Button>
-          <span className="admin-badge">
-            <CircleUserRound className="h-4 w-4" />
-            Admin
-          </span>
+          {authStatus === 'loading' ? (
+            <span className="admin-badge is-loading">
+              <CircleUserRound className="h-4 w-4" />
+              身份确认中
+            </span>
+          ) : isAdmin ? (
+            <div className="admin-session">
+              <span className="admin-badge">
+                <CircleUserRound className="h-4 w-4" />
+                Admin
+              </span>
+              <Button variant="ghost" size="icon" title="退出登录" aria-label="退出登录" onClick={() => void logout()}>
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <Link className="admin-badge" to="/login">
+              <LogIn className="h-4 w-4" />
+              登录
+            </Link>
+          )}
         </div>
       </header>
 
@@ -111,22 +134,26 @@ export function AppLayout() {
           })}
         </nav>
 
-        <div className="nav-title">管理</div>
-        <nav className="nav-section">
-          {manageNav.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.path}
-                className={cn('nav-link', pathname === item.path && 'active')}
-                to={item.path}
-              >
-                <Icon className="h-4 w-4" />
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
+        {isAdmin ? (
+          <>
+            <div className="nav-title">管理</div>
+            <nav className="nav-section">
+              {manageNav.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.path}
+                    className={cn('nav-link', pathname === item.path && 'active')}
+                    to={item.path}
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </nav>
+          </>
+        ) : null}
       </aside>
 
       <main className="app-main">

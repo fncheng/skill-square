@@ -6,6 +6,7 @@ import { UiPrototypeThumbnail } from '@/components/ui-prototype/UiPrototypeFrame
 import { Button } from '@/components/ui/button';
 import { useConfirm } from '@/hooks/use-confirm';
 import { useToast } from '@/hooks/use-toast';
+import { useAuthStore } from '@/stores/auth';
 import type { UiPrototype, UiPrototypeFilters } from '@/types/domain';
 import { formatShortDate } from '@/utils/date';
 
@@ -13,6 +14,7 @@ export function UiPrototypeList() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { confirmDeletion } = useConfirm();
+  const isAdmin = useAuthStore((state) => state.status === 'admin');
 
   const [prototypes, setPrototypes] = useState<UiPrototype[]>([]);
   const [loading, setLoading] = useState(false);
@@ -74,10 +76,12 @@ export function UiPrototypeList() {
             <p className="page-subtitle">收藏 AI 生成的单文件 HTML，在隔离环境中随时查看和对比设计效果。</p>
           </div>
         </div>
-        <Button onClick={() => navigate('/ui-prototypes/new')}>
-          <Plus className="h-4 w-4" />
-          新建原型
-        </Button>
+        {isAdmin ? (
+          <Button onClick={() => navigate('/ui-prototypes/new')}>
+            <Plus className="h-4 w-4" />
+            新建原型
+          </Button>
+        ) : null}
       </div>
 
       <div className="ui-prototype-toolbar">
@@ -171,7 +175,7 @@ export function UiPrototypeList() {
                   <Clock className="h-3.5 w-3.5" />
                   {formatShortDate(item.updatedAt)}
                 </span>
-                <div className="solution-card-actions" aria-label="UI 原型操作">
+                {isAdmin ? <div className="solution-card-actions" aria-label="UI 原型操作">
                   <button
                     type="button"
                     title="编辑"
@@ -194,7 +198,7 @@ export function UiPrototypeList() {
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
-                </div>
+                </div> : null}
               </footer>
             </div>
           </article>
@@ -204,11 +208,13 @@ export function UiPrototypeList() {
           <div className="ui-prototype-empty">
             <PanelsTopLeft className="h-9 w-9" />
             <p className="font-semibold">暂无匹配的 UI 原型</p>
-            <span>可以调整搜索条件，或者创建一个新的 HTML 原型。</span>
-            <Button size="sm" onClick={() => navigate('/ui-prototypes/new')}>
-              <Plus className="h-4 w-4" />
-              新建原型
-            </Button>
+            <span>{isAdmin ? '可以调整搜索条件，或者创建一个新的 HTML 原型。' : '可以调整搜索条件后继续查看。'}</span>
+            {isAdmin ? (
+              <Button size="sm" onClick={() => navigate('/ui-prototypes/new')}>
+                <Plus className="h-4 w-4" />
+                新建原型
+              </Button>
+            ) : null}
           </div>
         ) : null}
       </section>
