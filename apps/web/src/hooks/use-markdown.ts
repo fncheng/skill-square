@@ -166,6 +166,12 @@ function renderTable(headers: string[], alignments: TableAlignment[], rows: stri
   );
 }
 
+/** 判断当前行是否为 Markdown 分隔线，支持常见的横线、星号和下划线写法。 */
+function isHorizontalRule(line: string): boolean {
+  const normalized = line.trim();
+  return /^(?:(?:-\s*){3,}|(?:\*\s*){3,}|(?:_\s*){3,})$/.test(normalized);
+}
+
 /** 生成代码块右上角的复制按钮，图标使用 Lucide Copy 与 Check 路径。 */
 function renderCodeCopyButton(): string {
   return (
@@ -298,6 +304,35 @@ function parseMarkdown(source: string): ParseResult {
 
       blocks.push(renderTable(tableHeaders, tableAlignments, tableRows));
       lineIndex = nextLineIndex - 1;
+      continue;
+    }
+
+    const blockquoteMatch = line.match(/^ {0,3}>\s?(.*)$/);
+    if (blockquoteMatch) {
+      flushParagraph();
+      flushList();
+
+      const quoteLines: string[] = [blockquoteMatch[1]];
+      let nextLineIndex = lineIndex + 1;
+      while (nextLineIndex < lines.length) {
+        const nextQuoteMatch = lines[nextLineIndex].match(/^ {0,3}>\s?(.*)$/);
+        if (!nextQuoteMatch) {
+          break;
+        }
+        quoteLines.push(nextQuoteMatch[1]);
+        nextLineIndex += 1;
+      }
+
+      const quote = parseMarkdown(quoteLines.join('\n'));
+      blocks.push(`<blockquote class="md-blockquote">${quote.html}</blockquote>`);
+      lineIndex = nextLineIndex - 1;
+      continue;
+    }
+
+    if (isHorizontalRule(line)) {
+      flushParagraph();
+      flushList();
+      blocks.push('<hr class="md-divider">');
       continue;
     }
 
