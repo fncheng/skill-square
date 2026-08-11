@@ -148,13 +148,13 @@ interface CreateSolutionRequest {
   summary?: string;
   content: string;
   category?: string;
-  tags?: string[];
+  tags: string[];
 }
 ```
 
 ## UpdateSolutionRequest
 
-`UpdateSolutionRequest` 与 `CreateSolutionRequest` 字段一致，但所有字段均可选。
+`UpdateSolutionRequest` 与 `CreateSolutionRequest` 字段一致，但所有字段均可选；传入 `tags` 时至少包含一项。
 
 ## Note
 
@@ -192,13 +192,13 @@ interface CreateNoteRequest {
   summary?: string;
   content: string;
   category?: string;
-  tags?: string[];
+  tags: string[];
 }
 ```
 
 ## UpdateNoteRequest
 
-`UpdateNoteRequest` 与 `CreateNoteRequest` 字段一致，但所有字段均可选。
+`UpdateNoteRequest` 与 `CreateNoteRequest` 字段一致，但所有字段均可选；传入 `tags` 时至少包含一项。
 
 ## UiPrototype
 
@@ -344,4 +344,40 @@ interface ContentTransferFile {
 }
 ```
 
-迁移文件不包含资源和批注 UUID。导入时生成新的 UUID，避免覆盖目标环境已有数据；`format` 与 `version` 用于校验文件来源和后续格式兼容。
+迁移文件不包含资源和批注 UUID。导入时生成新的 UUID，避免覆盖目标环境已有数据；`format` 与 `version` 用于校验文件来源和后续格式兼容。`resource.tags` 至少包含一项。
+
+## ContentTagCloudResponse
+
+```ts
+interface ContentTagCloudResponse {
+  items: Array<{
+    name: string;
+    total: number;
+    solutionCount: number;
+    noteCount: number;
+  }>;
+  totalTags: number;
+  taggedSolutionCount: number;
+  taggedNoteCount: number;
+}
+```
+
+## ContentTagItemsResponse
+
+```ts
+interface ContentTagItemsResponse {
+  items: Array<{
+    id: string;
+    title: string;
+    summary: string;
+    category: string;
+    tags: string[];
+    resourceType: 'SOLUTION' | 'NOTE';
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  total: number;
+  page: number;
+  pageSize: number;
+}
+```

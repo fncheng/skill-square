@@ -1,6 +1,7 @@
 import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
+  ArrayMinSize,
   Equals,
   IsArray,
   IsEnum,
@@ -43,6 +44,7 @@ export class ContentTransferResourceDto {
 
   @ApiProperty({ type: [String], example: ['WSL', 'PostgreSQL'] })
   @IsArray()
+  @ArrayMinSize(1)
   @IsString({ each: true })
   @MaxLength(80, { each: true })
   @ArrayMaxSize(20)

@@ -13,6 +13,8 @@ import { SolutionDetail } from './views/SolutionDetail';
 import { SolutionEditor } from './views/SolutionEditor';
 import { SolutionList } from './views/SolutionList';
 import { TagManage } from './views/TagManage';
+import { TagArticleList } from './views/TagArticleList';
+import { TagCloud } from './views/TagCloud';
 import { UiPrototypeDetail } from './views/UiPrototypeDetail';
 import { UiPrototypeEditor } from './views/UiPrototypeEditor';
 import { UiPrototypeList } from './views/UiPrototypeList';
@@ -29,6 +31,8 @@ export default function App() {
         <Route path="/solutions/:id" element={<SolutionDetail />} />
         <Route path="/notes" element={<NoteList />} />
         <Route path="/notes/:id" element={<NoteDetail />} />
+        <Route path="/tag-cloud" element={<TagCloud />} />
+        <Route path="/tag-articles" element={<TagArticleList />} />
         <Route path="/ui-prototypes" element={<UiPrototypeList />} />
         <Route path="/ui-prototypes/:id" element={<UiPrototypeDetail />} />
         <Route element={<RequireAdmin />}>

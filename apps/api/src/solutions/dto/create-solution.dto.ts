@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ArrayMaxSize, IsArray, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { ArrayMaxSize, ArrayMinSize, IsArray, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 
 export class CreateSolutionDto {
   @ApiProperty({ example: '关于 Codex 如何在没有 AGENTS.md 时读取 CLAUDE.md' })
@@ -25,11 +25,11 @@ export class CreateSolutionDto {
   @MaxLength(80)
   category?: string;
 
-  @ApiPropertyOptional({ type: [String], example: ['Codex', 'CLAUDE.md', '配置'] })
-  @IsOptional()
+  @ApiProperty({ type: [String], example: ['Codex', 'CLAUDE.md', '配置'], minItems: 1 })
   @IsArray()
+  @ArrayMinSize(1)
   @IsString({ each: true })
   @MaxLength(80, { each: true })
   @ArrayMaxSize(20)
-  tags?: string[];
+  tags: string[];
 }

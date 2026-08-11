@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>标签词云与内容列表原型</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --muted: #64748b;
+      --primary: #4f46e5;
+      --accent: #eef2ff;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 320px; background: var(--bg); color: var(--text); font-size: 14px; }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    .shell { min-height: 100vh; }
+    .topbar { position: fixed; inset: 0 0 auto; z-index: 10; display: flex; height: 64px; align-items: center; border-bottom: 1px solid var(--border); background: rgba(255,255,255,.94); padding: 0 28px; }
+    .brand { display: flex; width: 220px; align-items: center; gap: 10px; font-weight: 800; }
+    .mark { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 6px; background: var(--primary); color: white; }
+    .top-search { width: min(560px, 45vw); height: 40px; border: 1px solid var(--border); border-radius: 6px; background: #f8fafc; padding: 0 14px; color: var(--muted); }
+    .avatar { margin-left: auto; width: 36px; height: 36px; border-radius: 50%; background: #e2e8f0; }
+    .sidebar { position: fixed; inset: 64px auto 0 0; width: 220px; border-right: 1px solid var(--border); background: rgba(255,255,255,.8); padding: 20px 14px; }
+    .nav { display: grid; gap: 6px; }
+    .nav button { display: flex; height: 44px; align-items: center; gap: 12px; border: 0; border-radius: 6px; background: transparent; padding: 0 14px; color: #475569; font-weight: 700; text-align: left; }
+    .nav button.active { background: var(--accent); color: var(--primary); }
+    main { margin-left: 220px; padding: 88px 28px 40px; }
+    .view[hidden] { display: none; }
+    .head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 20px; }
+    .head-icon, .back { display: grid; width: 40px; height: 40px; flex: none; place-items: center; border: 1px solid #c7d2fe; border-radius: 8px; background: var(--accent); color: var(--primary); }
+    .back { width: 36px; height: 36px; border-color: var(--border); background: white; color: var(--muted); }
+    h1 { margin: 0; font-size: 24px; line-height: 1.25; }
+    .subtitle { margin: 8px 0 0; color: var(--muted); line-height: 1.7; }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); overflow: hidden; margin: 0 0 20px; border: 1px solid var(--border); border-radius: 8px; background: white; }
+    .stats div { border-right: 1px solid var(--border); padding: 16px 20px; }
+    .stats div:last-child { border: 0; }
+    .stats dt { color: #94a3b8; font-size: 12px; font-weight: 700; }
+    .stats dd { margin: 5px 0 0; font-size: 18px; font-weight: 800; }
+    .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+    .search { display: flex; width: min(380px, 100%); height: 40px; align-items: center; gap: 8px; border: 1px solid var(--border); border-radius: 6px; background: white; padding: 0 12px; color: #94a3b8; }
+    .search input { min-width: 0; flex: 1; border: 0; outline: 0; }
+    .segments { display: flex; gap: 4px; border-radius: 6px; background: #f1f5f9; padding: 4px; }
+    .segments button { height: 32px; border: 0; border-radius: 4px; background: transparent; padding: 0 12px; color: var(--muted); font-size: 12px; font-weight: 700; }
+    .segments button.active { background: white; color: var(--text); box-shadow: 0 1px 2px rgba(15,23,42,.08); }
+    .cloud-surface, .list-surface { overflow: hidden; min-height: 460px; border: 1px solid var(--border); border-radius: 8px; background: white; box-shadow: 0 1px 2px rgba(15,23,42,.04); }
+    .cloud { display: flex; min-height: 460px; flex-wrap: wrap; align-content: center; align-items: baseline; justify-content: center; gap: 20px 28px; padding: 48px 40px; }
+    .word { display: inline-flex; align-items: flex-start; gap: 3px; border: 0; border-radius: 6px; background: transparent; padding: 5px 8px; font-weight: 800; line-height: 1; transition: .15s ease; }
+    .word:hover, .word:focus-visible { transform: translateY(-2px); background: #f8fafc; outline: 2px solid #c7d2fe; }
+    .word sup { color: #94a3b8; font-size: 10px; }
+    .tone-0 { color: #4f46e5; } .tone-1 { color: #0369a1; } .tone-2 { color: #047857; } .tone-3 { color: #a16207; } .tone-4 { color: #be123c; }
+    .empty { display: grid; min-height: 360px; place-content: center; gap: 8px; color: var(--muted); text-align: center; }
+    .empty strong { color: var(--text); }
+    .title-line { display: flex; align-items: center; gap: 10px; }
+    .count { border-radius: 999px; background: var(--accent); padding: 4px 10px; color: var(--primary); font-size: 12px; font-weight: 800; }
+    .list-head, .row { display: grid; grid-template-columns: 116px minmax(0,1fr) 132px 28px; align-items: center; gap: 16px; padding: 0 20px; }
+    .list-head { min-height: 40px; border-bottom: 1px solid var(--border); background: #f8fafc; color: #94a3b8; font-size: 12px; font-weight: 800; }
+    .row { min-height: 118px; border: 0; border-bottom: 1px solid var(--border); background: white; text-align: left; width: 100%; }
+    .row:last-child { border-bottom: 0; }
+    .row:hover { background: #f8fafc; }
+    .type { display: inline-flex; width: max-content; align-items: center; border-radius: 6px; padding: 8px 10px; font-size: 12px; font-weight: 800; }
+    .type.solution { background: #eef2ff; color: #4338ca; } .type.note { background: #ecfdf5; color: #047857; }
+    .copy { display: grid; min-width: 0; gap: 7px; }
+    .copy strong, .copy span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .copy strong { font-size: 14px; } .copy .summary { color: var(--muted); font-size: 12px; }
+    .tags { display: flex; gap: 10px; color: #94a3b8; font-size: 11px; font-weight: 700; }
+    .tags .selected { color: var(--primary); }
+    .date { color: #94a3b8; font-size: 12px; font-weight: 700; }
+    .arrow { color: #cbd5e1; font-size: 18px; }
+    @media (max-width: 860px) {
+      .topbar { position: static; padding: 0 16px; } .brand { width: auto; } .brand span:last-child, .top-search, .avatar, .sidebar { display: none; }
+      main { margin: 0; padding: 22px 16px 32px; }
+      .toolbar { align-items: stretch; flex-direction: column; } .search { width: 100%; } .segments { overflow-x: auto; }
+      .stats { grid-template-columns: 1fr; } .stats div { border-right: 0; border-bottom: 1px solid var(--border); }
+      .cloud { gap: 16px; padding: 32px 18px; }
+      .list-head { display: none; } .row { grid-template-columns: 1fr 28px; gap: 10px; padding: 16px; }
+      .type, .date { grid-column: 1; } .copy { grid-column: 1 / -1; } .arrow { grid-column: 2; grid-row: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand"><span class="mark">◇</span><span>Prompt Skill Manager</span></div>
+      <div class="top-search">搜索 Prompt、解决方案、学习笔记...</div><div class="avatar"></div>
+    </header>
+    <aside class="sidebar"><nav class="nav"><button>⌂　Prompt 列表</button><button>☆　我的收藏</button><button>◈　解决方案</button><button>▤　学习笔记</button><button class="active">⌗　标签词云</button><button>▧　UI 原型</button></nav></aside>
+    <main>
+      <section class="view" id="cloudView">
+        <div class="head"><div class="head-icon">⌗</div><div><h1>标签词云</h1><p class="subtitle">按使用频率浏览解决方案与学习笔记，点击标签查看相关内容。</p></div></div>
+        <dl class="stats"><div><dt>标签数量</dt><dd id="tagCount">0</dd></div><div><dt>已标记内容</dt><dd>28</dd></div><div><dt>当前最热</dt><dd id="hotTag">—</dd></div></dl>
+        <div class="toolbar">
+          <label class="search">⌕<input id="tagSearch" placeholder="搜索标签..." /></label>
+          <div class="segments" id="cloudScopes"><button class="active" data-scope="all">全部内容</button><button data-scope="solution">解决方案</button><button data-scope="note">学习笔记</button></div>
+        </div>
+        <div class="cloud-surface"><div class="cloud" id="cloud"></div></div>
+      </section>
+      <section class="view" id="listView" hidden>
+        <div class="head"><button class="back" id="back" aria-label="返回标签词云">←</button><div><div class="title-line"><h1 id="selectedTitle">React</h1><span class="count" id="articleCount">0 篇</span></div><p class="subtitle">包含该标签的解决方案与学习笔记，按最近更新时间排列。</p></div></div>
+        <div class="toolbar">
+          <label class="search">⌕<input id="articleSearch" placeholder="在当前标签中搜索..." /></label>
+          <div class="segments" id="listScopes"><button class="active" data-scope="all">全部</button><button data-scope="solution">解决方案</button><button data-scope="note">学习笔记</button></div>
+        </div>
+        <div class="list-surface"><div class="list-head"><span>类型</span><span>内容</span><span>更新时间</span><span></span></div><div id="rows"></div></div>
+      </section>
+    </main>
+  </div>
+  <script>
+    const tags = [
+      ['Codex', 12, 8, 4], ['React', 10, 6, 4], ['TypeScript', 9, 5, 4], ['Docker', 8, 6, 2],
+      ['PostgreSQL', 7, 4, 3], ['Markdown', 7, 3, 4], ['Nginx', 6, 5, 1], ['Git', 6, 2, 4],
+      ['Vue 3', 5, 2, 3], ['Prisma', 4, 3, 1], ['UI/UX', 4, 1, 3], ['安全', 3, 2, 1],
+      ['部署', 3, 3, 0], ['性能优化', 2, 1, 1], ['Shell', 2, 0, 2], ['Monaco Editor', 1, 1, 0]
+    ];
+    const articles = [
+      { type:'solution', title:'React 长列表渲染性能优化方案', summary:'通过虚拟列表、稳定引用与分片更新降低重渲染成本。', category:'前端性能', tags:['React','TypeScript','性能优化'], date:'2026-08-06' },
+      { type:'note', title:'React useEffect 依赖管理笔记', summary:'整理副作用依赖、清理函数和竞态条件的常见处理方式。', category:'React', tags:['React','Hooks'], date:'2026-08-04' },
+      { type:'solution', title:'React Router 查询参数驱动的筛选页', summary:'使用 URLSearchParams 保持筛选状态可分享、可返回。', category:'前端路由', tags:['React','React Router'], date:'2026-07-29' },
+      { type:'note', title:'React 组件可访问性检查清单', summary:'记录键盘路径、焦点状态与语义化标签的实现要点。', category:'UI/UX', tags:['React','可访问性'], date:'2026-07-22' },
+      { type:'solution', title:'Codex 项目规则的分层维护方式', summary:'区分全局偏好、项目规则与长期决策，减少上下文冲突。', category:'AI 工具', tags:['Codex','配置'], date:'2026-08-05' },
+      { type:'note', title:'Docker Compose 服务排障笔记', summary:'从容器状态、日志、端口监听到反向代理逐层定位。', category:'部署', tags:['Docker','Nginx'], date:'2026-08-03' },
+      { type:'solution', title:'PostgreSQL 数组字段的标签查询', summary:'使用 Prisma 数组过滤与服务层聚合实现标签筛选。', category:'数据库', tags:['PostgreSQL','Prisma'], date:'2026-07-30' },
+      { type:'note', title:'Git 部分暂存的安全处理方法', summary:'记录在同一文件混合改动时保留暂存边界的操作要点。', category:'版本控制', tags:['Git','Shell'], date:'2026-07-28' }
+    ];
+    let cloudScope = 'all', listScope = 'all', selectedTag = 'React';
+    const cloud = document.querySelector('#cloud'), rows = document.querySelector('#rows');
+    function countFor(tag, scope) { return scope === 'solution' ? tag[2] : scope === 'note' ? tag[3] : tag[1]; }
+    function renderCloud() {
+      const keyword = document.querySelector('#tagSearch').value.trim().toLowerCase();
+      const visible = tags.filter(tag => countFor(tag, cloudScope) > 0 && tag[0].toLowerCase().includes(keyword));
+      document.querySelector('#tagCount').textContent = visible.length;
+      document.querySelector('#hotTag').textContent = visible[0]?.[0] || '—';
+      cloud.innerHTML = visible.length ? visible.map((tag, index) => {
+        const count = countFor(tag, cloudScope), size = 14 + Math.round((count / 12) * 18);
+        return `<button class="word tone-${index % 5}" style="font-size:${size}px" data-tag="${tag[0]}"><span>${tag[0]}</span><sup>${count}</sup></button>`;
+      }).join('') : '<div class="empty"><strong>没有匹配的标签</strong><span>请尝试缩短关键词或切换内容类型。</span></div>';
+      cloud.querySelectorAll('[data-tag]').forEach(button => button.addEventListener('click', () => openList(button.dataset.tag)));
+    }
+    function openList(tag) { selectedTag = tag; document.querySelector('#selectedTitle').textContent = tag; document.querySelector('#cloudView').hidden = true; document.querySelector('#listView').hidden = false; renderRows(); }
+    function renderRows() {
+      const keyword = document.querySelector('#articleSearch').value.trim().toLowerCase();
+      const visible = articles.filter(item => item.tags.includes(selectedTag) && (listScope === 'all' || item.type === listScope) && (`${item.title} ${item.summary} ${item.tags.join(' ')}`).toLowerCase().includes(keyword));
+      document.querySelector('#articleCount').textContent = `${visible.length} 篇`;
+      rows.innerHTML = visible.length ? visible.map(item => `<button class="row"><span class="type ${item.type}">${item.type === 'solution' ? '▤　解决方案' : '▧　学习笔记'}</span><span class="copy"><strong>${item.title}</strong><span class="summary">${item.summary}</span><span class="tags"><span>${item.category}</span>${item.tags.map(tag => `<span class="${tag === selectedTag ? 'selected' : ''}">#${tag}</span>`).join('')}</span></span><span class="date">▣　${item.date}</span><span class="arrow">↗</span></button>`).join('') : '<div class="empty"><strong>暂无匹配内容</strong><span>请尝试其他关键词或内容类型。</span></div>';
+    }
+    function bindScopes(id, callback) { document.querySelectorAll(`#${id} button`).forEach(button => button.addEventListener('click', () => { document.querySelectorAll(`#${id} button`).forEach(item => item.classList.toggle('active', item === button)); callback(button.dataset.scope); })); }
+    bindScopes('cloudScopes', value => { cloudScope = value; renderCloud(); });
+    bindScopes('listScopes', value => { listScope = value; renderRows(); });
+    document.querySelector('#tagSearch').addEventListener('input', renderCloud);
+    document.querySelector('#articleSearch').addEventListener('input', renderRows);
+    document.querySelector('#back').addEventListener('click', () => { document.querySelector('#listView').hidden = true; document.querySelector('#cloudView').hidden = false; });
+    renderCloud();
+  </script>
+</body>
+</html>

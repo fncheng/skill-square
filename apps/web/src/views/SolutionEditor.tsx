@@ -73,6 +73,12 @@ export function SolutionEditor() {
       return;
     }
 
+    const tags = parseTags(tagsText);
+    if (tags.length === 0) {
+      toast({ title: '请至少添加一个标签', variant: 'destructive' });
+      return;
+    }
+
     setSaving(true);
     try {
       const payload: SolutionPayload = {
@@ -80,7 +86,7 @@ export function SolutionEditor() {
         summary: form.summary.trim(),
         content: form.content,
         category: form.category.trim(),
-        tags: parseTags(tagsText)
+        tags
       };
 
       const solution = isEdit && id ? await updateSolution(id, payload) : await createSolution(payload);
@@ -148,13 +154,13 @@ export function SolutionEditor() {
             </label>
 
             <label className="form-field">
-              <span className="form-label">标签</span>
+              <span className="form-label">标签 <span className="text-destructive">*</span></span>
               <Input
                 value={tagsText}
                 placeholder="多个标签用逗号分隔，如 Codex, CLAUDE.md"
                 onChange={(event) => setTagsText(event.target.value)}
               />
-              <span className="text-xs text-muted-foreground">使用中文或英文逗号分隔，自动去重。</span>
+              <span className="text-xs text-muted-foreground">至少填写一个，使用中文或英文逗号分隔，自动去重。</span>
             </label>
           </div>
         </div>

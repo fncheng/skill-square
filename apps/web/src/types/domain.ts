@@ -116,6 +116,41 @@ export interface NoteFilters {
   category: string;
 }
 
+export type ContentResourceType = 'SOLUTION' | 'NOTE';
+export type ContentTagScope = 'ALL' | ContentResourceType;
+
+export interface ContentTagCloudItem {
+  name: string;
+  total: number;
+  solutionCount: number;
+  noteCount: number;
+}
+
+export interface ContentTagCloudResponse {
+  items: ContentTagCloudItem[];
+  totalTags: number;
+  taggedSolutionCount: number;
+  taggedNoteCount: number;
+}
+
+export interface ContentTagItem {
+  id: string;
+  title: string;
+  summary: string;
+  category: string;
+  tags: string[];
+  resourceType: ContentResourceType;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ContentTagItemsResponse {
+  items: ContentTagItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 export interface UiPrototype {
   id: string;
   title: string;

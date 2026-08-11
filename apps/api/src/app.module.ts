@@ -5,6 +5,7 @@ import { AnnotationsModule } from './annotations/annotations.module';
 import { AuthModule } from './auth/auth.module';
 import { AdminWriteGuard } from './auth/guards/admin-write.guard';
 import { CategoriesModule } from './categories/categories.module';
+import { ContentTagsModule } from './content-tags/content-tags.module';
 import { NotesModule } from './notes/notes.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { PromptsModule } from './prompts/prompts.module';
@@ -21,6 +22,7 @@ import { UiPrototypesModule } from './ui-prototypes/ui-prototypes.module';
     PromptsModule,
     CategoriesModule,
     TagsModule,
+    ContentTagsModule,
     SolutionsModule,
     NotesModule,
     AnnotationsModule,

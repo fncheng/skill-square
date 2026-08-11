@@ -25,7 +25,7 @@ import { GlobalSearch } from './GlobalSearch';
 type IconComponent = ComponentType<LucideProps>;
 
 interface PrimaryNavItem {
-  key: 'prompts' | 'favorites' | 'solutions' | 'notes' | 'uiPrototypes';
+  key: 'prompts' | 'favorites' | 'solutions' | 'notes' | 'tagCloud' | 'uiPrototypes';
   label: string;
   to: string;
   icon: IconComponent;
@@ -42,6 +42,7 @@ const primaryNav: PrimaryNavItem[] = [
   { key: 'favorites', label: '我的收藏', to: '/prompts?favorite=true', icon: Star },
   { key: 'solutions', label: '解决方案', to: '/solutions', icon: Lightbulb },
   { key: 'notes', label: '学习笔记', to: '/notes', icon: NotebookPen },
+  { key: 'tagCloud', label: '标签词云', to: '/tag-cloud', icon: Tags },
   { key: 'uiPrototypes', label: 'UI 原型', to: '/ui-prototypes', icon: PanelsTopLeft }
 ];
 
@@ -70,6 +71,9 @@ export function AppLayout() {
     }
     if (item.key === 'notes') {
       return pathname.startsWith('/notes');
+    }
+    if (item.key === 'tagCloud') {
+      return pathname === '/tag-cloud' || pathname === '/tag-articles';
     }
     if (item.key === 'uiPrototypes') {
       return pathname.startsWith('/ui-prototypes');

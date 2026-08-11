@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ArrayMaxSize, IsArray, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { ArrayMaxSize, ArrayMinSize, IsArray, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 
 export class CreateNoteDto {
   @ApiProperty({ example: 'Linux 常用文件查找命令 find 用法总结' })
@@ -25,11 +25,11 @@ export class CreateNoteDto {
   @MaxLength(80)
   category?: string;
 
-  @ApiPropertyOptional({ type: [String], example: ['Linux', 'Shell', 'find'] })
-  @IsOptional()
+  @ApiProperty({ type: [String], example: ['Linux', 'Shell', 'find'], minItems: 1 })
   @IsArray()
+  @ArrayMinSize(1)
   @IsString({ each: true })
   @MaxLength(80, { each: true })
   @ArrayMaxSize(20)
-  tags?: string[];
+  tags: string[];
 }

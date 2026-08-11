@@ -76,7 +76,7 @@ GET /api/solutions?search=codex&category=Codex
 | `summary` | `string` | 否 | 列表摘要，最大长度 `500` |
 | `content` | `string` | 是 | Markdown 正文，长度 `>=1` |
 | `category` | `string` | 否 | 分类，最大长度 `80` |
-| `tags` | `string[]` | 否 | 标签数组，单个最大长度 `80`，最多 `20` 个，自动去重 |
+| `tags` | `string[]` | 是 | 标签数组，至少 `1` 个、最多 `20` 个，单个最大长度 `80`，自动去重 |
 
 ### 示例请求
 
@@ -107,7 +107,7 @@ Content-Type: application/json
 
 ### 请求体
 
-请求体为 `ContentTransferFile`，且 `resourceType` 必须为 `SOLUTION`。
+请求体为 `ContentTransferFile`，且 `resourceType` 必须为 `SOLUTION`，资源标签至少包含一项。
 
 ### 响应
 
@@ -127,7 +127,7 @@ Content-Type: application/json
 
 ### 请求体
 
-字段同 `POST /api/solutions`，全部可选。
+字段同 `POST /api/solutions`，全部可选；传入 `tags` 时至少包含一项。
 
 ### 响应
 
