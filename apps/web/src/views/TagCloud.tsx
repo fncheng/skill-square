@@ -112,7 +112,7 @@ export function TagCloud() {
       <dl className="tag-cloud-stats" aria-label="标签统计">
         <div>
           <dt>标签数量</dt>
-          <dd>{cloud?.totalTags ?? 0}</dd>
+          <dd>{visibleTags.length}</dd>
         </div>
         <div>
           <dt>已标记内容</dt>

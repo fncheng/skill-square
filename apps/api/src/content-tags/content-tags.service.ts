@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ContentTagItemsQueryDto } from './dto/content-tag-items-query.dto';
 import {
@@ -15,14 +16,19 @@ interface TagAccumulator {
   noteCount: number;
 }
 
-interface ContentItemSource {
+interface ContentTagDatabaseRow {
   id: string;
   title: string;
   summary: string;
   category: string;
   tags: string[];
+  resourceType: ContentTagResourceType;
   createdAt: Date;
   updatedAt: Date;
+}
+
+interface ContentTagCountRow {
+  total: number;
 }
 
 @Injectable()
@@ -52,51 +58,118 @@ export class ContentTagsService {
   }
 
   async findItems(query: ContentTagItemsQueryDto): Promise<ContentTagItemsResponseDto> {
-    const [solutions, notes] = await Promise.all([
-      this.prisma.solution.findMany({
-        select: {
-          id: true,
-          title: true,
-          summary: true,
-          category: true,
-          tags: true,
-          createdAt: true,
-          updatedAt: true
-        }
-      }),
-      this.prisma.note.findMany({
-        select: {
-          id: true,
-          title: true,
-          summary: true,
-          category: true,
-          tags: true,
-          createdAt: true,
-          updatedAt: true
-        }
-      })
-    ]);
     const targetTag = this.normalizeTag(query.tag);
     const keyword = query.search?.trim().toLocaleLowerCase('zh-CN') ?? '';
     const resourceType = query.resourceType ?? ContentTagScope.ALL;
-    const entries = [
-      ...(resourceType !== ContentTagScope.NOTE
-        ? this.filterItems(solutions, targetTag, keyword, ContentTagResourceType.SOLUTION)
-        : []),
-      ...(resourceType !== ContentTagScope.SOLUTION
-        ? this.filterItems(notes, targetTag, keyword, ContentTagResourceType.NOTE)
-        : [])
-    ].sort((left, right) => right.updatedAt.getTime() - left.updatedAt.getTime());
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 10;
-    const start = (page - 1) * pageSize;
+    const offset = (page - 1) * pageSize;
+    const entries = this.buildEntriesQuery(resourceType, targetTag, keyword);
+
+    const [items, countRows] = await Promise.all([
+      this.prisma.$queryRaw<ContentTagDatabaseRow[]>(Prisma.sql`
+        SELECT
+          entries."id",
+          entries."title",
+          entries."summary",
+          entries."category",
+          entries."tags",
+          entries."resourceType",
+          entries."createdAt",
+          entries."updatedAt"
+        FROM (${entries}) AS entries
+        ORDER BY entries."updatedAt" DESC, entries."resourceType" ASC, entries."id" ASC
+        LIMIT ${pageSize}
+        OFFSET ${offset}
+      `),
+      this.prisma.$queryRaw<ContentTagCountRow[]>(Prisma.sql`
+        SELECT COUNT(*)::int AS "total"
+        FROM (${entries}) AS entries
+      `)
+    ]);
 
     return {
-      items: entries.slice(start, start + pageSize),
-      total: entries.length,
+      items,
+      total: countRows[0]?.total ?? 0,
       page,
       pageSize
     };
+  }
+
+  private buildEntriesQuery(resourceType: ContentTagScope, targetTag: string, keyword: string) {
+    if (resourceType === ContentTagScope.SOLUTION) {
+      return this.buildSolutionQuery(targetTag, keyword);
+    }
+    if (resourceType === ContentTagScope.NOTE) {
+      return this.buildNoteQuery(targetTag, keyword);
+    }
+
+    return Prisma.sql`
+      ${this.buildSolutionQuery(targetTag, keyword)}
+      UNION ALL
+      ${this.buildNoteQuery(targetTag, keyword)}
+    `;
+  }
+
+  private buildSolutionQuery(targetTag: string, keyword: string) {
+    return Prisma.sql`
+      SELECT
+        resource."id",
+        resource."title",
+        resource."summary",
+        resource."category",
+        resource."tags",
+        'SOLUTION'::text AS "resourceType",
+        resource."createdAt",
+        resource."updatedAt"
+      FROM "solutions" AS resource
+      WHERE ${this.buildWhereQuery(targetTag, keyword)}
+    `;
+  }
+
+  private buildNoteQuery(targetTag: string, keyword: string) {
+    return Prisma.sql`
+      SELECT
+        resource."id",
+        resource."title",
+        resource."summary",
+        resource."category",
+        resource."tags",
+        'NOTE'::text AS "resourceType",
+        resource."createdAt",
+        resource."updatedAt"
+      FROM "notes" AS resource
+      WHERE ${this.buildWhereQuery(targetTag, keyword)}
+    `;
+  }
+
+  private buildWhereQuery(targetTag: string, keyword: string) {
+    const searchQuery = keyword
+      ? Prisma.sql`
+          AND lower(
+            concat_ws(
+              ' ',
+              resource."title",
+              resource."summary",
+              resource."category",
+              array_to_string(resource."tags", ' ')
+            )
+          ) LIKE ${`%${this.escapeLikePattern(keyword)}%`} ESCAPE '\'
+        `
+      : Prisma.empty;
+
+    return Prisma.sql`
+      EXISTS (
+        SELECT 1
+        FROM unnest(resource."tags") AS tag(value)
+        WHERE lower(btrim(tag.value)) = ${targetTag}
+      )
+      ${searchQuery}
+    `;
+  }
+
+  private escapeLikePattern(value: string) {
+    return value.replace(/[\\%_]/g, '\\$&');
   }
 
   private addResourceTags(
@@ -127,26 +200,6 @@ export class ContentTagsService {
       }
       accumulator.set(key, current);
     });
-  }
-
-  private filterItems(
-    items: ContentItemSource[],
-    targetTag: string,
-    keyword: string,
-    resourceType: ContentTagResourceType.SOLUTION | ContentTagResourceType.NOTE
-  ) {
-    return items
-      .filter((item) => item.tags.some((tag) => this.normalizeTag(tag) === targetTag))
-      .filter((item) => {
-        if (!keyword) {
-          return true;
-        }
-        return [item.title, item.summary, item.category, ...item.tags]
-          .join(' ')
-          .toLocaleLowerCase('zh-CN')
-          .includes(keyword);
-      })
-      .map((item) => ({ ...item, resourceType }));
   }
 
   private normalizeTag(tag: string) {
