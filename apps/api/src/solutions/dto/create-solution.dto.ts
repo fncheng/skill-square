@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ArrayMaxSize, ArrayMinSize, IsArray, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { NormalizeTags } from '../../common/decorators/normalize-tags.decorator';
 
 export class CreateSolutionDto {
   @ApiProperty({ example: '关于 Codex 如何在没有 AGENTS.md 时读取 CLAUDE.md' })
@@ -26,6 +27,7 @@ export class CreateSolutionDto {
   category?: string;
 
   @ApiProperty({ type: [String], example: ['Codex', 'CLAUDE.md', '配置'], minItems: 1 })
+  @NormalizeTags()
   @IsArray()
   @ArrayMinSize(1)
   @IsString({ each: true })

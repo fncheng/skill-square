@@ -1,7 +1,7 @@
 import {
   CONTENT_TRANSFER_FORMAT,
   CONTENT_TRANSFER_MAX_FILE_SIZE,
-  CONTENT_TRANSFER_VERSION,
+  CONTENT_TRANSFER_VERSIONS,
   type ContentTransferAnnotation,
   type ContentTransferFile,
   type ContentTransferResource
@@ -55,15 +55,20 @@ function isContentTransferFile(value: unknown): value is ContentTransferFile {
     return false;
   }
 
-  return (
+  const hasValidEnvelope =
     value.format === CONTENT_TRANSFER_FORMAT &&
-    value.version === CONTENT_TRANSFER_VERSION &&
+    CONTENT_TRANSFER_VERSIONS.some((version) => version === value.version) &&
     (value.resourceType === 'NOTE' || value.resourceType === 'SOLUTION') &&
     typeof value.exportedAt === 'string' &&
     isTransferResource(value.resource) &&
     Array.isArray(value.annotations) &&
-    value.annotations.every(isTransferAnnotation)
-  );
+    value.annotations.every(isTransferAnnotation);
+
+  if (!hasValidEnvelope || !isTransferResource(value.resource)) {
+    return false;
+  }
+
+  return value.version === 1 || value.resource.tags.some((tag) => tag.trim().length > 0);
 }
 
 /** 读取并校验迁移文件，阻止错误资源类型进入导入接口。 */

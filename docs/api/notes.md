@@ -76,7 +76,7 @@ GET /api/notes?search=find&category=Linux
 | `summary` | `string` | 否 | 列表摘要，最大长度 `500` |
 | `content` | `string` | 是 | Markdown 正文，长度 `>=1` |
 | `category` | `string` | 否 | 分类，最大长度 `80` |
-| `tags` | `string[]` | 是 | 标签数组，至少 `1` 个、最多 `20` 个，单个最大长度 `80`，自动去重 |
+| `tags` | `string[]` | 是 | 标签数组，去除首尾空白并去重后至少 `1` 个、最多 `20` 个，单个最大长度 `80` |
 
 ### 示例请求
 
@@ -107,7 +107,7 @@ Content-Type: application/json
 
 ### 请求体
 
-请求体为 `ContentTransferFile`，且 `resourceType` 必须为 `NOTE`，资源标签至少包含一项。
+请求体为 `ContentTransferFile`，且 `resourceType` 必须为 `NOTE`。v1 文件允许 `resource.tags` 为空，以兼容历史无标签内容；v2 文件的标签在去除首尾空白并去重后至少包含一项。
 
 ### 响应
 

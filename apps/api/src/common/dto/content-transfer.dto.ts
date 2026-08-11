@@ -1,24 +1,33 @@
 import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
-  ArrayMinSize,
   Equals,
   IsArray,
   IsEnum,
   IsISO8601,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
   MaxLength,
   Min,
   MinLength,
+  Validate,
   ValidateNested
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { AnnotationResourceTypeDto } from '../../annotations/dto/annotation-resource-type';
+import { NormalizeTags } from '../decorators/normalize-tags.decorator';
+import { ContentTransferTagsConstraint } from '../validators/content-transfer-tags.validator';
 
 export const CONTENT_TRANSFER_FORMAT = 'prompt-skill-manager-transfer';
-export const CONTENT_TRANSFER_VERSION = 1;
+export const CONTENT_TRANSFER_VERSION = 2;
+export const CONTENT_TRANSFER_VERSIONS = [1, CONTENT_TRANSFER_VERSION] as const;
+export type ContentTransferVersion = (typeof CONTENT_TRANSFER_VERSIONS)[number];
+
+export function getContentTransferVersion(tags: readonly string[]): ContentTransferVersion {
+  return tags.length > 0 ? CONTENT_TRANSFER_VERSION : 1;
+}
 
 export class ContentTransferResourceDto {
   @ApiProperty({ example: 'WSL 内连接本机 PostgreSQL 失败' })
@@ -42,9 +51,13 @@ export class ContentTransferResourceDto {
   @MaxLength(80)
   category: string;
 
-  @ApiProperty({ type: [String], example: ['WSL', 'PostgreSQL'] })
+  @ApiProperty({
+    type: [String],
+    example: ['WSL', 'PostgreSQL'],
+    description: 'v1 兼容无标签历史内容；v2 规范化后至少包含一项。'
+  })
+  @NormalizeTags()
   @IsArray()
-  @ArrayMinSize(1)
   @IsString({ each: true })
   @MaxLength(80, { each: true })
   @ArrayMaxSize(20)
@@ -111,10 +124,10 @@ export class ContentTransferDto {
   @Equals(CONTENT_TRANSFER_FORMAT)
   format: typeof CONTENT_TRANSFER_FORMAT;
 
-  @ApiProperty({ example: CONTENT_TRANSFER_VERSION })
+  @ApiProperty({ example: CONTENT_TRANSFER_VERSION, enum: [...CONTENT_TRANSFER_VERSIONS] })
   @IsInt()
-  @Equals(CONTENT_TRANSFER_VERSION)
-  version: typeof CONTENT_TRANSFER_VERSION;
+  @IsIn(CONTENT_TRANSFER_VERSIONS)
+  version: ContentTransferVersion;
 
   @ApiProperty({ enum: AnnotationResourceTypeDto })
   @IsEnum(AnnotationResourceTypeDto)
@@ -125,6 +138,7 @@ export class ContentTransferDto {
   exportedAt: string;
 
   @ApiProperty({ type: ContentTransferResourceDto })
+  @Validate(ContentTransferTagsConstraint)
   @ValidateNested()
   @Type(() => ContentTransferResourceDto)
   resource: ContentTransferResourceDto;

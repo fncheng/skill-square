@@ -1,8 +1,10 @@
 import type { AnnotationResourceType } from './domain';
 
 export const CONTENT_TRANSFER_FORMAT = 'prompt-skill-manager-transfer';
-export const CONTENT_TRANSFER_VERSION = 1;
+export const CONTENT_TRANSFER_VERSION = 2;
+export const CONTENT_TRANSFER_VERSIONS = [1, CONTENT_TRANSFER_VERSION] as const;
 export const CONTENT_TRANSFER_MAX_FILE_SIZE = 5 * 1024 * 1024;
+export type ContentTransferVersion = (typeof CONTENT_TRANSFER_VERSIONS)[number];
 
 export interface ContentTransferResource {
   title: string;
@@ -28,7 +30,7 @@ export interface ContentTransferAnnotation {
 
 export interface ContentTransferFile {
   format: typeof CONTENT_TRANSFER_FORMAT;
-  version: typeof CONTENT_TRANSFER_VERSION;
+  version: ContentTransferVersion;
   resourceType: AnnotationResourceType;
   exportedAt: string;
   resource: ContentTransferResource;

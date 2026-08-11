@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ArrayMaxSize, ArrayMinSize, IsArray, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { NormalizeTags } from '../../common/decorators/normalize-tags.decorator';
 
 export class CreateNoteDto {
   @ApiProperty({ example: 'Linux 常用文件查找命令 find 用法总结' })
@@ -26,6 +27,7 @@ export class CreateNoteDto {
   category?: string;
 
   @ApiProperty({ type: [String], example: ['Linux', 'Shell', 'find'], minItems: 1 })
+  @NormalizeTags()
   @IsArray()
   @ArrayMinSize(1)
   @IsString({ each: true })

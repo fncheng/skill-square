@@ -154,7 +154,7 @@ interface CreateSolutionRequest {
 
 ## UpdateSolutionRequest
 
-`UpdateSolutionRequest` 与 `CreateSolutionRequest` 字段一致，但所有字段均可选；传入 `tags` 时至少包含一项。
+`UpdateSolutionRequest` 与 `CreateSolutionRequest` 字段一致，但所有字段均可选；传入 `tags` 时，去除首尾空白并去重后至少包含一项。
 
 ## Note
 
@@ -198,7 +198,7 @@ interface CreateNoteRequest {
 
 ## UpdateNoteRequest
 
-`UpdateNoteRequest` 与 `CreateNoteRequest` 字段一致，但所有字段均可选；传入 `tags` 时至少包含一项。
+`UpdateNoteRequest` 与 `CreateNoteRequest` 字段一致，但所有字段均可选；传入 `tags` 时，去除首尾空白并去重后至少包含一项。
 
 ## UiPrototype
 
@@ -318,7 +318,7 @@ interface CreateTagRequest {
 ```ts
 interface ContentTransferFile {
   format: 'prompt-skill-manager-transfer';
-  version: 1;
+  version: 1 | 2;
   resourceType: 'NOTE' | 'SOLUTION';
   exportedAt: string;
   resource: {
@@ -344,7 +344,7 @@ interface ContentTransferFile {
 }
 ```
 
-迁移文件不包含资源和批注 UUID。导入时生成新的 UUID，避免覆盖目标环境已有数据；`format` 与 `version` 用于校验文件来源和后续格式兼容。`resource.tags` 至少包含一项。
+迁移文件不包含资源和批注 UUID。导入时生成新的 UUID，避免覆盖目标环境已有数据；`format` 与 `version` 用于校验文件来源和后续格式兼容。v1 允许 `resource.tags` 为空，以兼容历史无标签内容；v2 的标签在去除首尾空白并去重后至少包含一项。当前有标签内容导出为 v2，无标签历史内容继续导出为可兼容导入的 v1。
 
 ## ContentTagCloudResponse
 

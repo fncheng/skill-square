@@ -3,9 +3,10 @@ import { AnnotationResourceType, Prisma } from '@prisma/client';
 import { AnnotationResourceTypeDto } from '../annotations/dto/annotation-resource-type';
 import {
   CONTENT_TRANSFER_FORMAT,
-  CONTENT_TRANSFER_VERSION,
-  ContentTransferDto
+  ContentTransferDto,
+  getContentTransferVersion
 } from '../common/dto/content-transfer.dto';
+import { normalizeTags } from '../common/utils/normalize-tags';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateSolutionDto } from './dto/create-solution.dto';
 import { SolutionQueryDto } from './dto/solution-query.dto';
@@ -59,9 +60,11 @@ export class SolutionsService {
       throw new NotFoundException('解决方案不存在。');
     }
 
+    const tags = normalizeTags(solution.tags);
+
     return {
       format: CONTENT_TRANSFER_FORMAT,
-      version: CONTENT_TRANSFER_VERSION,
+      version: getContentTransferVersion(tags),
       resourceType: AnnotationResourceTypeDto.SOLUTION,
       exportedAt: new Date().toISOString(),
       resource: {
@@ -69,7 +72,7 @@ export class SolutionsService {
         summary: solution.summary,
         content: solution.content,
         category: solution.category,
-        tags: solution.tags,
+        tags,
         createdAt: solution.createdAt.toISOString(),
         updatedAt: solution.updatedAt.toISOString()
       },
@@ -94,7 +97,7 @@ export class SolutionsService {
         summary: dto.summary ?? '',
         content: dto.content,
         category: dto.category ?? '',
-        tags: this.normalizeTags(dto.tags)
+        tags: normalizeTags(dto.tags)
       }
     });
   }
@@ -111,7 +114,7 @@ export class SolutionsService {
           summary: dto.resource.summary,
           content: dto.resource.content,
           category: dto.resource.category,
-          tags: this.normalizeTags(dto.resource.tags),
+          tags: normalizeTags(dto.resource.tags),
           createdAt: new Date(dto.resource.createdAt),
           updatedAt: new Date(dto.resource.updatedAt)
         }
@@ -152,7 +155,7 @@ export class SolutionsService {
         summary: dto.summary,
         content: dto.content,
         category: dto.category,
-        tags: dto.tags ? this.normalizeTags(dto.tags) : undefined
+        tags: dto.tags ? normalizeTags(dto.tags) : undefined
       }
     });
   }
@@ -160,10 +163,5 @@ export class SolutionsService {
   async remove(id: string) {
     await this.findOne(id);
     await this.prisma.solution.delete({ where: { id } });
-  }
-
-  /** 去重、去空白，保证标签写入整洁。 */
-  private normalizeTags(tags?: string[]) {
-    return Array.from(new Set((tags ?? []).map((tag) => tag.trim()).filter(Boolean)));
   }
 }
