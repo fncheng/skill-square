@@ -89,6 +89,12 @@
 - 如果出现长期有效的历史决策、废弃方案或踩坑记录，写入 `docs/decisions.md`；如果该决策会影响每次任务，再在本文件保留摘要。
 - 不记录一次性调试过程和未确认猜测。
 
+### 项目文档导航
+
+- 任务依赖现有功能或长期项目知识时，先读取 `docs/README.md`，再从相关 `docs/features/<feature>/README.md` 开始。
+- 按任务需要追踪 Feature 文档中的 API、架构、原型和 `related` 链接，不在本文件重复维护详细 schema 与状态规范。
+- 仅在当前任务或本文件明确要求时维护长期文档；新增或移动受管理文档后同步检查索引、frontmatter 和相对链接。
+
 ## 命令执行规则
 
 - 不要主动执行构建或编译命令，例如 `pnpm build`、`npm run build`、`nest build`。
