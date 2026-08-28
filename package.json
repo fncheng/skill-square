@@ -2,7 +2,7 @@
   "name": "prompt-skill-manager",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "pnpm@9.15.4",
+  "packageManager": "pnpm@10.5.2",
   "scripts": {
     "dev:api": "pnpm --filter @prompt-skill-manager/api start:dev",
     "dev:web": "pnpm --filter @prompt-skill-manager/web dev",
