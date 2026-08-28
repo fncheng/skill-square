@@ -11,12 +11,14 @@ interface PageHeadProps {
   back?: string;
   /** 右侧操作区内容，可选 */
   actions?: ReactNode;
+  /** 详情页启用时避开固定顶栏吸顶，不影响列表与编辑页。 */
+  sticky?: boolean;
 }
 
 /** 页面统一头部：左侧返回按钮 + 标题，右侧操作区，返回与操作同处一行。 */
-export function PageHead({ title, subtitle, back, actions }: PageHeadProps) {
+export function PageHead({ title, subtitle, back, actions, sticky = false }: PageHeadProps) {
   return (
-    <div className="page-head">
+    <div className={sticky ? 'page-head page-head--sticky' : 'page-head'}>
       <div className="page-head-main">
         {back ? (
           <Link className="app-main-back" to={back} title="返回上级" aria-label="返回上级">

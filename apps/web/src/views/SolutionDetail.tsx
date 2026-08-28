@@ -92,6 +92,7 @@ export function SolutionDetail() {
         title={solution?.title || '解决方案'}
         subtitle={solution?.summary}
         back="/solutions"
+        sticky
         actions={
           solution ? (
             <>

@@ -186,6 +186,11 @@
     @apply mb-5 flex items-start justify-between gap-5;
   }
 
+  /* 仅详情页页头启用，避开 64px 固定顶栏并遮住滚动正文。 */
+  .page-head--sticky {
+    @apply sticky top-16 z-30 -mx-7 bg-background/95 px-7 backdrop-blur-sm;
+  }
+
   .page-head-main {
     @apply flex items-start gap-3;
   }
@@ -501,6 +506,12 @@
     max-height: calc(100vh - 96px);
     overflow-y: auto;
     overscroll-behavior: contain;
+  }
+
+  /* 详情页头部吸顶后，右侧元信息从其下方开始吸顶。 */
+  .page-head--sticky + .detail-grid .detail-surface {
+    top: 160px;
+    max-height: calc(100vh - 176px);
   }
 
   .detail-meta,
@@ -1695,6 +1706,12 @@
     position: static;
     max-height: none;
     overflow-y: visible;
+  }
+
+  .page-head--sticky + .detail-grid .detail-surface {
+    position: static;
+    top: auto;
+    max-height: none;
   }
 
   .prompt-hero {

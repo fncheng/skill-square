@@ -86,6 +86,7 @@ export function UiPrototypeDetail() {
         title={prototype?.title || 'UI 原型'}
         subtitle={prototype?.summary}
         back="/ui-prototypes"
+        sticky
         actions={
           prototype ? (
             <>
