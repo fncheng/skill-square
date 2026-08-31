@@ -88,6 +88,14 @@ export function PromptDetail() {
         title={prompt?.name || 'Prompt 详情'}
         subtitle={prompt?.description}
         back="/prompts"
+        compactActions={
+          prompt && isAdmin ? (
+            <Button variant="outline" size="sm" onClick={() => navigate(`/prompts/${prompt.id}/edit`)}>
+              <Pencil className="h-4 w-4" />
+              编辑
+            </Button>
+          ) : null
+        }
         actions={
           <>
             <Button variant="outline" onClick={copyContent}>

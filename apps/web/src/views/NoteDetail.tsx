@@ -92,6 +92,31 @@ export function NoteDetail() {
         title={note?.title || '笔记'}
         subtitle={note?.summary}
         back="/notes"
+        compactActions={
+          note ? (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => annotationSurfaceRef.current?.openList()}
+              >
+                <MessageSquareText className="h-4 w-4" />
+                批注
+                <span className="md-annotation-count">{annotationCount}</span>
+              </Button>
+              {isAdmin ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate(`/notes/${note.id}/edit`)}
+                >
+                  <Pencil className="h-4 w-4" />
+                  编辑
+                </Button>
+              ) : null}
+            </>
+          ) : null
+        }
         actions={
           note ? (
             <>

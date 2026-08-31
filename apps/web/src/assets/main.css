@@ -186,6 +186,35 @@
     @apply mb-5 flex items-start justify-between gap-5;
   }
 
+  .detail-compact-action-bar {
+    @apply fixed left-[220px] right-0 top-16 z-30 h-14 border-b bg-white/95 shadow-[0_8px_20px_rgba(15,23,42,0.06)] backdrop-blur-xl;
+    animation: detail-compact-action-bar-enter 160ms ease-out;
+  }
+
+  .detail-compact-action-bar-inner {
+    @apply flex h-full min-w-0 items-center gap-3 px-7;
+  }
+
+  .detail-compact-action-title {
+    @apply min-w-0 flex-1 truncate font-extrabold text-slate-800;
+  }
+
+  .detail-compact-action-buttons {
+    @apply flex flex-none items-center gap-2;
+  }
+
+  @keyframes detail-compact-action-bar-enter {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
   .page-head-main {
     @apply flex items-start gap-3;
   }
@@ -495,10 +524,15 @@
     grid-template-columns: minmax(0, 1fr) 300px;
   }
 
+  .detail-compact-action-bar + .detail-grid {
+    --detail-surface-sticky-top: 136px;
+    --detail-surface-sticky-space: 152px;
+  }
+
   .detail-surface {
     position: sticky;
-    top: 80px;
-    max-height: calc(100vh - 96px);
+    top: var(--detail-surface-sticky-top, 80px);
+    max-height: calc(100vh - var(--detail-surface-sticky-space, 96px));
     overflow-y: auto;
     overscroll-behavior: contain;
   }
@@ -1763,5 +1797,11 @@
   .md-annotation-editor-input {
     min-height: 240px;
     max-height: min(52vh, 420px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .detail-compact-action-bar {
+    animation: none;
   }
 }

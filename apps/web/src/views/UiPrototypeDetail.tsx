@@ -86,6 +86,18 @@ export function UiPrototypeDetail() {
         title={prototype?.title || 'UI 原型'}
         subtitle={prototype?.summary}
         back="/ui-prototypes"
+        compactActions={
+          prototype && isAdmin ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate(`/ui-prototypes/${prototype.id}/edit`)}
+            >
+              <Pencil className="h-4 w-4" />
+              编辑
+            </Button>
+          ) : null
+        }
         actions={
           prototype ? (
             <>

@@ -92,6 +92,31 @@ export function SolutionDetail() {
         title={solution?.title || '解决方案'}
         subtitle={solution?.summary}
         back="/solutions"
+        compactActions={
+          solution ? (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => annotationSurfaceRef.current?.openList()}
+              >
+                <MessageSquareText className="h-4 w-4" />
+                批注
+                <span className="md-annotation-count">{annotationCount}</span>
+              </Button>
+              {isAdmin ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate(`/solutions/${solution.id}/edit`)}
+                >
+                  <Pencil className="h-4 w-4" />
+                  编辑
+                </Button>
+              ) : null}
+            </>
+          ) : null
+        }
         actions={
           solution ? (
             <>
