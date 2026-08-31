@@ -92,7 +92,6 @@ export function NoteDetail() {
         title={note?.title || '笔记'}
         subtitle={note?.summary}
         back="/notes"
-        sticky
         actions={
           note ? (
             <>

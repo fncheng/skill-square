@@ -1,0 +1,664 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>详情页紧凑操作条原型</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --background: #f8fafc;
+        --foreground: #0f172a;
+        --muted: #64748b;
+        --border: #e2e8f0;
+        --primary: #4f46e5;
+        --primary-soft: #eef2ff;
+        --danger: #dc2626;
+        --topbar-height: 64px;
+        --sidebar-width: 220px;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        min-width: 960px;
+        margin: 0;
+        background: var(--background);
+        color: var(--foreground);
+        font-size: 14px;
+      }
+
+      button,
+      a {
+        font: inherit;
+      }
+
+      button {
+        cursor: pointer;
+      }
+
+      .icon {
+        width: 16px;
+        height: 16px;
+        flex: 0 0 auto;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .topbar {
+        position: fixed;
+        inset: 0 0 auto;
+        z-index: 50;
+        display: flex;
+        align-items: center;
+        height: var(--topbar-height);
+        padding: 0 28px;
+        border-bottom: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.94);
+        backdrop-filter: blur(14px);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        width: var(--sidebar-width);
+        gap: 10px;
+        font-size: 16px;
+        font-weight: 800;
+      }
+
+      .brand-mark {
+        display: grid;
+        width: 32px;
+        height: 32px;
+        place-items: center;
+        border-radius: 6px;
+        background: var(--primary);
+        color: white;
+      }
+
+      .global-search {
+        width: min(520px, 44vw);
+        height: 38px;
+        margin-left: 24px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: #f8fafc;
+        color: #94a3b8;
+        line-height: 36px;
+        padding: 0 14px;
+      }
+
+      .account {
+        margin-left: auto;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: white;
+        padding: 8px 12px;
+        font-weight: 700;
+      }
+
+      .sidebar {
+        position: fixed;
+        inset: var(--topbar-height) auto 0 0;
+        z-index: 30;
+        width: var(--sidebar-width);
+        border-right: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.78);
+        padding: 20px 14px;
+      }
+
+      .nav-title {
+        margin: 24px 12px 10px;
+        color: #94a3b8;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .nav-link {
+        display: flex;
+        align-items: center;
+        height: 42px;
+        gap: 11px;
+        margin-bottom: 3px;
+        border-radius: 6px;
+        color: #475569;
+        padding: 0 13px;
+        font-weight: 700;
+      }
+
+      .nav-link.active {
+        background: var(--primary-soft);
+        color: var(--primary);
+      }
+
+      .main {
+        min-height: 100vh;
+        margin-left: var(--sidebar-width);
+        padding: 88px 28px 64px;
+      }
+
+      .page-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 24px;
+        margin-bottom: 20px;
+      }
+
+      .page-head-main {
+        display: flex;
+        min-width: 0;
+        align-items: flex-start;
+        gap: 12px;
+      }
+
+      .back-button,
+      .icon-button,
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        height: 36px;
+        gap: 7px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: white;
+        color: #475569;
+        padding: 0 12px;
+        font-weight: 700;
+        transition: border-color 150ms ease, background 150ms ease, color 150ms ease, box-shadow 150ms ease;
+      }
+
+      .back-button,
+      .icon-button {
+        width: 36px;
+        padding: 0;
+      }
+
+      .button:hover,
+      .icon-button:hover,
+      .back-button:hover {
+        border-color: #c7d2fe;
+        background: var(--primary-soft);
+        color: var(--primary);
+      }
+
+      .button:focus-visible,
+      .icon-button:focus-visible,
+      .back-button:focus-visible {
+        outline: 2px solid rgba(79, 70, 229, 0.35);
+        outline-offset: 2px;
+      }
+
+      .button.primary {
+        border-color: var(--primary);
+        background: var(--primary);
+        color: white;
+      }
+
+      .button.primary:hover {
+        background: #4338ca;
+      }
+
+      .title-wrap {
+        min-width: 0;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 24px;
+        line-height: 1.25;
+      }
+
+      .subtitle {
+        max-width: 680px;
+        margin: 8px 0 0;
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      .page-actions {
+        display: flex;
+        flex: 0 0 auto;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+
+      .detail-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 300px;
+        align-items: start;
+        gap: 16px;
+      }
+
+      .surface {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: white;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+      }
+
+      .article {
+        padding: 28px 34px 44px;
+      }
+
+      .article h2 {
+        margin: 34px 0 12px;
+        font-size: 20px;
+      }
+
+      .article h2:first-child {
+        margin-top: 0;
+      }
+
+      .article p,
+      .article li {
+        color: #334155;
+        font-size: 15px;
+        line-height: 1.9;
+      }
+
+      .article code {
+        border-radius: 4px;
+        background: #f1f5f9;
+        color: #be123c;
+        padding: 2px 5px;
+      }
+
+      .quote {
+        margin: 18px 0;
+        border-left: 3px solid #818cf8;
+        background: #f8fafc;
+        color: #475569;
+        padding: 12px 16px;
+        line-height: 1.8;
+      }
+
+      .meta {
+        position: sticky;
+        top: 80px;
+        max-height: calc(100vh - 96px);
+        overflow: auto;
+        padding: 20px;
+        transition: top 180ms ease, max-height 180ms ease;
+      }
+
+      body.compact-visible .meta {
+        top: 136px;
+        max-height: calc(100vh - 152px);
+      }
+
+      .meta-item {
+        display: grid;
+        grid-template-columns: 64px minmax(0, 1fr);
+        gap: 12px;
+        padding: 12px 0;
+        border-bottom: 1px solid #f1f5f9;
+      }
+
+      .meta-item:first-child {
+        padding-top: 0;
+      }
+
+      .meta-item:last-child {
+        border-bottom: 0;
+        padding-bottom: 0;
+      }
+
+      .meta-label {
+        color: #94a3b8;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .meta-value {
+        min-width: 0;
+        color: #475569;
+        font-weight: 650;
+        line-height: 1.55;
+      }
+
+      .tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .tag {
+        border-radius: 999px;
+        background: #f1f5f9;
+        color: #475569;
+        padding: 4px 8px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .toc {
+        display: grid;
+        gap: 8px;
+        border-left: 2px solid #f1f5f9;
+        padding-left: 12px;
+      }
+
+      .toc a {
+        overflow: hidden;
+        color: #64748b;
+        font-size: 13px;
+        font-weight: 650;
+        text-decoration: none;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .compact-bar {
+        position: fixed;
+        inset: var(--topbar-height) 0 auto var(--sidebar-width);
+        z-index: 40;
+        height: 56px;
+        border-bottom: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.96);
+        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(-10px);
+        transition: opacity 160ms ease, transform 160ms ease;
+      }
+
+      body.compact-visible .compact-bar {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateY(0);
+      }
+
+      .compact-inner {
+        display: flex;
+        align-items: center;
+        height: 100%;
+        gap: 10px;
+        padding: 0 28px;
+      }
+
+      .compact-title {
+        min-width: 0;
+        flex: 1;
+        overflow: hidden;
+        font-weight: 800;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .compact-actions {
+        position: relative;
+        display: flex;
+        flex: 0 0 auto;
+        gap: 8px;
+      }
+
+      .count {
+        min-width: 20px;
+        border-radius: 999px;
+        background: #eef2ff;
+        color: var(--primary);
+        padding: 2px 6px;
+        font-size: 11px;
+        text-align: center;
+      }
+
+      .more-menu {
+        position: absolute;
+        top: calc(100% + 8px);
+        right: 0;
+        display: none;
+        width: 160px;
+        overflow: hidden;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: white;
+        box-shadow: 0 18px 38px rgba(15, 23, 42, 0.16);
+        padding: 6px;
+      }
+
+      .more-menu.open {
+        display: grid;
+      }
+
+      .menu-item {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        height: 36px;
+        gap: 9px;
+        border: 0;
+        border-radius: 5px;
+        background: transparent;
+        color: #475569;
+        padding: 0 10px;
+        text-align: left;
+      }
+
+      .menu-item:hover {
+        background: #f8fafc;
+      }
+
+      .menu-item.danger {
+        color: var(--danger);
+      }
+
+      .toast {
+        position: fixed;
+        z-index: 90;
+        top: 80px;
+        right: 22px;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        min-width: 240px;
+        border: 1px solid #bbf7d0;
+        border-radius: 8px;
+        background: #f0fdf4;
+        color: #166534;
+        box-shadow: 0 14px 32px rgba(15, 23, 42, 0.14);
+        opacity: 0;
+        padding: 12px 14px;
+        pointer-events: none;
+        transform: translateY(-8px);
+        transition: opacity 160ms ease, transform 160ms ease;
+      }
+
+      .toast.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      @media (max-width: 1180px) {
+        .detail-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .meta,
+        body.compact-visible .meta {
+          position: static;
+          max-height: none;
+        }
+
+        .button-label-optional {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <svg aria-hidden="true" width="0" height="0" style="position: absolute">
+      <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></symbol>
+      <symbol id="i-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+      <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></symbol>
+      <symbol id="i-copy" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></symbol>
+      <symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></symbol>
+      <symbol id="i-message" viewBox="0 0 24 24"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z"/></symbol>
+      <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="m20 6-11 11-5-5"/></symbol>
+    </svg>
+
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark"><svg class="icon"><use href="#i-book" /></svg></span>Prompt Skill Manager</div>
+      <div class="global-search">搜索 Prompt、解决方案和学习笔记</div>
+      <div class="account">管理员</div>
+    </header>
+
+    <aside class="sidebar">
+      <div class="nav-title">内容管理</div>
+      <div class="nav-link">Prompt 资源库</div>
+      <div class="nav-link">解决方案</div>
+      <div class="nav-link active">学习笔记</div>
+      <div class="nav-link">UI 原型库</div>
+      <div class="nav-title">分类浏览</div>
+      <div class="nav-link">标签词云</div>
+    </aside>
+
+    <div class="compact-bar" aria-hidden="true" inert>
+      <div class="compact-inner">
+        <button class="back-button" aria-label="返回学习笔记" title="返回学习笔记"><svg class="icon"><use href="#i-left" /></svg></button>
+        <div class="compact-title">React 并发渲染与状态更新实践</div>
+        <div class="compact-actions">
+          <button class="button" data-action="export"><svg class="icon"><use href="#i-download" /></svg><span class="button-label-optional">导出</span></button>
+          <button class="button primary" data-action="copy"><svg class="icon"><use href="#i-copy" /></svg>复制 Markdown</button>
+          <button class="button" data-action="annotation"><svg class="icon"><use href="#i-message" /></svg>批注 <span class="count">3</span></button>
+          <button class="icon-button" id="moreButton" aria-haspopup="menu" aria-expanded="false" title="更多操作"><svg class="icon"><use href="#i-more" /></svg></button>
+          <div class="more-menu" id="moreMenu" role="menu">
+            <button class="menu-item" role="menuitem" data-action="edit"><svg class="icon"><use href="#i-edit" /></svg>编辑笔记</button>
+            <button class="menu-item danger" role="menuitem" data-action="delete"><svg class="icon"><use href="#i-trash" /></svg>删除笔记</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <main class="main">
+      <section class="page-head" id="originalHead">
+        <div class="page-head-main">
+          <button class="back-button" aria-label="返回学习笔记" title="返回学习笔记"><svg class="icon"><use href="#i-left" /></svg></button>
+          <div class="title-wrap">
+            <h1>React 并发渲染与状态更新实践</h1>
+            <p class="subtitle">整理并发渲染、状态批处理与异步任务中的常见问题和可复用处理方式。</p>
+          </div>
+        </div>
+        <div class="page-actions">
+          <button class="button" data-action="export"><svg class="icon"><use href="#i-download" /></svg>导出</button>
+          <button class="button" data-action="copy"><svg class="icon"><use href="#i-copy" /></svg>复制 Markdown</button>
+          <button class="button" data-action="edit"><svg class="icon"><use href="#i-edit" /></svg>编辑</button>
+          <button class="button" data-action="annotation"><svg class="icon"><use href="#i-message" /></svg>批注 <span class="count">3</span></button>
+        </div>
+      </section>
+
+      <section class="detail-grid">
+        <article class="surface article">
+          <h2 id="context">为什么需要区分更新优先级</h2>
+          <p>在复杂交互中，输入、筛选和页面切换并不具有相同的紧急程度。将所有更新视为同步任务，会让耗时渲染阻塞用户正在进行的输入。</p>
+          <div class="quote">高频交互首先保证响应，非关键内容允许稍后完成，是并发渲染最直接的使用原则。</div>
+          <p>可以将输入框状态保持为紧急更新，将筛选结果计算放进非紧急更新。这样既保留了数据一致性，也减少了明显的输入延迟。</p>
+
+          <h2 id="batch">状态批处理的边界</h2>
+          <p>React 会在常见事件和异步回调中合并多次状态更新。连续调用更新函数时，应优先使用函数式更新，避免读取到同一份旧状态。</p>
+          <ul>
+            <li>依赖前一个状态时使用函数式更新。</li>
+            <li>不要将渲染后的 DOM 当作状态是否完成的唯一依据。</li>
+            <li>确实需要同步读取布局时，再使用更严格的同步边界。</li>
+          </ul>
+
+          <h2 id="async">异步任务与会话所有权</h2>
+          <p>详情页中的导出、批注加载和内容刷新可能同时发生。每个异步任务都应绑定当前资源标识，回调完成时再次确认页面仍属于同一资源。</p>
+          <p>如果用户已经切换到其他笔记，旧任务的结果不应覆盖新页面状态。可以使用请求取消、序列号或资源标识校验完成隔离。</p>
+
+          <h2 id="checklist">实现检查清单</h2>
+          <ul>
+            <li>关键按钮具备明确的 loading 和 disabled 状态。</li>
+            <li>错误反馈不会清除用户尚未提交的内容。</li>
+            <li>长标题和长标签不会挤压操作区域。</li>
+            <li>页面滚动后仍能找到高频操作，但不遮挡正文标题。</li>
+          </ul>
+
+          <h2>补充说明</h2>
+          <p>紧凑操作条只在原始操作区域离开视口后出现。用户回到页面顶部时，它会自动退出，不会形成两个同时可见的操作区域。</p>
+          <p>删除等低频危险操作收进更多菜单，避免与复制、批注等高频动作争夺视觉注意力。</p>
+        </article>
+
+        <aside class="surface meta">
+          <div class="meta-item"><span class="meta-label">分类</span><span class="meta-value">前端工程</span></div>
+          <div class="meta-item"><span class="meta-label">标签</span><div class="tags"><span class="tag">React</span><span class="tag">并发渲染</span><span class="tag">状态管理</span></div></div>
+          <div class="meta-item"><span class="meta-label">更新时间</span><span class="meta-value">2026-08-31 10:24</span></div>
+          <div class="meta-item"><span class="meta-label">目录</span><nav class="toc"><a href="#context">为什么需要区分更新优先级</a><a href="#batch">状态批处理的边界</a><a href="#async">异步任务与会话所有权</a><a href="#checklist">实现检查清单</a></nav></div>
+        </aside>
+      </section>
+    </main>
+
+    <div class="toast" id="toast" role="status"><svg class="icon"><use href="#i-check" /></svg><span id="toastText">操作完成</span></div>
+
+    <script>
+      const originalHead = document.getElementById('originalHead');
+      const compactBar = document.querySelector('.compact-bar');
+      const moreButton = document.getElementById('moreButton');
+      const moreMenu = document.getElementById('moreMenu');
+      const toast = document.getElementById('toast');
+      const toastText = document.getElementById('toastText');
+      let toastTimer;
+
+      const updateCompactBar = () => {
+        const shouldShow = originalHead.getBoundingClientRect().bottom <= 64;
+        document.body.classList.toggle('compact-visible', shouldShow);
+        compactBar.setAttribute('aria-hidden', String(!shouldShow));
+        compactBar.toggleAttribute('inert', !shouldShow);
+        if (!shouldShow) {
+          moreMenu.classList.remove('open');
+          moreButton.setAttribute('aria-expanded', 'false');
+        }
+      };
+
+      const showToast = (message) => {
+        window.clearTimeout(toastTimer);
+        toastText.textContent = message;
+        toast.classList.add('show');
+        toastTimer = window.setTimeout(() => toast.classList.remove('show'), 1800);
+      };
+
+      window.addEventListener('scroll', updateCompactBar, { passive: true });
+      window.addEventListener('resize', updateCompactBar);
+      updateCompactBar();
+
+      moreButton.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const isOpen = moreMenu.classList.toggle('open');
+        moreButton.setAttribute('aria-expanded', String(isOpen));
+      });
+
+      document.addEventListener('click', () => {
+        moreMenu.classList.remove('open');
+        moreButton.setAttribute('aria-expanded', 'false');
+      });
+
+      document.querySelectorAll('[data-action]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const messages = {
+            export: '笔记已导出',
+            copy: 'Markdown 内容已复制',
+            edit: '已进入编辑入口',
+            annotation: '已打开批注列表',
+            delete: '删除操作需要二次确认'
+          };
+          showToast(messages[button.dataset.action]);
+        });
+      });
+    </script>
+  </body>
+</html>

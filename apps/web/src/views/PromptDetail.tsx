@@ -88,7 +88,6 @@ export function PromptDetail() {
         title={prompt?.name || 'Prompt 详情'}
         subtitle={prompt?.description}
         back="/prompts"
-        sticky
         actions={
           <>
             <Button variant="outline" onClick={copyContent}>
