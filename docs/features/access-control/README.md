@@ -19,6 +19,7 @@ related: []
 - 登录成功后后端签发 `HttpOnly`、`SameSite=Strict` Cookie，前端通过 session 接口恢复管理员、访客或加载中的认证状态。
 - `GET`、`HEAD` 和 `OPTIONS` 默认公开；业务 `POST`、`PUT`、`PATCH` 和 `DELETE` 默认由全局 Guard 要求管理员会话。
 - 前端使用 `RequireAdmin` 保护新建、编辑、分类管理和标签管理路由，详情页的写操作也只对管理员显示。
+- 模型回答是例外的私有读取资源：其全部前端路由、菜单、列表、详情、导出与批注查询均要求管理员会话。
 - 登录接口启用频率限制。
 
 ## 约束与限制

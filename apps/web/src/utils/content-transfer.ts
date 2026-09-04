@@ -27,6 +27,9 @@ function isTransferResource(value: unknown): value is ContentTransferResource {
     typeof value.content === 'string' &&
     typeof value.category === 'string' &&
     isStringArray(value.tags) &&
+    (value.sourceProduct === undefined || typeof value.sourceProduct === 'string') &&
+    (value.modelName === undefined || typeof value.modelName === 'string') &&
+    (value.originalPrompt === undefined || typeof value.originalPrompt === 'string') &&
     typeof value.createdAt === 'string' &&
     typeof value.updatedAt === 'string'
   );
@@ -58,7 +61,7 @@ function isContentTransferFile(value: unknown): value is ContentTransferFile {
   const hasValidEnvelope =
     value.format === CONTENT_TRANSFER_FORMAT &&
     CONTENT_TRANSFER_VERSIONS.some((version) => version === value.version) &&
-    (value.resourceType === 'NOTE' || value.resourceType === 'SOLUTION') &&
+    (value.resourceType === 'NOTE' || value.resourceType === 'SOLUTION' || value.resourceType === 'MODEL_RESPONSE') &&
     typeof value.exportedAt === 'string' &&
     isTransferResource(value.resource) &&
     Array.isArray(value.annotations) &&
@@ -89,7 +92,7 @@ export async function readContentTransferFile(file: File, expectedType: Annotati
   }
 
   if (parsed.resourceType !== expectedType) {
-    const expectedLabel = expectedType === 'SOLUTION' ? '解决方案' : '学习笔记';
+    const expectedLabel = expectedType === 'SOLUTION' ? '解决方案' : expectedType === 'NOTE' ? '学习笔记' : '模型回答';
     throw new Error(`请选择${expectedLabel}迁移文件。`);
   }
 
@@ -98,7 +101,7 @@ export async function readContentTransferFile(file: File, expectedType: Annotati
 
 /** 将迁移对象下载为单个 JSON 文件。 */
 export function downloadContentTransferFile(transfer: ContentTransferFile) {
-  const resourceLabel = transfer.resourceType === 'SOLUTION' ? 'solution' : 'note';
+  const resourceLabel = transfer.resourceType === 'SOLUTION' ? 'solution' : transfer.resourceType === 'NOTE' ? 'note' : 'model-response';
   const safeTitle = transfer.resource.title
     .trim()
     .replace(/[\\/:*?"<>|]/g, '-')

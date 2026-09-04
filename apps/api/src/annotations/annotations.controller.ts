@@ -9,7 +9,8 @@ import {
   ParseUUIDPipe,
   Post,
   Put,
-  Query
+  Query,
+  UseGuards
 } from '@nestjs/common';
 import { ApiCreatedResponse, ApiNoContentResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AnnotationsService } from './annotations.service';
@@ -17,8 +18,10 @@ import { AnnotationQueryDto } from './dto/annotation-query.dto';
 import { AnnotationResponseDto } from './dto/annotation-response.dto';
 import { CreateAnnotationDto } from './dto/create-annotation.dto';
 import { UpdateAnnotationDto } from './dto/update-annotation.dto';
+import { ModelResponseAnnotationGuard } from './guards/model-response-annotation.guard';
 
 @ApiTags('Annotations')
+@UseGuards(ModelResponseAnnotationGuard)
 @Controller('annotations')
 export class AnnotationsController {
   constructor(private readonly annotationsService: AnnotationsService) {}

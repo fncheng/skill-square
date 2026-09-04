@@ -63,6 +63,24 @@ export class ContentTransferResourceDto {
   @ArrayMaxSize(20)
   tags: string[];
 
+  @ApiPropertyOptional({ description: '模型回答的来源产品；其他资源不使用。' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  sourceProduct?: string;
+
+  @ApiPropertyOptional({ description: '模型回答的模型名称；其他资源不使用。' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  modelName?: string;
+
+  @ApiPropertyOptional({ description: '模型回答的原始 Prompt；其他资源不使用。' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(50000)
+  originalPrompt?: string;
+
   @ApiProperty()
   @IsISO8601()
   createdAt: string;

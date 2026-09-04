@@ -112,6 +112,25 @@ model Note {
   @@map("notes")
 }
 
+model ModelResponse {
+  id            String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title         String       @db.VarChar(200)
+  summary       String       @default("") @db.VarChar(500)
+  content       String       @db.Text
+  category      String       @default("") @db.VarChar(80)
+  tags          String[]     @default([])
+  sourceProduct String       @default("") @db.VarChar(120)
+  modelName     String       @default("") @db.VarChar(120)
+  originalPrompt String      @default("") @db.Text
+  annotations   Annotation[]
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @default(now()) @updatedAt
+
+  @@index([title])
+  @@index([category])
+  @@map("model_responses")
+}
+
 model UiPrototype {
   id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   title         String   @db.VarChar(160)
@@ -131,6 +150,7 @@ model UiPrototype {
 enum AnnotationResourceType {
   NOTE
   SOLUTION
+  MODEL_RESPONSE
 }
 
 model Annotation {
@@ -140,6 +160,8 @@ model Annotation {
   note              Note?                  @relation(fields: [noteId], references: [id], onDelete: Cascade)
   solutionId        String?                @db.Uuid
   solution          Solution?              @relation(fields: [solutionId], references: [id], onDelete: Cascade)
+  modelResponseId   String?                @db.Uuid
+  modelResponse     ModelResponse?         @relation(fields: [modelResponseId], references: [id], onDelete: Cascade)
   content           String                 @db.Text
   exact             String                 @db.Text
   prefix            String                 @default("") @db.VarChar(500)
@@ -152,6 +174,7 @@ model Annotation {
 
   @@index([noteId])
   @@index([solutionId])
+  @@index([modelResponseId])
   @@index([resourceType, createdAt])
   @@map("annotations")
 }

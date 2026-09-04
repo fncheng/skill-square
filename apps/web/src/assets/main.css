@@ -682,6 +682,24 @@
     @apply col-span-full rounded-lg border bg-card py-8;
   }
 
+  .model-response-home { max-width: 1500px; margin: 0 auto; }
+  .model-response-title-row { display: flex; align-items: center; gap: 10px; }
+  .model-response-private-badge { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 8px; color: #4f46e5; background: #eef2ff; border: 1px solid #dfe3ff; border-radius: 999px; font-size: 11px; font-weight: 800; }
+  .model-response-page-icon, .model-response-card-icon { display: grid; place-items: center; color: #4f46e5; background: #eef2ff; border: 1px solid #dfe3ff; border-radius: 6px; }
+  .model-response-page-icon { width: 34px; height: 34px; }
+  .model-response-toolbar { display: grid; grid-template-columns: minmax(240px, 1.2fr) minmax(250px, 2fr) auto; align-items: center; gap: 12px; padding: 12px; margin-bottom: 18px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; }
+  .model-response-result-count { color: #64748b; font-size: 12px; white-space: nowrap; }
+  .model-response-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+  .model-response-card { min-width: 0; min-height: 224px; display: flex; flex-direction: column; padding: 18px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 1px 2px rgb(15 23 42 / 5%); transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease; }
+  .model-response-card:hover { transform: translateY(-2px); border-color: #c7d2fe; box-shadow: 0 12px 28px rgb(15 23 42 / 8%); }
+  .model-response-card-head { display: flex; align-items: flex-start; gap: 10px; }
+  .model-response-card-icon { width: 34px; height: 34px; flex: none; }
+  .model-response-card-title { margin: 0; color: #0f172a; font-size: 15px; line-height: 1.45; font-weight: 800; }
+  .model-response-source { margin: 3px 0 0; color: #64748b; font-size: 11px; font-weight: 700; }
+  .model-response-card-desc { display: -webkit-box; min-height: 48px; margin: 14px 0; overflow: hidden; color: #64748b; font-size: 13px; line-height: 1.65; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+  .model-response-annotation-total { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; color: #64748b; font-size: 12px; }
+  .model-response-original-prompt { margin: 6px 0 0; white-space: pre-wrap; color: #475569; font-size: 12px; line-height: 1.65; }
+
   .tag-cloud-page,
   .tag-article-page {
     @apply pb-9;

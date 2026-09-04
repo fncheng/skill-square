@@ -16,7 +16,7 @@ Prompt Skill Manager 用于管理 AI Prompt、Agent Workflow、Skill、Cursor Ru
 
 ### 前端
 
-- `App.tsx`：基于 `react-router-dom` 的页面路由，包括 Prompt、解决方案、学习笔记、内容标签词云、UI 原型、分类与标签管理。
+- `App.tsx`：基于 `react-router-dom` 的页面路由，包括 Prompt、解决方案、学习笔记、模型回答、内容标签词云、UI 原型、分类与标签管理。
 - `stores`：Zustand 管理管理员/访客会话、Prompt 查询条件、分页数据、分类与标签缓存，以及全局 Toast、Confirm 状态。
 - `hooks`：`useToast`、`useConfirm`、`useMarkdown` 等业务 Hooks。
 - `api`：Axios 封装 RESTful API。
@@ -33,7 +33,8 @@ Prompt Skill Manager 用于管理 AI Prompt、Agent Workflow、Skill、Cursor Ru
 - `categories`：分类 CRUD。
 - `tags`：标签 CRUD。
 - `content-tags`：聚合解决方案与学习笔记的字符串标签，并提供轻量词云统计与标签内容分页查询。
-- `annotations`：学习笔记与解决方案的单人 Markdown 批注 CRUD、资源校验和文本锚点持久化。
+- `annotations`：学习笔记、解决方案与模型回答的单人 Markdown 批注 CRUD、资源校验和文本锚点持久化。
+- `model-responses`：仅管理员可见的模型回答 CRUD、溯源字段、导入导出和批注关联；全部读取由专用管理员 Guard 保护。
 - `ui-prototypes`：单文件 HTML 原型 CRUD、筛选和源码大小校验。
 - `dto`：所有接口的入参和 Swagger 响应 DTO。
 
@@ -53,7 +54,7 @@ Prompt Skill Manager 用于管理 AI Prompt、Agent Workflow、Skill、Cursor Ru
 
 - 前端只调用 `/api` 下的 RESTful 接口，不直接依赖 Prisma 字段结构。
 - 后端统一返回扁平化后的 Prompt 响应，`tags` 字段直接返回 Tag 数组，避免暴露中间表结构。
-- 访客可以调用 `GET`、`HEAD`、`OPTIONS`；业务 `POST`、`PUT`、`PATCH`、`DELETE` 默认要求有效 Admin Cookie。
+- 访客可以调用公开资源的 `GET`、`HEAD`、`OPTIONS`；业务写操作默认要求有效 Admin Cookie。模型回答以及 `MODEL_RESPONSE` 批注查询是私有读取资源，全部请求要求管理员 Cookie，并且不纳入公开标签发现。
 - 管理员会话保存在 `HttpOnly`、`SameSite=Strict` Cookie 中，前端仅通过 session 接口恢复三态认证状态。
 - 唯一管理员用户名固定为 `admin`，密码哈希和 JWT secret 来自运行环境，不建立用户或 Session 数据表。
 - Swagger 地址为 `/api/docs`。
@@ -90,6 +91,13 @@ Prompt Skill Manager 用于管理 AI Prompt、Agent Workflow、Skill、Cursor Ru
 - `POST /api/annotations`
 - `PUT /api/annotations/:id`
 - `DELETE /api/annotations/:id`
+- `GET /api/model-responses`
+- `GET /api/model-responses/:id`
+- `GET /api/model-responses/:id/export`
+- `POST /api/model-responses/import`
+- `POST /api/model-responses`
+- `PUT /api/model-responses/:id`
+- `DELETE /api/model-responses/:id`
 - `GET /api/ui-prototypes`
 - `GET /api/ui-prototypes/:id`
 - `POST /api/ui-prototypes`
@@ -105,3 +113,4 @@ Prompt Skill Manager 用于管理 AI Prompt、Agent Workflow、Skill、Cursor Ru
 - `PromptVersion`：Prompt 历史快照，保存名称、描述、内容、分类与标签快照。
 - `Annotation`：笔记或解决方案的 Markdown 补充内容，以及渲染文本位置和原文上下文锚点。
 - `UiPrototype`：UI 原型名称、描述、单文件 HTML、分类、标签和外部资源策略。
+- `ModelResponse`：私有模型回答、Markdown 正文、分类、标签、来源产品、模型名称和原始 Prompt。

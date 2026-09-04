@@ -200,6 +200,46 @@ interface CreateNoteRequest {
 
 `UpdateNoteRequest` 与 `CreateNoteRequest` 字段一致，但所有字段均可选；传入 `tags` 时，去除首尾空白并去重后至少包含一项。
 
+## ModelResponse
+
+```ts
+interface ModelResponse {
+  id: string;
+  title: string;
+  summary: string;
+  content: string;
+  category: string;
+  tags: string[];
+  sourceProduct: string;
+  modelName: string;
+  originalPrompt: string;
+  annotationCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+`title`、`content` 与至少一个 `tags` 为创建必填字段。`sourceProduct`、`modelName` 和 `originalPrompt` 为可选溯源字段。
+
+## CreateModelResponseRequest
+
+```ts
+interface CreateModelResponseRequest {
+  title: string;
+  summary?: string;
+  content: string;
+  category?: string;
+  tags: string[];
+  sourceProduct?: string;
+  modelName?: string;
+  originalPrompt?: string;
+}
+```
+
+## UpdateModelResponseRequest
+
+`UpdateModelResponseRequest` 与 `CreateModelResponseRequest` 字段一致，但所有字段均可选；传入 `tags` 时，去除首尾空白并去重后至少包含一项。
+
 ## UiPrototype
 
 ```ts
@@ -250,7 +290,7 @@ interface CreateUiPrototypeRequest {
 ## Annotation
 
 ```ts
-type AnnotationResourceType = 'NOTE' | 'SOLUTION';
+type AnnotationResourceType = 'NOTE' | 'SOLUTION' | 'MODEL_RESPONSE';
 
 interface Annotation {
   id: string;
@@ -319,7 +359,7 @@ interface CreateTagRequest {
 interface ContentTransferFile {
   format: 'prompt-skill-manager-transfer';
   version: 1 | 2;
-  resourceType: 'NOTE' | 'SOLUTION';
+  resourceType: 'NOTE' | 'SOLUTION' | 'MODEL_RESPONSE';
   exportedAt: string;
   resource: {
     title: string;
@@ -327,6 +367,9 @@ interface ContentTransferFile {
     content: string;
     category: string;
     tags: string[];
+    sourceProduct?: string;
+    modelName?: string;
+    originalPrompt?: string;
     createdAt: string;
     updatedAt: string;
   };

@@ -12,6 +12,9 @@ export interface ContentTransferResource {
   content: string;
   category: string;
   tags: string[];
+  sourceProduct?: string;
+  modelName?: string;
+  originalPrompt?: string;
   createdAt: string;
   updatedAt: string;
 }

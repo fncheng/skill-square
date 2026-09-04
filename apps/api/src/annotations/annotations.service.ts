@@ -30,6 +30,7 @@ export class AnnotationsService {
         resourceType: dto.resourceType as AnnotationResourceType,
         noteId: dto.resourceType === AnnotationResourceTypeDto.NOTE ? dto.resourceId : null,
         solutionId: dto.resourceType === AnnotationResourceTypeDto.SOLUTION ? dto.resourceId : null,
+        modelResponseId: dto.resourceType === AnnotationResourceTypeDto.MODEL_RESPONSE ? dto.resourceId : null,
         content: dto.content,
         exact: dto.exact,
         prefix: dto.prefix ?? '',
@@ -83,14 +84,15 @@ export class AnnotationsService {
   }
 
   private async ensureResourceExists(resourceType: AnnotationResourceTypeDto, resourceId: string) {
-    const resource =
-      resourceType === AnnotationResourceTypeDto.NOTE
-        ? await this.prisma.note.findUnique({ where: { id: resourceId }, select: { id: true } })
-        : await this.prisma.solution.findUnique({ where: { id: resourceId }, select: { id: true } });
+    const resource = resourceType === AnnotationResourceTypeDto.NOTE
+      ? await this.prisma.note.findUnique({ where: { id: resourceId }, select: { id: true } })
+      : resourceType === AnnotationResourceTypeDto.SOLUTION
+        ? await this.prisma.solution.findUnique({ where: { id: resourceId }, select: { id: true } })
+        : await this.prisma.modelResponse.findUnique({ where: { id: resourceId }, select: { id: true } });
 
     if (!resource) {
       throw new NotFoundException(
-        resourceType === AnnotationResourceTypeDto.NOTE ? '笔记不存在。' : '解决方案不存在。'
+        resourceType === AnnotationResourceTypeDto.NOTE ? '笔记不存在。' : resourceType === AnnotationResourceTypeDto.SOLUTION ? '解决方案不存在。' : '模型回答不存在。'
       );
     }
   }
@@ -99,9 +101,9 @@ export class AnnotationsService {
     resourceType: AnnotationResourceTypeDto,
     resourceId: string
   ): Prisma.AnnotationWhereInput {
-    return resourceType === AnnotationResourceTypeDto.NOTE
-      ? { resourceType: AnnotationResourceType.NOTE, noteId: resourceId }
-      : { resourceType: AnnotationResourceType.SOLUTION, solutionId: resourceId };
+    if (resourceType === AnnotationResourceTypeDto.NOTE) return { resourceType: AnnotationResourceType.NOTE, noteId: resourceId };
+    if (resourceType === AnnotationResourceTypeDto.SOLUTION) return { resourceType: AnnotationResourceType.SOLUTION, solutionId: resourceId };
+    return { resourceType: AnnotationResourceType.MODEL_RESPONSE, modelResponseId: resourceId };
   }
 
   private validateAnchor(anchor: Pick<CreateAnnotationDto, 'exact' | 'start' | 'end'>) {
@@ -118,7 +120,7 @@ export class AnnotationsService {
     return {
       id: annotation.id,
       resourceType: annotation.resourceType,
-      resourceId: annotation.noteId ?? annotation.solutionId!,
+      resourceId: annotation.noteId ?? annotation.solutionId ?? annotation.modelResponseId!,
       content: annotation.content,
       exact: annotation.exact,
       prefix: annotation.prefix,

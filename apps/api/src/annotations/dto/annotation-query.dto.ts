@@ -7,7 +7,7 @@ export class AnnotationQueryDto {
   @IsEnum(AnnotationResourceTypeDto)
   resourceType: AnnotationResourceTypeDto;
 
-  @ApiProperty({ description: '笔记或解决方案 UUID。' })
+  @ApiProperty({ description: '笔记、解决方案或模型回答 UUID。' })
   @IsUUID()
   resourceId: string;
 }

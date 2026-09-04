@@ -1,4 +1,5 @@
 export enum AnnotationResourceTypeDto {
   NOTE = 'NOTE',
-  SOLUTION = 'SOLUTION'
+  SOLUTION = 'SOLUTION',
+  MODEL_RESPONSE = 'MODEL_RESPONSE'
 }

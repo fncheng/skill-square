@@ -5,6 +5,9 @@ import { CategoryManage } from './views/CategoryManage';
 import { NoteDetail } from './views/NoteDetail';
 import { NoteEditor } from './views/NoteEditor';
 import { NoteList } from './views/NoteList';
+import { ModelResponseDetail } from './views/ModelResponseDetail';
+import { ModelResponseEditor } from './views/ModelResponseEditor';
+import { ModelResponseList } from './views/ModelResponseList';
 import { Login } from './views/Login';
 import { PromptDetail } from './views/PromptDetail';
 import { PromptEditor } from './views/PromptEditor';
@@ -36,6 +39,10 @@ export default function App() {
         <Route path="/ui-prototypes" element={<UiPrototypeList />} />
         <Route path="/ui-prototypes/:id" element={<UiPrototypeDetail />} />
         <Route element={<RequireAdmin />}>
+          <Route path="/model-responses" element={<ModelResponseList />} />
+          <Route path="/model-responses/new" element={<ModelResponseEditor />} />
+          <Route path="/model-responses/:id" element={<ModelResponseDetail />} />
+          <Route path="/model-responses/:id/edit" element={<ModelResponseEditor />} />
           <Route path="/prompts/new" element={<PromptEditor />} />
           <Route path="/prompts/:id/edit" element={<PromptEditor />} />
           <Route path="/solutions/new" element={<SolutionEditor />} />

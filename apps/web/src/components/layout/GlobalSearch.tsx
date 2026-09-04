@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { FileText, Lightbulb, LoaderCircle, NotebookPen, PanelsTopLeft, Search, X } from 'lucide-react';
+import { BotMessageSquare, FileText, Lightbulb, LoaderCircle, NotebookPen, PanelsTopLeft, Search, X } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { globalSearch } from '@/api/search';
 import type { GlobalSearchItem, GlobalSearchResourceType } from '@/types/domain';
@@ -12,7 +12,8 @@ const resourceConfig: Record<
   PROMPT: { label: 'Prompt', path: '/prompts', icon: FileText },
   SOLUTION: { label: '解决方案', path: '/solutions', icon: Lightbulb },
   NOTE: { label: '学习笔记', path: '/notes', icon: NotebookPen },
-  UI_PROTOTYPE: { label: 'UI 原型', path: '/ui-prototypes', icon: PanelsTopLeft }
+  UI_PROTOTYPE: { label: 'UI 原型', path: '/ui-prototypes', icon: PanelsTopLeft },
+  MODEL_RESPONSE: { label: '模型回答', path: '/model-responses', icon: BotMessageSquare }
 };
 
 export function GlobalSearch() {

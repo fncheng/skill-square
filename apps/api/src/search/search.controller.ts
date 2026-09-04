@@ -1,4 +1,5 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, Req } from '@nestjs/common';
+import { Request } from 'express';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { GlobalSearchQueryDto } from './dto/global-search-query.dto';
 import { GlobalSearchResponseDto } from './dto/global-search-response.dto';
@@ -12,7 +13,7 @@ export class SearchController {
   @Get()
   @ApiOperation({ summary: '按标题全局搜索内容' })
   @ApiOkResponse({ type: GlobalSearchResponseDto })
-  search(@Query() query: GlobalSearchQueryDto) {
-    return this.searchService.search(query);
+  search(@Query() query: GlobalSearchQueryDto, @Req() request: Request) {
+    return this.searchService.search(query, request);
   }
 }

@@ -4,7 +4,8 @@ export enum GlobalSearchResourceType {
   PROMPT = 'PROMPT',
   SOLUTION = 'SOLUTION',
   NOTE = 'NOTE',
-  UI_PROTOTYPE = 'UI_PROTOTYPE'
+  UI_PROTOTYPE = 'UI_PROTOTYPE',
+  MODEL_RESPONSE = 'MODEL_RESPONSE'
 }
 
 export class GlobalSearchItemDto {

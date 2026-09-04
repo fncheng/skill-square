@@ -1,4 +1,6 @@
 import { Injectable } from '@nestjs/common';
+import { Request } from 'express';
+import { AuthService } from '../auth/auth.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { GlobalSearchQueryDto } from './dto/global-search-query.dto';
 import {
@@ -9,16 +11,16 @@ import {
 
 @Injectable()
 export class SearchService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly authService: AuthService) {}
 
-  async search(query: GlobalSearchQueryDto): Promise<GlobalSearchResponseDto> {
+  async search(query: GlobalSearchQueryDto, request: Request): Promise<GlobalSearchResponseDto> {
     const keyword = query.query.trim();
     if (!keyword) {
       return { items: [] };
     }
 
     const take = query.limit;
-    const [prompts, solutions, notes, uiPrototypes] = await Promise.all([
+    const [prompts, solutions, notes, uiPrototypes, session] = await Promise.all([
       this.prisma.prompt.findMany({
         where: { name: { contains: keyword, mode: 'insensitive' } },
         select: { id: true, name: true, updatedAt: true },
@@ -42,8 +44,16 @@ export class SearchService {
         select: { id: true, title: true, updatedAt: true },
         orderBy: { updatedAt: 'desc' },
         take
-      })
+      }),
+      this.authService.getSession(request)
     ]);
+
+    const modelResponses = session.authenticated
+      ? await this.prisma.modelResponse.findMany({
+          where: { title: { contains: keyword, mode: 'insensitive' } },
+          select: { id: true, title: true, updatedAt: true }, orderBy: { updatedAt: 'desc' }, take
+        })
+      : [];
 
     const items: GlobalSearchItemDto[] = [
       ...prompts.map((prompt) => ({
@@ -63,7 +73,8 @@ export class SearchService {
       ...uiPrototypes.map((uiPrototype) => ({
         ...uiPrototype,
         resourceType: GlobalSearchResourceType.UI_PROTOTYPE
-      }))
+      })),
+      ...modelResponses.map((modelResponse) => ({ ...modelResponse, resourceType: GlobalSearchResourceType.MODEL_RESPONSE }))
     ];
 
     return {

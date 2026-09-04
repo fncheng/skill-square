@@ -1,0 +1,803 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>模型回答 - Prompt Skill Manager</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --background: #f8fafc;
+      --surface: #ffffff;
+      --surface-soft: #f8fafc;
+      --surface-muted: #f1f5f9;
+      --border: #e2e8f0;
+      --border-strong: #cbd5e1;
+      --text: #0f172a;
+      --text-secondary: #475569;
+      --muted: #64748b;
+      --muted-soft: #94a3b8;
+      --primary: #5957e8;
+      --primary-hover: #4845d3;
+      --primary-soft: #eef2ff;
+      --warning: #a16207;
+      --warning-soft: #fef9c3;
+      --danger: #dc2626;
+      --shadow-sm: 0 1px 2px rgba(15, 23, 42, .05);
+      --shadow-md: 0 14px 34px rgba(15, 23, 42, .11);
+      --shadow-lg: 0 28px 72px rgba(15, 23, 42, .22);
+      --radius: 8px;
+    }
+
+    * { box-sizing: border-box; }
+    html { min-width: 320px; background: var(--background); }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      color: var(--text);
+      background: var(--background);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+      font-size: 14px;
+    }
+    button, input, textarea, select { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, [tabindex]:focus-visible {
+      outline: 2px solid rgba(89, 87, 232, .42);
+      outline-offset: 2px;
+    }
+    [hidden] { display: none !important; }
+    .icon {
+      width: 17px;
+      height: 17px;
+      display: block;
+      flex: none;
+      fill: none;
+      stroke: currentColor;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-width: 1.9;
+    }
+
+    .topbar {
+      position: fixed;
+      inset: 0 0 auto 0;
+      z-index: 50;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      padding: 0 28px;
+      background: rgba(255, 255, 255, .94);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(14px);
+    }
+    .brand, .topbar-actions, .admin-badge, .nav-link, .page-title-row, .page-actions,
+    .button, .icon-button, .search-box, .chips, .card-head, .card-meta, .card-actions,
+    .meta-line, .detail-actions, .drawer-head, .dialog-head, .dialog-actions, .field-hint,
+    .privacy-badge, .annotation-button, .status-line, .toast { display: flex; align-items: center; }
+    .brand {
+      width: 220px;
+      flex: none;
+      gap: 10px;
+      color: var(--text);
+      text-decoration: none;
+      font-size: 16px;
+      font-weight: 850;
+    }
+    .brand-mark {
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      background: var(--primary);
+      border-radius: 6px;
+      box-shadow: 0 8px 18px rgba(89, 87, 232, .22);
+    }
+    .global-search { position: relative; width: min(560px, 42vw); margin: 0 32px; }
+    .global-search .icon { position: absolute; left: 13px; top: 12px; color: var(--muted-soft); }
+    .global-search input {
+      width: 100%;
+      height: 40px;
+      padding: 0 38px;
+      color: var(--text-secondary);
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      outline: none;
+    }
+    .global-search input:focus { background: #fff; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(89,87,232,.1); }
+    .topbar-actions { margin-left: auto; gap: 9px; }
+    .admin-badge {
+      height: 36px;
+      gap: 8px;
+      padding: 0 12px;
+      color: #334155;
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 760;
+    }
+
+    .sidebar {
+      position: fixed;
+      inset: 64px auto 0 0;
+      z-index: 40;
+      width: 220px;
+      padding: 20px 14px;
+      background: rgba(255,255,255,.9);
+      border-right: 1px solid var(--border);
+      backdrop-filter: blur(12px);
+    }
+    .nav-section { display: grid; gap: 6px; }
+    .nav-link {
+      height: 44px;
+      gap: 12px;
+      padding: 0 14px;
+      color: #526077;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 730;
+      transition: color .16s ease, background .16s ease;
+    }
+    .nav-link:hover, .nav-link.active { color: var(--primary); background: var(--primary-soft); }
+    .nav-link.active { font-weight: 850; }
+    .nav-link .private-mark { margin-left: auto; width: 14px; height: 14px; opacity: .72; }
+    .nav-title { margin: 24px 12px 10px; color: var(--muted-soft); font-size: 11px; font-weight: 850; letter-spacing: .08em; }
+
+    main { min-height: 100vh; margin-left: 220px; padding: 88px 28px 48px; }
+    .page { max-width: 1500px; margin: 0 auto; }
+    .page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 20px; }
+    .page-title-row { gap: 10px; }
+    h1 { margin: 0; font-size: 24px; line-height: 32px; font-weight: 900; letter-spacing: -.02em; }
+    .page-subtitle { margin: 6px 0 0; color: var(--muted); line-height: 1.65; }
+    .privacy-badge {
+      gap: 5px;
+      height: 24px;
+      padding: 0 8px;
+      color: #4f46e5;
+      background: var(--primary-soft);
+      border: 1px solid #dfe3ff;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 800;
+    }
+    .privacy-badge .icon { width: 13px; height: 13px; }
+    .page-actions { flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+    .button, .icon-button {
+      justify-content: center;
+      min-height: 38px;
+      color: var(--text-secondary);
+      background: #fff;
+      border: 1px solid var(--border-strong);
+      border-radius: 6px;
+      box-shadow: var(--shadow-sm);
+      font-size: 13px;
+      font-weight: 780;
+      transition: .16s ease;
+    }
+    .button { gap: 8px; padding: 0 14px; }
+    .icon-button { width: 38px; padding: 0; }
+    .button:hover, .icon-button:hover { color: var(--primary); background: #fafaff; border-color: #c7d2fe; }
+    .button.primary { color: #fff; background: var(--primary); border-color: var(--primary); }
+    .button.primary:hover { color: #fff; background: var(--primary-hover); }
+    .button.danger:hover { color: var(--danger); background: #fef2f2; border-color: #fecaca; }
+    .button:disabled { cursor: not-allowed; opacity: .55; }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: minmax(260px, 1.3fr) minmax(380px, 2fr) auto;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+      padding: 12px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+    }
+    .search-box { position: relative; min-width: 0; }
+    .search-box > .icon { position: absolute; left: 12px; color: var(--muted-soft); }
+    .search-box input, select {
+      height: 38px;
+      color: var(--text-secondary);
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      outline: none;
+    }
+    .search-box input { width: 100%; padding: 0 34px 0 38px; }
+    .search-clear { position: absolute; right: 8px; display: grid; place-items: center; padding: 4px; color: var(--muted-soft); background: transparent; border: 0; }
+    .chips { min-width: 0; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+    .chips::-webkit-scrollbar { display: none; }
+    .chip {
+      flex: none;
+      height: 32px;
+      padding: 0 11px;
+      color: var(--muted);
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 750;
+    }
+    .chip:hover { color: var(--text-secondary); background: var(--surface-muted); }
+    .chip.active { color: var(--primary); background: var(--primary-soft); border-color: #dfe3ff; }
+    select { min-width: 126px; padding: 0 30px 0 11px; font-size: 12px; font-weight: 720; }
+    .result-count { color: var(--muted); font-size: 12px; white-space: nowrap; }
+
+    .card-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+    .response-card {
+      min-width: 0;
+      min-height: 226px;
+      display: flex;
+      flex-direction: column;
+      padding: 18px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
+    }
+    .response-card:hover { transform: translateY(-2px); border-color: #c7d2fe; box-shadow: 0 12px 28px rgba(15,23,42,.08); }
+    .card-head { align-items: flex-start; gap: 10px; }
+    .card-icon {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      flex: none;
+      color: var(--primary);
+      background: var(--primary-soft);
+      border: 1px solid #dfe3ff;
+      border-radius: 6px;
+    }
+    .card-copy { min-width: 0; flex: 1; }
+    .card-title { margin: 0; color: var(--text); font-size: 15px; line-height: 1.45; font-weight: 850; }
+    .model-name { margin-top: 3px; color: var(--muted); font-size: 11px; font-weight: 700; }
+    .card-summary {
+      display: -webkit-box;
+      min-height: 52px;
+      margin: 14px 0;
+      overflow: hidden;
+      color: var(--text-secondary);
+      line-height: 1.72;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 3;
+    }
+    .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 15px; }
+    .tag {
+      max-width: 150px;
+      overflow: hidden;
+      padding: 4px 8px;
+      color: var(--muted);
+      background: var(--surface-muted);
+      border-radius: 5px;
+      font-size: 11px;
+      font-weight: 720;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .tag.category { color: #4f46e5; background: var(--primary-soft); }
+    .card-meta { min-height: 34px; margin-top: auto; padding-top: 12px; color: var(--muted-soft); border-top: 1px solid #edf2f7; font-size: 11px; }
+    .meta-line { gap: 6px; }
+    .meta-line + .meta-line { margin-left: 14px; }
+    .meta-line .icon { width: 14px; height: 14px; }
+    .card-actions { margin-left: auto; gap: 2px; opacity: 0; transition: opacity .16s ease; }
+    .response-card:hover .card-actions, .response-card:focus-within .card-actions { opacity: 1; }
+    .card-action {
+      width: 30px;
+      height: 30px;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      background: transparent;
+      border: 0;
+      border-radius: 5px;
+    }
+    .card-action:hover { color: var(--primary); background: var(--primary-soft); }
+    .card-action.danger:hover { color: var(--danger); background: #fef2f2; }
+    .card-action .icon { width: 15px; height: 15px; }
+
+    .state-panel {
+      min-height: 300px;
+      display: grid;
+      place-items: center;
+      padding: 48px;
+      color: var(--muted);
+      background: #fff;
+      border: 1px dashed var(--border-strong);
+      border-radius: var(--radius);
+      text-align: center;
+    }
+    .state-panel .state-icon { width: 48px; height: 48px; display: grid; place-items: center; margin: 0 auto 12px; color: var(--muted-soft); background: var(--surface-muted); border-radius: 50%; }
+    .state-panel h3 { margin: 0 0 6px; color: var(--text-secondary); font-size: 15px; }
+    .state-panel p { margin: 0; line-height: 1.7; }
+    .spinner { width: 24px; height: 24px; margin: 0 auto 12px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin .75s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .detail-view { max-width: 1320px; margin: 0 auto; }
+    .back-button { margin-bottom: 15px; }
+    .detail-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 18px; }
+    .detail-title { margin: 0; font-size: 23px; line-height: 1.4; font-weight: 900; }
+    .detail-summary { max-width: 760px; margin: 6px 0 0; color: var(--muted); line-height: 1.65; }
+    .detail-actions { flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+    .detail-grid { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 16px; align-items: start; }
+    .document, .detail-meta {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+    }
+    .document { min-height: 600px; padding: 32px 38px 48px; color: #263248; }
+    .document h2 { margin: 28px 0 12px; color: var(--text); font-size: 20px; }
+    .document h2:first-child { margin-top: 0; }
+    .document p, .document li { line-height: 1.85; }
+    .document pre { overflow: auto; padding: 16px; color: #dbeafe; background: #172033; border-radius: 7px; }
+    .document code { font-family: "SFMono-Regular", Consolas, monospace; font-size: 12px; }
+    .annotation-mark { padding: 1px 2px; background: #fef3c7; border-bottom: 2px solid #eab308; cursor: pointer; }
+    .detail-meta { position: sticky; top: 82px; padding: 18px; }
+    .meta-group + .meta-group { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); }
+    .meta-label { display: block; margin-bottom: 7px; color: var(--muted-soft); font-size: 11px; font-weight: 820; }
+    .meta-value { color: var(--text-secondary); line-height: 1.6; font-size: 13px; font-weight: 650; }
+    .prompt-box { padding: 10px 11px; color: var(--text-secondary); background: var(--surface-soft); border: 1px solid var(--border); border-radius: 6px; line-height: 1.65; }
+    .toc { display: grid; gap: 7px; }
+    .toc a { color: var(--muted); text-decoration: none; font-size: 12px; }
+    .toc a:hover { color: var(--primary); }
+
+    .overlay { position: fixed; inset: 0; z-index: 80; background: rgba(15,23,42,.46); backdrop-filter: blur(2px); }
+    .dialog {
+      position: fixed;
+      z-index: 90;
+      left: 50%;
+      top: 50%;
+      width: min(760px, calc(100vw - 32px));
+      max-height: calc(100vh - 40px);
+      overflow: auto;
+      transform: translate(-50%, -50%);
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+    }
+    .dialog-head { justify-content: space-between; padding: 18px 20px; border-bottom: 1px solid var(--border); }
+    .dialog-head h2 { margin: 0; font-size: 18px; }
+    .dialog-body { padding: 20px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .field { display: grid; gap: 7px; }
+    .field.full { grid-column: 1 / -1; }
+    .field label { color: #334155; font-size: 12px; font-weight: 800; }
+    .field input, .field textarea, .field select {
+      width: 100%;
+      color: var(--text-secondary);
+      background: #fff;
+      border: 1px solid var(--border-strong);
+      border-radius: 6px;
+      outline: none;
+    }
+    .field input, .field select { height: 40px; padding: 0 11px; }
+    .field textarea { min-height: 96px; resize: vertical; padding: 10px 11px; line-height: 1.6; }
+    .field textarea.answer-input { min-height: 210px; font-family: "SFMono-Regular", Consolas, monospace; font-size: 12px; }
+    .field input:focus, .field textarea:focus, .field select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(89,87,232,.1); }
+    .field-hint { justify-content: space-between; color: var(--muted-soft); font-size: 11px; }
+    .dialog-actions { justify-content: flex-end; gap: 8px; padding: 14px 20px; background: var(--surface-soft); border-top: 1px solid var(--border); }
+
+    .drawer {
+      position: fixed;
+      inset: 64px 0 0 auto;
+      z-index: 90;
+      width: min(420px, calc(100vw - 28px));
+      display: flex;
+      flex-direction: column;
+      background: #fff;
+      border-left: 1px solid var(--border);
+      box-shadow: -18px 0 44px rgba(15,23,42,.15);
+    }
+    .drawer-head { justify-content: space-between; padding: 17px 18px; border-bottom: 1px solid var(--border); }
+    .drawer-head h2 { margin: 0; font-size: 16px; }
+    .drawer-body { flex: 1; overflow: auto; padding: 14px; }
+    .annotation-item { padding: 14px; border: 1px solid var(--border); border-radius: 7px; }
+    .annotation-item + .annotation-item { margin-top: 10px; }
+    .quote { margin-bottom: 10px; padding-left: 10px; color: var(--warning); border-left: 3px solid #eab308; line-height: 1.6; font-size: 12px; }
+    .annotation-text { color: var(--text-secondary); line-height: 1.72; }
+    .annotation-time { margin-top: 10px; color: var(--muted-soft); font-size: 11px; }
+    .drawer-foot { padding: 14px; border-top: 1px solid var(--border); }
+    .drawer-foot textarea { width: 100%; min-height: 82px; padding: 10px; border: 1px solid var(--border-strong); border-radius: 6px; resize: vertical; }
+    .drawer-foot .button { width: 100%; margin-top: 8px; }
+    .annotation-button { gap: 7px; }
+    .count { min-width: 19px; height: 19px; display: inline-grid; place-items: center; padding: 0 5px; color: var(--primary); background: var(--primary-soft); border-radius: 999px; font-size: 10px; }
+
+    .toast {
+      position: fixed;
+      right: 22px;
+      bottom: 22px;
+      z-index: 110;
+      gap: 9px;
+      min-width: 260px;
+      padding: 13px 15px;
+      color: #166534;
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 7px;
+      box-shadow: var(--shadow-md);
+      font-weight: 750;
+    }
+    .toast .icon { width: 18px; height: 18px; }
+
+    @media (max-width: 1180px) {
+      .card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .toolbar { grid-template-columns: minmax(240px, 1fr) minmax(300px, 1.4fr) auto; }
+    }
+    @media (max-width: 820px) {
+      .topbar { padding: 0 16px; }
+      .brand { width: auto; }
+      .brand span:last-child, .global-search { display: none; }
+      .sidebar {
+        inset: 64px 0 auto 0;
+        width: auto;
+        height: 54px;
+        overflow-x: auto;
+        padding: 5px 10px;
+        border-right: 0;
+        border-bottom: 1px solid var(--border);
+      }
+      .nav-section { display: flex; gap: 4px; min-width: max-content; }
+      .nav-link { height: 42px; padding: 0 11px; }
+      .nav-title, .manage-nav { display: none; }
+      main { margin-left: 0; padding: 138px 16px 34px; }
+      .page-head, .detail-head { display: grid; }
+      .page-actions, .detail-actions { justify-content: flex-start; }
+      .toolbar { grid-template-columns: 1fr; }
+      .card-grid { grid-template-columns: 1fr; }
+      .card-actions { opacity: 1; }
+      .detail-grid { grid-template-columns: 1fr; }
+      .detail-meta { position: static; }
+      .document { padding: 24px 20px 34px; }
+    }
+    @media (max-width: 560px) {
+      .admin-badge span { display: none; }
+      .page-title-row { align-items: flex-start; flex-wrap: wrap; }
+      .page-actions .button { flex: 1; }
+      .form-grid { grid-template-columns: 1fr; }
+      .field.full { grid-column: auto; }
+      .meta-line:nth-child(2) { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <svg aria-hidden="true" width="0" height="0" style="position:absolute">
+    <symbol id="i-boxes" viewBox="0 0 24 24"><path d="m12 2 4 2.3v4.6L12 11 8 8.9V4.3L12 2Z"/><path d="m4 8.5 4 2.3v4.6l-4 2.3-4-2.3v-4.6l4-2.3ZM20 8.5l4 2.3v4.6l-4 2.3-4-2.3v-4.6l4-2.3ZM12 13l4 2.3v4.4L12 22l-4-2.3v-4.4l4-2.3Z"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10H3V10Z"/><path d="M9 20v-6h6v6"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3 2.8 5.8 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.7l6.2-.9L12 3Z"/></symbol>
+    <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 22h4"/><path d="M8.5 15.5A7 7 0 1 1 15.5 15.5c-.9.7-1.5 1.4-1.5 2.5h-4c0-1.1-.6-1.8-1.5-2.5Z"/></symbol>
+    <symbol id="i-note" viewBox="0 0 24 24"><path d="M5 3h14v18H5z"/><path d="M9 7h6M9 11h6M9 15h4"/></symbol>
+    <symbol id="i-bot" viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="14" rx="3"/><path d="M12 2v4M8 12h.01M16 12h.01M9 16h6"/></symbol>
+    <symbol id="i-tags" viewBox="0 0 24 24"><path d="m20 13-7 7L3 10V3h7l10 10Z"/><circle cx="7.5" cy="7.5" r="1"/></symbol>
+    <symbol id="i-layout" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 6h7l2 2h9v11H3V6Z"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-message" viewBox="0 0 24 24"><path d="M4 4h16v13H9l-5 4V4Z"/><path d="M8 9h8M8 13h5"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="m4 20 4.5-1 10-10-3.5-3.5-10 10L4 20Z"/><path d="m13.5 7 3.5 3.5"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M7 7l1 14h8l1-14M10 11v6M14 11v6"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="11" height="12" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h3"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M4 20h16"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+  </svg>
+
+  <header class="topbar">
+    <a class="brand" href="#">
+      <span class="brand-mark"><svg class="icon"><use href="#i-boxes"/></svg></span>
+      <span>Prompt Skill Manager</span>
+    </a>
+    <label class="global-search">
+      <svg class="icon"><use href="#i-search"/></svg>
+      <input type="search" placeholder="搜索 Prompt、解决方案、笔记、模型回答和 UI 原型">
+    </label>
+    <div class="topbar-actions">
+      <span class="admin-badge"><svg class="icon"><use href="#i-user"/></svg><span>Admin</span></span>
+    </div>
+  </header>
+
+  <aside class="sidebar">
+    <nav class="nav-section">
+      <a class="nav-link" href="#"><svg class="icon"><use href="#i-home"/></svg><span>Prompt 列表</span></a>
+      <a class="nav-link" href="#"><svg class="icon"><use href="#i-star"/></svg><span>我的收藏</span></a>
+      <a class="nav-link" href="#"><svg class="icon"><use href="#i-bulb"/></svg><span>解决方案</span></a>
+      <a class="nav-link" href="#"><svg class="icon"><use href="#i-note"/></svg><span>学习笔记</span></a>
+      <a class="nav-link active" href="#" aria-current="page"><svg class="icon"><use href="#i-bot"/></svg><span>模型回答</span><svg class="icon private-mark"><use href="#i-lock"/></svg></a>
+      <a class="nav-link" href="#"><svg class="icon"><use href="#i-tags"/></svg><span>标签词云</span></a>
+      <a class="nav-link" href="#"><svg class="icon"><use href="#i-layout"/></svg><span>UI 原型</span></a>
+    </nav>
+    <div class="nav-title">管理</div>
+    <nav class="nav-section manage-nav">
+      <a class="nav-link" href="#"><svg class="icon"><use href="#i-folder"/></svg><span>分类管理</span></a>
+      <a class="nav-link" href="#"><svg class="icon"><use href="#i-tags"/></svg><span>标签管理</span></a>
+    </nav>
+  </aside>
+
+  <main>
+    <section id="listView" class="page">
+      <header class="page-head">
+        <div>
+          <div class="page-title-row">
+            <h1>模型回答</h1>
+            <span class="privacy-badge"><svg class="icon"><use href="#i-lock"/></svg>仅登录可见</span>
+          </div>
+          <p class="page-subtitle">收录值得回看的大模型回答，保留上下文并通过批注沉淀个人判断。</p>
+        </div>
+        <div class="page-actions">
+          <button class="button" type="button"><svg class="icon"><use href="#i-upload"/></svg>导入</button>
+          <button id="openDialog" class="button primary" type="button"><svg class="icon"><use href="#i-plus"/></svg>收录回答</button>
+        </div>
+      </header>
+
+      <section class="toolbar" aria-label="筛选模型回答">
+        <label class="search-box">
+          <svg class="icon"><use href="#i-search"/></svg>
+          <input id="searchInput" type="search" placeholder="搜索标题、摘要、标签或原始问题">
+          <button id="clearSearch" class="search-clear" type="button" aria-label="清空搜索" hidden><svg class="icon"><use href="#i-x"/></svg></button>
+        </label>
+        <div id="categoryChips" class="chips" aria-label="分类筛选">
+          <button class="chip active" type="button" data-category="全部">全部</button>
+          <button class="chip" type="button" data-category="前端开发">前端开发</button>
+          <button class="chip" type="button" data-category="架构设计">架构设计</button>
+          <button class="chip" type="button" data-category="效率工具">效率工具</button>
+          <button class="chip" type="button" data-category="写作">写作</button>
+        </div>
+        <span id="resultCount" class="result-count">共 6 条</span>
+      </section>
+
+      <section id="cardGrid" class="card-grid" aria-live="polite">
+        <article class="response-card" tabindex="0" role="link">
+          <header class="card-head"><span class="card-icon"><svg class="icon"><use href="#i-bot"/></svg></span><div class="card-copy"><h2 class="card-title">大型前端项目中如何设计可维护的权限系统</h2><div class="model-name">ChatGPT · GPT-5</div></div></header>
+          <p class="card-summary">从路由、组件、接口和数据四层说明权限模型，并给出 React 项目的实施边界。</p>
+          <div class="tags"><span class="tag category">架构设计</span><span class="tag">React</span><span class="tag">权限</span></div>
+          <footer class="card-meta"><span class="meta-line"><svg class="icon"><use href="#i-clock"/></svg>今天 10:42</span><span class="meta-line"><svg class="icon"><use href="#i-message"/></svg>3 条批注</span><span class="card-actions"><button class="card-action" type="button" aria-label="编辑"><svg class="icon"><use href="#i-edit"/></svg></button><button class="card-action danger" type="button" aria-label="删除"><svg class="icon"><use href="#i-trash"/></svg></button></span></footer>
+        </article>
+        <article class="response-card" tabindex="0" role="link">
+          <header class="card-head"><span class="card-icon"><svg class="icon"><use href="#i-bot"/></svg></span><div class="card-copy"><h2 class="card-title">Vue 3 大型表单的状态拆分与性能优化</h2><div class="model-name">Claude · Claude Sonnet</div></div></header>
+          <p class="card-summary">比较单体 reactive、字段级 composable 与 schema 驱动三种实现方式，并给出适用范围。</p>
+          <div class="tags"><span class="tag category">前端开发</span><span class="tag">Vue 3</span><span class="tag">表单</span></div>
+          <footer class="card-meta"><span class="meta-line"><svg class="icon"><use href="#i-clock"/></svg>昨天 16:28</span><span class="meta-line"><svg class="icon"><use href="#i-message"/></svg>2 条批注</span><span class="card-actions"><button class="card-action" type="button" aria-label="编辑"><svg class="icon"><use href="#i-edit"/></svg></button><button class="card-action danger" type="button" aria-label="删除"><svg class="icon"><use href="#i-trash"/></svg></button></span></footer>
+        </article>
+        <article class="response-card" tabindex="0" role="link">
+          <header class="card-head"><span class="card-icon"><svg class="icon"><use href="#i-bot"/></svg></span><div class="card-copy"><h2 class="card-title">为团队设计可复用的代码审查清单</h2><div class="model-name">ChatGPT · GPT-5</div></div></header>
+          <p class="card-summary">按正确性、安全性、可维护性和验证证据组织代码审查清单，适合纳入项目规范。</p>
+          <div class="tags"><span class="tag category">效率工具</span><span class="tag">Code Review</span><span class="tag">流程</span></div>
+          <footer class="card-meta"><span class="meta-line"><svg class="icon"><use href="#i-clock"/></svg>09-01 09:15</span><span class="meta-line"><svg class="icon"><use href="#i-message"/></svg>0 条批注</span><span class="card-actions"><button class="card-action" type="button" aria-label="编辑"><svg class="icon"><use href="#i-edit"/></svg></button><button class="card-action danger" type="button" aria-label="删除"><svg class="icon"><use href="#i-trash"/></svg></button></span></footer>
+        </article>
+        <article class="response-card" tabindex="0" role="link">
+          <header class="card-head"><span class="card-icon"><svg class="icon"><use href="#i-bot"/></svg></span><div class="card-copy"><h2 class="card-title">如何写出信息密度高但易读的技术方案</h2><div class="model-name">Gemini · Gemini 2.5 Pro</div></div></header>
+          <p class="card-summary">围绕读者目标、结论前置、证据链和决策记录，给出技术方案的结构化写作方法。</p>
+          <div class="tags"><span class="tag category">写作</span><span class="tag">技术文档</span><span class="tag">表达</span></div>
+          <footer class="card-meta"><span class="meta-line"><svg class="icon"><use href="#i-clock"/></svg>08-30 14:06</span><span class="meta-line"><svg class="icon"><use href="#i-message"/></svg>4 条批注</span><span class="card-actions"><button class="card-action" type="button" aria-label="编辑"><svg class="icon"><use href="#i-edit"/></svg></button><button class="card-action danger" type="button" aria-label="删除"><svg class="icon"><use href="#i-trash"/></svg></button></span></footer>
+        </article>
+        <article class="response-card" tabindex="0" role="link">
+          <header class="card-head"><span class="card-icon"><svg class="icon"><use href="#i-bot"/></svg></span><div class="card-copy"><h2 class="card-title">Monorepo 中共享类型与 API 契约的组织方式</h2><div class="model-name">DeepSeek · DeepSeek V3</div></div></header>
+          <p class="card-summary">分析共享 package、OpenAPI 生成与手写 DTO 的权衡，并解释如何避免前后端类型漂移。</p>
+          <div class="tags"><span class="tag category">架构设计</span><span class="tag">Monorepo</span><span class="tag">TypeScript</span></div>
+          <footer class="card-meta"><span class="meta-line"><svg class="icon"><use href="#i-clock"/></svg>08-28 18:32</span><span class="meta-line"><svg class="icon"><use href="#i-message"/></svg>1 条批注</span><span class="card-actions"><button class="card-action" type="button" aria-label="编辑"><svg class="icon"><use href="#i-edit"/></svg></button><button class="card-action danger" type="button" aria-label="删除"><svg class="icon"><use href="#i-trash"/></svg></button></span></footer>
+        </article>
+        <article class="response-card" tabindex="0" role="link">
+          <header class="card-head"><span class="card-icon"><svg class="icon"><use href="#i-bot"/></svg></span><div class="card-copy"><h2 class="card-title">React 列表页面的请求竞态与状态一致性</h2><div class="model-name">Claude · Claude Sonnet</div></div></header>
+          <p class="card-summary">说明搜索、分页和筛选并发时常见的旧请求覆盖问题，以及 AbortController 的处理方式。</p>
+          <div class="tags"><span class="tag category">前端开发</span><span class="tag">React</span><span class="tag">异步</span></div>
+          <footer class="card-meta"><span class="meta-line"><svg class="icon"><use href="#i-clock"/></svg>08-26 11:20</span><span class="meta-line"><svg class="icon"><use href="#i-message"/></svg>0 条批注</span><span class="card-actions"><button class="card-action" type="button" aria-label="编辑"><svg class="icon"><use href="#i-edit"/></svg></button><button class="card-action danger" type="button" aria-label="删除"><svg class="icon"><use href="#i-trash"/></svg></button></span></footer>
+        </article>
+      </section>
+      <section id="emptyState" class="state-panel" hidden>
+        <div><span class="state-icon"><svg class="icon"><use href="#i-search"/></svg></span><h3>没有找到匹配的回答</h3><p>尝试更换关键词、分类或来源模型。</p></div>
+      </section>
+      <section id="loadingState" class="state-panel" hidden><div><div class="spinner"></div><h3>正在加载模型回答...</h3></div></section>
+      <section id="errorState" class="state-panel" hidden>
+        <div><span class="state-icon"><svg class="icon"><use href="#i-x"/></svg></span><h3>加载失败</h3><p>模型回答暂时无法加载，请稍后重试。</p><button id="retryButton" class="button" type="button" style="margin:14px auto 0">重新加载</button></div>
+      </section>
+    </section>
+
+    <section id="detailView" class="detail-view" hidden>
+      <button id="backButton" class="button back-button" type="button"><svg class="icon"><use href="#i-arrow"/></svg>返回模型回答</button>
+      <header class="detail-head">
+        <div>
+          <h1 class="detail-title">大型前端项目中如何设计可维护的权限系统</h1>
+          <p class="detail-summary">从路由、组件、接口和数据四层说明权限模型，并给出 React 项目的实施边界。</p>
+        </div>
+        <div class="detail-actions">
+          <button id="copyButton" class="button" type="button"><svg class="icon"><use href="#i-copy"/></svg>复制 Markdown</button>
+          <button class="button" type="button"><svg class="icon"><use href="#i-download"/></svg>导出</button>
+          <button class="button" type="button"><svg class="icon"><use href="#i-edit"/></svg>编辑</button>
+          <button id="openAnnotations" class="button annotation-button" type="button"><svg class="icon"><use href="#i-message"/></svg>批注<span class="count">3</span></button>
+        </div>
+      </header>
+      <div class="detail-grid">
+        <article class="document">
+          <h2>核心结论</h2>
+          <p>可维护的权限系统不应只依赖前端路由守卫。更稳妥的方式是将权限判断分为展示、导航、接口和数据范围四个层级，并让后端承担最终授权责任。</p>
+          <h2>一、先定义统一的权限语义</h2>
+          <p>建议使用“资源 + 动作”的稳定权限键，例如 <code>prompt:read</code>、<code>prompt:update</code>。角色只是权限集合，不应直接散落在页面判断中。</p>
+          <pre><code>type Permission =
+  | 'prompt:read'
+  | 'prompt:create'
+  | 'prompt:update'
+  | 'prompt:delete';</code></pre>
+          <h2>二、前端负责体验，后端负责安全</h2>
+          <p>前端路由守卫用于阻止无权限用户进入页面，组件级权限用于隐藏不可用操作。<span class="annotation-mark" title="点击查看批注">真正的安全边界必须位于后端接口</span>，否则用户仍可以绕过界面直接发送请求。</p>
+          <h2>三、集中管理权限判断</h2>
+          <p>不要在组件中反复比较角色字符串。可以提供统一的 <code>can(permission)</code> 方法，并在路由配置与按钮组件中复用。</p>
+        </article>
+        <aside class="detail-meta">
+          <div class="meta-group"><span class="meta-label">来源模型</span><div class="meta-value">ChatGPT · GPT-5</div></div>
+          <div class="meta-group"><span class="meta-label">原始问题</span><div class="prompt-box">大型 React 项目应该怎样设计可维护的权限系统？请给出前后端边界和代码组织建议。</div></div>
+          <div class="meta-group"><span class="meta-label">分类与标签</span><div class="tags"><span class="tag category">架构设计</span><span class="tag">React</span><span class="tag">权限</span></div></div>
+          <div class="meta-group"><span class="meta-label">收录时间</span><div class="meta-value">2026-09-03 10:42</div></div>
+          <div class="meta-group"><span class="meta-label">目录</span><nav class="toc"><a href="#">核心结论</a><a href="#">一、统一权限语义</a><a href="#">二、前后端边界</a><a href="#">三、集中管理</a></nav></div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <div id="dialogOverlay" class="overlay" hidden></div>
+  <section id="captureDialog" class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle" hidden>
+    <header class="dialog-head"><h2 id="dialogTitle">收录模型回答</h2><button id="closeDialog" class="icon-button" type="button" aria-label="关闭"><svg class="icon"><use href="#i-x"/></svg></button></header>
+    <div class="dialog-body">
+      <div class="form-grid">
+        <div class="field full"><label for="answerTitle">标题 *</label><input id="answerTitle" maxlength="200" value="大型前端项目中如何设计可维护的权限系统"><div class="field-hint"><span>用于列表检索和后续回看</span><span>23/200</span></div></div>
+        <div class="field"><label for="sourceProduct">来源产品</label><select id="sourceProduct"><option>ChatGPT</option><option>Claude</option><option>Gemini</option><option>DeepSeek</option><option>其他</option></select></div>
+        <div class="field"><label for="sourceModel">模型名称</label><input id="sourceModel" value="GPT-5" placeholder="例如 GPT-5、Claude Sonnet 4"></div>
+        <div class="field full"><label for="originPrompt">原始问题</label><textarea id="originPrompt" placeholder="粘贴触发这段回答的问题，便于还原上下文">大型 React 项目应该怎样设计可维护的权限系统？请给出前后端边界和代码组织建议。</textarea></div>
+        <div class="field full"><label for="answerContent">回答内容 *</label><textarea id="answerContent" class="answer-input" placeholder="在这里粘贴大模型回答，支持 Markdown">## 核心结论
+
+可维护的权限系统不应只依赖前端路由守卫。更稳妥的方式是将权限判断分为展示、导航、接口和数据范围四个层级，并让后端承担最终授权责任。</textarea><div class="field-hint"><span>保存后可继续编辑并添加批注</span><span>Markdown</span></div></div>
+        <div class="field"><label for="answerCategory">分类</label><input id="answerCategory" value="架构设计" placeholder="例如前端开发"></div>
+        <div class="field"><label for="answerTags">标签 *</label><input id="answerTags" value="React, 权限" placeholder="多个标签用逗号分隔"></div>
+      </div>
+    </div>
+    <footer class="dialog-actions"><button id="cancelDialog" class="button" type="button">取消</button><button id="saveAnswer" class="button primary" type="button"><svg class="icon"><use href="#i-check"/></svg>保存回答</button></footer>
+  </section>
+
+  <div id="drawerOverlay" class="overlay" hidden></div>
+  <aside id="annotationDrawer" class="drawer" aria-label="批注列表" hidden>
+    <header class="drawer-head"><h2>批注 <span class="count">3</span></h2><button id="closeAnnotations" class="icon-button" type="button" aria-label="关闭批注"><svg class="icon"><use href="#i-x"/></svg></button></header>
+    <div class="drawer-body">
+      <article class="annotation-item"><div class="quote">“真正的安全边界必须位于后端接口”</div><div class="annotation-text">这个结论可以补充到团队的权限开发规范中，并在接口审查清单里增加越权检查。</div><div class="annotation-time">今天 10:56</div></article>
+      <article class="annotation-item"><div class="quote">“资源 + 动作”</div><div class="annotation-text">后续需要确认现有权限键是否已经遵循这一格式。</div><div class="annotation-time">今天 10:51</div></article>
+      <article class="annotation-item"><div class="quote">“集中管理权限判断”</div><div class="annotation-text">可以抽成 `usePermission`，不要再由各页面自行判断角色。</div><div class="annotation-time">今天 10:48</div></article>
+    </div>
+    <footer class="drawer-foot"><textarea aria-label="新增批注" placeholder="选择正文后，可在这里记录你的判断..."></textarea><button class="button primary" type="button">保存批注</button></footer>
+  </aside>
+  <div id="toast" class="toast" hidden><svg class="icon"><use href="#i-check"/></svg><span>回答已保存</span></div>
+
+  <script>
+    const responses = [
+      { title: '大型前端项目中如何设计可维护的权限系统', model: 'GPT-5', source: 'ChatGPT', category: '架构设计', tags: ['React', '权限'], prompt: '大型 React 项目应该怎样设计可维护的权限系统？', summary: '从路由、组件、接口和数据四层说明权限模型，并给出 React 项目的实施边界。', annotations: 3, date: '今天 10:42' },
+      { title: 'Vue 3 大型表单的状态拆分与性能优化', model: 'Claude', source: 'Claude', category: '前端开发', tags: ['Vue 3', '表单'], prompt: 'Vue 3 大型表单如何拆分状态并优化性能？', summary: '比较单体 reactive、字段级 composable 与 schema 驱动三种实现方式，并给出适用范围。', annotations: 2, date: '昨天 16:28' },
+      { title: '为团队设计可复用的代码审查清单', model: 'GPT-5', source: 'ChatGPT', category: '效率工具', tags: ['Code Review', '流程'], prompt: '帮团队设计一份可复用的代码审查清单。', summary: '按正确性、安全性、可维护性和验证证据组织代码审查清单，适合纳入项目规范。', annotations: 0, date: '09-01 09:15' },
+      { title: '如何写出信息密度高但易读的技术方案', model: 'Gemini', source: 'Gemini', category: '写作', tags: ['技术文档', '表达'], prompt: '怎样提升技术方案的信息密度和可读性？', summary: '围绕读者目标、结论前置、证据链和决策记录，给出技术方案的结构化写作方法。', annotations: 4, date: '08-30 14:06' },
+      { title: 'Monorepo 中共享类型与 API 契约的组织方式', model: 'DeepSeek', source: 'DeepSeek', category: '架构设计', tags: ['Monorepo', 'TypeScript'], prompt: 'Monorepo 怎样组织前后端共享类型和 API 契约？', summary: '分析共享 package、OpenAPI 生成与手写 DTO 的权衡，并解释如何避免前后端类型漂移。', annotations: 1, date: '08-28 18:32' },
+      { title: 'React 列表页面的请求竞态与状态一致性', model: 'Claude', source: 'Claude', category: '前端开发', tags: ['React', '异步'], prompt: 'React 列表页面怎样处理搜索和分页的请求竞态？', summary: '说明搜索、分页和筛选并发时常见的旧请求覆盖问题，以及 AbortController 的处理方式。', annotations: 0, date: '08-26 11:20' }
+    ];
+
+    const cardGrid = document.querySelector('#cardGrid');
+    const emptyState = document.querySelector('#emptyState');
+    const loadingState = document.querySelector('#loadingState');
+    const errorState = document.querySelector('#errorState');
+    const searchInput = document.querySelector('#searchInput');
+    const clearSearch = document.querySelector('#clearSearch');
+    const resultCount = document.querySelector('#resultCount');
+    let activeCategory = '全部';
+
+    const escapeHtml = (value) => value.replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character]);
+    const icon = (name) => `<svg class="icon"><use href="#i-${name}"/></svg>`;
+
+    function renderCards() {
+      const keyword = searchInput.value.trim().toLowerCase();
+      const filtered = responses.filter((item) => {
+        const haystack = [item.title, item.summary, item.prompt, item.category, item.model, ...item.tags].join(' ').toLowerCase();
+        return (!keyword || haystack.includes(keyword)) &&
+          (activeCategory === '全部' || item.category === activeCategory);
+      });
+      cardGrid.innerHTML = filtered.map((item, index) => `
+        <article class="response-card" tabindex="0" role="link" data-index="${index}">
+          <header class="card-head">
+            <span class="card-icon">${icon('bot')}</span>
+            <div class="card-copy"><h2 class="card-title">${escapeHtml(item.title)}</h2><div class="model-name">${escapeHtml(item.source)} · ${escapeHtml(item.model)}</div></div>
+          </header>
+          <p class="card-summary">${escapeHtml(item.summary)}</p>
+          <div class="tags"><span class="tag category">${escapeHtml(item.category)}</span>${item.tags.map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`).join('')}</div>
+          <footer class="card-meta">
+            <span class="meta-line">${icon('clock')}${escapeHtml(item.date)}</span>
+            <span class="meta-line">${icon('message')}${item.annotations} 条批注</span>
+            <span class="card-actions">
+              <button class="card-action" type="button" aria-label="编辑">${icon('edit')}</button>
+              <button class="card-action danger" type="button" aria-label="删除">${icon('trash')}</button>
+            </span>
+          </footer>
+        </article>`).join('');
+      resultCount.textContent = `共 ${filtered.length} 条`;
+      cardGrid.hidden = filtered.length === 0;
+      emptyState.hidden = filtered.length !== 0;
+      cardGrid.querySelectorAll('.response-card').forEach((card) => {
+        const open = (event) => {
+          if (event.target.closest('button')) return;
+          document.querySelector('#listView').hidden = true;
+          document.querySelector('#detailView').hidden = false;
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+        card.addEventListener('click', open);
+        card.addEventListener('keydown', (event) => { if (event.key === 'Enter') open(event); });
+      });
+    }
+
+    searchInput.addEventListener('input', () => { clearSearch.hidden = !searchInput.value; renderCards(); });
+    clearSearch.addEventListener('click', () => { searchInput.value = ''; clearSearch.hidden = true; searchInput.focus(); renderCards(); });
+    document.querySelectorAll('[data-category]').forEach((chip) => chip.addEventListener('click', () => {
+      activeCategory = chip.dataset.category;
+      document.querySelectorAll('[data-category]').forEach((item) => item.classList.toggle('active', item === chip));
+      renderCards();
+    }));
+
+    const toggleDialog = (open) => {
+      document.querySelector('#captureDialog').hidden = !open;
+      document.querySelector('#dialogOverlay').hidden = !open;
+      if (open) document.querySelector('#answerTitle').focus();
+    };
+    document.querySelector('#openDialog').addEventListener('click', () => toggleDialog(true));
+    document.querySelector('#closeDialog').addEventListener('click', () => toggleDialog(false));
+    document.querySelector('#cancelDialog').addEventListener('click', () => toggleDialog(false));
+    document.querySelector('#dialogOverlay').addEventListener('click', () => toggleDialog(false));
+    document.querySelector('#saveAnswer').addEventListener('click', () => {
+      const saveButton = document.querySelector('#saveAnswer');
+      saveButton.disabled = true;
+      saveButton.textContent = '保存中...';
+      setTimeout(() => {
+        toggleDialog(false);
+        saveButton.disabled = false;
+        saveButton.innerHTML = `${icon('check')}保存回答`;
+        const toast = document.querySelector('#toast');
+        toast.hidden = false;
+        setTimeout(() => { toast.hidden = true; }, 2200);
+      }, 700);
+    });
+
+    document.querySelector('#backButton').addEventListener('click', () => {
+      document.querySelector('#detailView').hidden = true;
+      document.querySelector('#listView').hidden = false;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+    document.querySelector('#copyButton').addEventListener('click', () => {
+      const toast = document.querySelector('#toast');
+      toast.querySelector('span').textContent = 'Markdown 内容已复制';
+      toast.hidden = false;
+      setTimeout(() => { toast.hidden = true; toast.querySelector('span').textContent = '回答已保存'; }, 2200);
+    });
+
+    const toggleAnnotations = (open) => {
+      document.querySelector('#annotationDrawer').hidden = !open;
+      document.querySelector('#drawerOverlay').hidden = !open;
+    };
+    document.querySelector('#openAnnotations').addEventListener('click', () => toggleAnnotations(true));
+    document.querySelector('.annotation-mark').addEventListener('click', () => toggleAnnotations(true));
+    document.querySelector('#closeAnnotations').addEventListener('click', () => toggleAnnotations(false));
+    document.querySelector('#drawerOverlay').addEventListener('click', () => toggleAnnotations(false));
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape') return;
+      toggleDialog(false);
+      toggleAnnotations(false);
+    });
+    document.querySelector('#retryButton').addEventListener('click', () => {
+      errorState.hidden = true;
+      loadingState.hidden = false;
+      setTimeout(() => { loadingState.hidden = true; renderCards(); }, 650);
+    });
+
+    renderCards();
+  </script>
+</body>
+</html>

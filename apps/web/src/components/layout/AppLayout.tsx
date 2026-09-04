@@ -2,6 +2,7 @@ import { type ComponentType } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import {
   Bell,
+  BotMessageSquare,
   Boxes,
   CircleUserRound,
   Folder,
@@ -25,7 +26,7 @@ import { GlobalSearch } from './GlobalSearch';
 type IconComponent = ComponentType<LucideProps>;
 
 interface PrimaryNavItem {
-  key: 'prompts' | 'favorites' | 'solutions' | 'notes' | 'tagCloud' | 'uiPrototypes';
+  key: 'prompts' | 'favorites' | 'solutions' | 'notes' | 'tagCloud' | 'uiPrototypes' | 'modelResponses';
   label: string;
   to: string;
   icon: IconComponent;
@@ -42,6 +43,7 @@ const primaryNav: PrimaryNavItem[] = [
   { key: 'favorites', label: '我的收藏', to: '/prompts?favorite=true', icon: Star },
   { key: 'solutions', label: '解决方案', to: '/solutions', icon: Lightbulb },
   { key: 'notes', label: '学习笔记', to: '/notes', icon: NotebookPen },
+  { key: 'modelResponses', label: '模型回答', to: '/model-responses', icon: BotMessageSquare },
   { key: 'tagCloud', label: '标签词云', to: '/tag-cloud', icon: Tags },
   { key: 'uiPrototypes', label: 'UI 原型', to: '/ui-prototypes', icon: PanelsTopLeft }
 ];
@@ -78,6 +80,7 @@ export function AppLayout() {
     if (item.key === 'uiPrototypes') {
       return pathname.startsWith('/ui-prototypes');
     }
+    if (item.key === 'modelResponses') return pathname.startsWith('/model-responses');
     return false;
   };
 
@@ -123,7 +126,7 @@ export function AppLayout() {
 
       <aside className="app-sidebar">
         <nav className="nav-section">
-          {primaryNav.map((item) => {
+          {primaryNav.filter((item) => item.key !== 'modelResponses' || isAdmin).map((item) => {
             const Icon = item.icon;
             return (
               <Link

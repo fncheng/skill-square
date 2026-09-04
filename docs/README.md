@@ -28,6 +28,7 @@ related: []
 | [Markdown 知识库](./features/markdown-knowledge-base/README.md) | `active` | 管理解决方案、学习笔记、文件导入导出与 Markdown 批注。 |
 | [内容发现](./features/content-discovery/README.md) | `active` | 提供跨资源全局搜索，以及解决方案和学习笔记的标签词云浏览。 |
 | [UI 原型库](./features/ui-prototype-library/README.md) | `active` | 管理、筛选并在隔离沙箱中预览单文件 HTML 原型。 |
+| [模型回答库](./features/model-response-library/README.md) | `active` | 仅管理员可见的模型回答收录、溯源、批注与迁移。 |
 | [访问控制](./features/access-control/README.md) | `active` | 提供单管理员登录、Cookie 会话和访客只读访问边界。 |
 
 ## 现有专题文档

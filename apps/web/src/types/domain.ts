@@ -116,6 +116,34 @@ export interface NoteFilters {
   category: string;
 }
 
+export interface ModelResponse {
+  id: string;
+  title: string;
+  summary: string;
+  content: string;
+  category: string;
+  tags: string[];
+  sourceProduct: string;
+  modelName: string;
+  originalPrompt: string;
+  annotationCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ModelResponsePayload {
+  title: string;
+  summary: string;
+  content: string;
+  category: string;
+  tags: string[];
+  sourceProduct: string;
+  modelName: string;
+  originalPrompt: string;
+}
+
+export interface ModelResponseFilters { search: string; category: string; }
+
 export type ContentResourceType = 'SOLUTION' | 'NOTE';
 export type ContentTagScope = 'ALL' | ContentResourceType;
 
@@ -177,7 +205,7 @@ export interface UiPrototypeFilters {
   category: string;
 }
 
-export type GlobalSearchResourceType = 'PROMPT' | 'SOLUTION' | 'NOTE' | 'UI_PROTOTYPE';
+export type GlobalSearchResourceType = 'PROMPT' | 'SOLUTION' | 'NOTE' | 'UI_PROTOTYPE' | 'MODEL_RESPONSE';
 
 export interface GlobalSearchItem {
   id: string;
@@ -190,7 +218,7 @@ export interface GlobalSearchResponse {
   items: GlobalSearchItem[];
 }
 
-export type AnnotationResourceType = 'NOTE' | 'SOLUTION';
+export type AnnotationResourceType = 'NOTE' | 'SOLUTION' | 'MODEL_RESPONSE';
 
 export interface AnnotationAnchor {
   exact: string;
