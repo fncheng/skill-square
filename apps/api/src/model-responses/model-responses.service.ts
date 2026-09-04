@@ -1,7 +1,12 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { AnnotationResourceType, Prisma } from '@prisma/client';
 import { AnnotationResourceTypeDto } from '../annotations/dto/annotation-resource-type';
-import { CONTENT_TRANSFER_FORMAT, ContentTransferDto, getContentTransferVersion } from '../common/dto/content-transfer.dto';
+import {
+  CONTENT_TRANSFER_FORMAT,
+  ContentTransferDto,
+  ContentTransferResourceDto,
+  getContentTransferVersion
+} from '../common/dto/content-transfer.dto';
 import { normalizeTags } from '../common/utils/normalize-tags';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateModelResponseDto } from './dto/create-model-response.dto';
@@ -71,7 +76,7 @@ export class ModelResponsesService {
   }
 
   async create(dto: CreateModelResponseDto) {
-    const record = await this.prisma.modelResponse.create({ data: this.toData(dto) });
+    const record = await this.prisma.modelResponse.create({ data: this.toCreateData(dto) });
     return { ...record, annotationCount: 0 };
   }
 
@@ -79,7 +84,7 @@ export class ModelResponsesService {
     if (dto.resourceType !== AnnotationResourceTypeDto.MODEL_RESPONSE) throw new BadRequestException('请选择模型回答迁移文件。');
     return this.prisma.$transaction(async (transaction) => {
       const record = await transaction.modelResponse.create({ data: {
-        ...this.toData(dto.resource), createdAt: new Date(dto.resource.createdAt), updatedAt: new Date(dto.resource.updatedAt)
+        ...this.toCreateData(dto.resource), createdAt: new Date(dto.resource.createdAt), updatedAt: new Date(dto.resource.updatedAt)
       } });
       if (dto.annotations.length) await transaction.annotation.createMany({ data: dto.annotations.map((annotation) => ({
         resourceType: AnnotationResourceType.MODEL_RESPONSE, noteId: null, solutionId: null, modelResponseId: record.id,
@@ -94,7 +99,7 @@ export class ModelResponsesService {
 
   async update(id: string, dto: UpdateModelResponseDto) {
     await this.findOne(id);
-    const record = await this.prisma.modelResponse.update({ where: { id }, data: this.toData(dto, true) });
+    const record = await this.prisma.modelResponse.update({ where: { id }, data: this.toUpdateData(dto) });
     const annotationCount = await this.prisma.annotation.count({ where: { modelResponseId: id } });
     return { ...record, annotationCount };
   }
@@ -104,11 +109,10 @@ export class ModelResponsesService {
     await this.prisma.modelResponse.delete({ where: { id } });
   }
 
-  /** 标准化可选溯源字段，避免空白值进入数据库。 */
-  private toData(
-    dto: Partial<CreateModelResponseDto>,
-    partial = false
-  ): Prisma.ModelResponseUncheckedCreateInput | Prisma.ModelResponseUncheckedUpdateInput {
+  /** 将新增或导入载荷转换为完整的 Prisma 创建数据。 */
+  private toCreateData(
+    dto: CreateModelResponseDto | ContentTransferResourceDto
+  ): Prisma.ModelResponseUncheckedCreateInput {
     const value = {
       title: dto.title?.trim(),
       summary: dto.summary?.trim(),
@@ -119,8 +123,21 @@ export class ModelResponsesService {
       modelName: dto.modelName?.trim(),
       originalPrompt: dto.originalPrompt?.trim()
     };
-    if (partial) return value;
     return { title: value.title ?? '', summary: value.summary ?? '', content: value.content ?? '', category: value.category ?? '', tags: value.tags ?? [], sourceProduct: value.sourceProduct ?? '', modelName: value.modelName ?? '', originalPrompt: value.originalPrompt ?? '' };
+  }
+
+  /** 将更新载荷转换为仅包含已提供字段的 Prisma 更新数据。 */
+  private toUpdateData(dto: UpdateModelResponseDto): Prisma.ModelResponseUncheckedUpdateInput {
+    return {
+      title: dto.title?.trim(),
+      summary: dto.summary?.trim(),
+      content: dto.content,
+      category: dto.category?.trim(),
+      tags: dto.tags ? normalizeTags(dto.tags) : undefined,
+      sourceProduct: dto.sourceProduct?.trim(),
+      modelName: dto.modelName?.trim(),
+      originalPrompt: dto.originalPrompt?.trim()
+    };
   }
 
   private toResponse(record: Prisma.ModelResponseGetPayload<{ include: { _count: { select: { annotations: true } } } }>) {
