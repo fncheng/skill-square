@@ -189,6 +189,24 @@ function renderCitationChip(groupIndex: number, sources: MarkdownCitationSource[
   );
 }
 
+/** 仅在数字引用组被紧邻且未转义的一对括号完整包裹时，扩展其替换区间。 */
+function getCitationGroupDisplayRange(
+  text: string,
+  citationStart: number,
+  citationEnd: number
+): { start: number; end: number } {
+  const openingCharacter = text[citationStart - 1];
+  const closingCharacter = text[citationEnd];
+  const expectedClosingCharacter = openingCharacter === '(' ? ')' : openingCharacter === '（' ? '）' : '';
+  const isEscapedOpening = text[citationStart - 2] === '\\';
+
+  if (!expectedClosingCharacter || isEscapedOpening || closingCharacter !== expectedClosingCharacter) {
+    return { start: citationStart, end: citationEnd };
+  }
+
+  return { start: citationStart - 1, end: citationEnd + 1 };
+}
+
 /** 将相邻数字 reference link 聚合为来源按钮，其余 reference link 继续作为普通外链。 */
 function renderReferenceLinks(
   text: string,
@@ -212,7 +230,6 @@ function renderReferenceLinks(
   while (matchIndex < matches.length) {
     const match = matches[matchIndex];
     const matchStart = match.index ?? 0;
-    result += text.slice(cursor, matchStart);
 
     if (isCitation(match)) {
       const sources: MarkdownCitationSource[] = [];
@@ -236,15 +253,18 @@ function renderReferenceLinks(
         currentIndex += 1;
       }
 
+      const displayRange = getCitationGroupDisplayRange(text, matchStart, lastEnd);
       const groupIndex = context.citationGroups.length;
       context.citationGroups.push({ sources });
+      result += text.slice(cursor, displayRange.start);
       result += createSlot(renderCitationChip(groupIndex, sources));
-      cursor = lastEnd;
+      cursor = displayRange.end;
       matchIndex = currentIndex;
       continue;
     }
 
     const definition = getDefinition(match);
+    result += text.slice(cursor, matchStart);
     result += definition ? createSlot(renderMarkdownLink(match[1], definition.url)) : match[0];
     cursor = matchStart + match[0].length;
     matchIndex += 1;
