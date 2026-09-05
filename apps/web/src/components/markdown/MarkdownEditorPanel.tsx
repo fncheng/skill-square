@@ -13,7 +13,7 @@ interface MarkdownEditorPanelProps {
 }
 
 function MarkdownPreview({ source }: { source: string }) {
-  const { html } = useMarkdown(source);
+  const { html, citationGroups } = useMarkdown(source);
 
   if (!source.trim()) {
     return <div className="editor-preview-empty">暂无可预览的 Markdown 内容</div>;
@@ -21,7 +21,7 @@ function MarkdownPreview({ source }: { source: string }) {
 
   return (
     <div className="editor-preview-scroll">
-      <MarkdownContent html={html} className="editor-preview-content" />
+      <MarkdownContent html={html} citationGroups={citationGroups} className="editor-preview-content" />
     </div>
   );
 }

@@ -1,15 +1,26 @@
-import { useCallback, useEffect, useRef, type KeyboardEvent, type MouseEvent } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type FocusEvent,
+  type KeyboardEvent,
+  type MouseEvent
+} from 'react';
 import {
   decorateMarkdownAnnotations,
   getMarkdownTextSelection,
   type MarkdownTextSelection
 } from '@/components/markdown/annotation-anchor';
+import { MarkdownCitationPopover } from '@/components/markdown/MarkdownCitationPopover';
 import { cn } from '@/lib/utils';
+import type { MarkdownCitationGroup } from '@/hooks/use-markdown';
 import type { Annotation } from '@/types/domain';
 import { copyText } from '@/utils/clipboard';
 
 interface MarkdownContentProps {
   html: string;
+  citationGroups?: MarkdownCitationGroup[];
   className?: string;
   annotations?: Annotation[];
   onAnnotationActivate?: (annotationId: string, trigger: HTMLElement) => void;
@@ -38,6 +49,13 @@ let mermaidApiPromise: Promise<MermaidApi> | undefined;
 let highlightApiPromise: Promise<HighlightApi> | undefined;
 let mermaidCounter = 0;
 const emptyAnnotations: Annotation[] = [];
+const emptyCitationGroups: MarkdownCitationGroup[] = [];
+
+interface ActiveCitation {
+  groupIndex: number;
+  pinned: boolean;
+  trigger: HTMLButtonElement;
+}
 
 /** 按需加载 highlight.js 常用语言包，避免普通页面承担语法高亮开销。 */
 async function getHighlightApi(): Promise<HighlightApi> {
@@ -125,6 +143,7 @@ function showMermaidError(preview: HTMLElement): void {
 /** 渲染 Markdown HTML，并为代码高亮、Mermaid 和可选批注补充交互能力。 */
 export function MarkdownContent({
   html,
+  citationGroups = emptyCitationGroups,
   className,
   annotations = emptyAnnotations,
   onAnnotationActivate,
@@ -134,6 +153,8 @@ export function MarkdownContent({
   const containerRef = useRef<HTMLElement>(null);
   const copyResetTimers = useRef(new Map<HTMLButtonElement, ReturnType<typeof setTimeout>>());
   const resolutionKeyRef = useRef('');
+  const citationCloseTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const [activeCitation, setActiveCitation] = useState<ActiveCitation | null>(null);
 
   const applyAnnotations = useCallback(() => {
     const container = containerRef.current;
@@ -157,6 +178,50 @@ export function MarkdownContent({
       timers.clear();
     };
   }, []);
+
+  const cancelCitationClose = useCallback(() => {
+    if (citationCloseTimer.current) {
+      clearTimeout(citationCloseTimer.current);
+      citationCloseTimer.current = undefined;
+    }
+  }, []);
+
+  const closeCitation = useCallback(() => {
+    cancelCitationClose();
+    setActiveCitation(null);
+  }, [cancelCitationClose]);
+
+  const scheduleCitationClose = useCallback(() => {
+    cancelCitationClose();
+    citationCloseTimer.current = setTimeout(() => setActiveCitation(null), 120);
+  }, [cancelCitationClose]);
+
+  useEffect(() => {
+    return () => cancelCitationClose();
+  }, [cancelCitationClose]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) {
+      return;
+    }
+    container.querySelectorAll<HTMLButtonElement>('[data-citation-group]').forEach((button) => {
+      const groupIndex = Number(button.dataset.citationGroup);
+      const isActive = activeCitation?.trigger === button && activeCitation.groupIndex === groupIndex;
+      button.classList.toggle('is-active', isActive);
+      button.setAttribute('aria-expanded', String(isActive));
+    });
+  }, [activeCitation, html]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (
+      activeCitation &&
+      (!citationGroups[activeCitation.groupIndex] || !container?.contains(activeCitation.trigger))
+    ) {
+      closeCitation();
+    }
+  }, [activeCitation, citationGroups, closeCitation, html]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -268,6 +333,22 @@ export function MarkdownContent({
       return;
     }
 
+    const citationTrigger = target.closest<HTMLButtonElement>('[data-citation-group]');
+    if (citationTrigger && event.currentTarget.contains(citationTrigger)) {
+      const groupIndex = Number(citationTrigger.dataset.citationGroup);
+      if (!Number.isInteger(groupIndex) || !citationGroups[groupIndex]) {
+        return;
+      }
+      cancelCitationClose();
+      setActiveCitation((current) => {
+        if (current?.trigger === citationTrigger && current.pinned) {
+          return null;
+        }
+        return { groupIndex, trigger: citationTrigger, pinned: true };
+      });
+      return;
+    }
+
     const annotationTrigger = target.closest<HTMLElement>('[data-annotation-id]');
     if (annotationTrigger && event.currentTarget.contains(annotationTrigger)) {
       onAnnotationActivate?.(annotationTrigger.dataset.annotationId ?? '', annotationTrigger);
@@ -303,6 +384,61 @@ export function MarkdownContent({
     });
   };
 
+  const handleCitationPointerEnter = (event: MouseEvent<HTMLElement>) => {
+    if (window.matchMedia('(max-width: 760px)').matches) {
+      return;
+    }
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+    const citationTrigger = target.closest<HTMLButtonElement>('[data-citation-group]');
+    if (!citationTrigger || !event.currentTarget.contains(citationTrigger)) {
+      return;
+    }
+    const groupIndex = Number(citationTrigger.dataset.citationGroup);
+    if (!Number.isInteger(groupIndex) || !citationGroups[groupIndex]) {
+      return;
+    }
+    cancelCitationClose();
+    setActiveCitation((current) =>
+      current?.trigger === citationTrigger && current.pinned
+        ? current
+        : { groupIndex, trigger: citationTrigger, pinned: false }
+    );
+  };
+
+  const handleCitationPointerLeave = (event: MouseEvent<HTMLElement>) => {
+    if (window.matchMedia('(max-width: 760px)').matches) {
+      return;
+    }
+    const target = event.target;
+    const nextTarget = event.relatedTarget;
+    if (!(target instanceof Element)) {
+      return;
+    }
+    const citationTrigger = target.closest<HTMLButtonElement>('[data-citation-group]');
+    if (citationTrigger && nextTarget instanceof Node && citationTrigger.contains(nextTarget)) {
+      return;
+    }
+    if (citationTrigger && activeCitation?.trigger === citationTrigger && !activeCitation.pinned) {
+      scheduleCitationClose();
+    }
+  };
+
+  const handleCitationFocus = (event: FocusEvent<HTMLElement>) => {
+    const target = event.target;
+    if (!(target instanceof HTMLButtonElement) || !target.matches('[data-citation-group]')) {
+      return;
+    }
+    const groupIndex = Number(target.dataset.citationGroup);
+    if (!Number.isInteger(groupIndex) || !citationGroups[groupIndex]) {
+      return;
+    }
+    cancelCitationClose();
+    setActiveCitation({ groupIndex, trigger: target, pinned: false });
+  };
+
   const publishSelection = () => {
     const container = containerRef.current;
     const selection = window.getSelection();
@@ -324,13 +460,28 @@ export function MarkdownContent({
   };
 
   return (
-    <article
-      ref={containerRef}
-      className={cn('md-surface', annotations.length > 0 || onTextSelection ? 'md-annotation-enabled' : '', className)}
-      onClick={handleClick}
-      onMouseUp={publishSelection}
-      onKeyUp={handleKeyUp}
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+    <>
+      <article
+        ref={containerRef}
+        className={cn('md-surface', annotations.length > 0 || onTextSelection ? 'md-annotation-enabled' : '', className)}
+        onClick={handleClick}
+        onMouseOver={handleCitationPointerEnter}
+        onMouseOut={handleCitationPointerLeave}
+        onMouseUp={publishSelection}
+        onKeyUp={handleKeyUp}
+        onFocus={handleCitationFocus}
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+      {activeCitation && citationGroups[activeCitation.groupIndex] ? (
+        <MarkdownCitationPopover
+          group={citationGroups[activeCitation.groupIndex]}
+          trigger={activeCitation.trigger}
+          pinned={activeCitation.pinned}
+          onRequestClose={closeCitation}
+          onPointerEnter={cancelCitationClose}
+          onPointerLeave={scheduleCitationClose}
+        />
+      ) : null}
+    </>
   );
 }

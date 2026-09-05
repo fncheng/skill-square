@@ -31,13 +31,14 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useConfirm } from '@/hooks/use-confirm';
-import { useMarkdown } from '@/hooks/use-markdown';
+import { useMarkdown, type MarkdownCitationGroup } from '@/hooks/use-markdown';
 import { useToast } from '@/hooks/use-toast';
 import type { Annotation, AnnotationAnchor, AnnotationResourceType } from '@/types/domain';
 import { formatDateTime } from '@/utils/date';
 
 interface MarkdownAnnotationSurfaceProps {
   html: string;
+  citationGroups: MarkdownCitationGroup[];
   resourceType: AnnotationResourceType;
   resourceId: string;
   documentUpdatedAt: string;
@@ -88,7 +89,7 @@ export const MarkdownAnnotationSurface = forwardRef<
   MarkdownAnnotationSurfaceHandle,
   MarkdownAnnotationSurfaceProps
 >(function MarkdownAnnotationSurface(
-  { html, resourceType, resourceId, documentUpdatedAt, readOnly = false, onCountChange },
+  { html, citationGroups, resourceType, resourceId, documentUpdatedAt, readOnly = false, onCountChange },
   ref
 ) {
   const { toast } = useToast();
@@ -118,9 +119,9 @@ export const MarkdownAnnotationSurface = forwardRef<
   const activeAnnotation = annotations.find((annotation) => annotation.id === activeAnnotationId);
   const dialogAnnotation = annotations.find((annotation) => annotation.id === dialogAnnotationId);
   const orphanIdSet = useMemo(() => new Set(orphanIds), [orphanIds]);
-  const { html: activeAnnotationHtml } = useMarkdown(activeAnnotation?.content ?? '');
-  const { html: dialogAnnotationHtml } = useMarkdown(dialogAnnotation?.content ?? '');
-  const { html: draftHtml } = useMarkdown(draft);
+  const { html: activeAnnotationHtml, citationGroups: activeAnnotationCitationGroups } = useMarkdown(activeAnnotation?.content ?? '');
+  const { html: dialogAnnotationHtml, citationGroups: dialogAnnotationCitationGroups } = useMarkdown(dialogAnnotation?.content ?? '');
+  const { html: draftHtml, citationGroups: draftCitationGroups } = useMarkdown(draft);
 
   const resizeEditorInput = useCallback(() => {
     const input = editorInputRef.current;
@@ -552,6 +553,7 @@ export const MarkdownAnnotationSurface = forwardRef<
 
       <MarkdownContent
         html={html}
+        citationGroups={citationGroups}
         className="md-annotation-main-content"
         annotations={annotations}
         onAnnotationActivate={handleAnnotationActivate}
@@ -636,7 +638,11 @@ export const MarkdownAnnotationSurface = forwardRef<
                   <strong>关联原文</strong>
                   <span>“{activeAnnotation.exact}”</span>
                 </div>
-                <MarkdownContent html={activeAnnotationHtml} className="md-annotation-rendered-content" />
+                <MarkdownContent
+                  html={activeAnnotationHtml}
+                  citationGroups={activeAnnotationCitationGroups}
+                  className="md-annotation-rendered-content"
+                />
               </div>
             </aside>
           </>,
@@ -678,7 +684,11 @@ export const MarkdownAnnotationSurface = forwardRef<
                       <strong>关联原文</strong>
                       <span>“{dialogAnnotation.exact}”</span>
                     </div>
-                    <MarkdownContent html={dialogAnnotationHtml} className="md-annotation-dialog-preview" />
+                    <MarkdownContent
+                      html={dialogAnnotationHtml}
+                      citationGroups={dialogAnnotationCitationGroups}
+                      className="md-annotation-dialog-preview"
+                    />
                   </>
                 ) : null}
 
@@ -710,7 +720,11 @@ export const MarkdownAnnotationSurface = forwardRef<
                     </div>
                     {previewing ? (
                       draft.trim() ? (
-                        <MarkdownContent html={draftHtml} className="md-annotation-dialog-preview" />
+                        <MarkdownContent
+                          html={draftHtml}
+                          citationGroups={draftCitationGroups}
+                          className="md-annotation-dialog-preview"
+                        />
                       ) : (
                         <div className="md-annotation-preview-empty">暂无可预览的 Markdown 内容</div>
                       )

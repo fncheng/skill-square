@@ -30,7 +30,7 @@ export function SolutionDetail() {
   const [loading, setLoading] = useState(false);
   const [annotationCount, setAnnotationCount] = useState(0);
 
-  const { html, headings } = useMarkdown(solution?.content ?? '');
+  const { html, headings, citationGroups } = useMarkdown(solution?.content ?? '');
   const { exporting, exportFile } = useContentExport({
     resourceLabel: '解决方案',
     exporter: async () => {
@@ -155,6 +155,7 @@ export function SolutionDetail() {
           <MarkdownAnnotationSurface
             ref={annotationSurfaceRef}
             html={html}
+            citationGroups={citationGroups}
             resourceType="SOLUTION"
             resourceId={solution.id}
             documentUpdatedAt={solution.updatedAt}

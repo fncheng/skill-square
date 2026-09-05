@@ -2,6 +2,7 @@ import type { Annotation, AnnotationAnchor } from '@/types/domain';
 
 const ignoredSelector = [
   '.md-code-copy',
+  '.md-citation-chip',
   '.md-mermaid-controls',
   '.md-mermaid-preview',
   '.md-annotation-pin-stack'

@@ -30,7 +30,7 @@ export function NoteDetail() {
   const [loading, setLoading] = useState(false);
   const [annotationCount, setAnnotationCount] = useState(0);
 
-  const { html, headings } = useMarkdown(note?.content ?? '');
+  const { html, headings, citationGroups } = useMarkdown(note?.content ?? '');
   const { exporting, exportFile } = useContentExport({
     resourceLabel: '学习笔记',
     exporter: async () => {
@@ -155,6 +155,7 @@ export function NoteDetail() {
           <MarkdownAnnotationSurface
             ref={annotationSurfaceRef}
             html={html}
+            citationGroups={citationGroups}
             resourceType="NOTE"
             resourceId={note.id}
             documentUpdatedAt={note.updatedAt}

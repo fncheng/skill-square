@@ -6,9 +6,27 @@ export interface MarkdownHeading {
   id: string;
 }
 
+export interface MarkdownCitationSource {
+  /** 引用定义中的标识，用于在 Markdown 原文中定位来源。 */
+  id: string;
+  /** 正文引用中的可读名称，在未填写标题时作为来源名称回退。 */
+  label: string;
+  /** 引用定义可选标题，优先展示为来源标题。 */
+  title: string;
+  /** 已通过协议校验的外部来源地址。 */
+  url: string;
+  /** 由 URL 派生的站点名称，供紧凑引用按钮展示。 */
+  siteName: string;
+}
+
+export interface MarkdownCitationGroup {
+  sources: MarkdownCitationSource[];
+}
+
 export interface UseMarkdownReturn {
   html: string;
   headings: MarkdownHeading[];
+  citationGroups: MarkdownCitationGroup[];
 }
 
 /** 转义 HTML 特殊字符，避免文档内容造成 XSS。 */
@@ -30,38 +48,248 @@ function slugify(text: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
+interface MarkdownReferenceDefinition {
+  id: string;
+  title: string;
+  url: string;
+}
+
+interface MarkdownParseContext {
+  citationGroups: MarkdownCitationGroup[];
+  referenceDefinitions: Map<string, MarkdownReferenceDefinition>;
+}
+
+/** 统一 Markdown reference 标识，兼容大小写与连续空白差异。 */
+function normalizeReferenceId(value: string): string {
+  return value.trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+/** 仅允许在来源卡片中打开的安全协议。 */
+function getSafeCitationUrl(rawUrl: string): string | null {
+  try {
+    const url = new URL(rawUrl);
+    return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
+function isGitHubHostname(hostname: string): boolean {
+  const normalizedHostname = hostname.toLowerCase().replace(/^www\./, '');
+  return normalizedHostname === 'github.com' || normalizedHostname.endsWith('.github.com');
+}
+
+/** 供渲染器与引用浮层复用的 GitHub 站点判定，避免误匹配同名恶意域名。 */
+export function isGitHubCitationUrl(url: string): boolean {
+  try {
+    return isGitHubHostname(new URL(url).hostname);
+  } catch {
+    return false;
+  }
+}
+
+/** 归一化来源站点名，保持按钮和浮层中的 GitHub 品牌一致。 */
+export function getCitationSiteName(url: string): string {
+  try {
+    const hostname = new URL(url).hostname.replace(/^www\./i, '');
+    return isGitHubHostname(hostname) ? 'GitHub' : hostname || url;
+  } catch {
+    return url;
+  }
+}
+
+/**
+ * 在块级解析前移除 reference definition，避免尾部来源定义被渲染为正文。
+ * 围栏代码内的文本必须原样保留，防止示例 Markdown 被误识别为定义。
+ */
+function extractReferenceDefinitions(source: string): { content: string; referenceDefinitions: Map<string, MarkdownReferenceDefinition> } {
+  const referenceDefinitions = new Map<string, MarkdownReferenceDefinition>();
+  const content: string[] = [];
+  let inFence = false;
+
+  for (const line of source.replace(/\r\n/g, '\n').split('\n')) {
+    if (/^```/.test(line)) {
+      inFence = !inFence;
+      content.push(line);
+      continue;
+    }
+
+    if (inFence) {
+      content.push(line);
+      continue;
+    }
+
+    const definition = line.match(/^\s{0,3}\[([^\]]+)\]:\s*(?:<([^>]+)>|(\S+))(?:\s+(?:"([^"]*)"|'([^']*)'|\(([^)]*)\)))?\s*$/);
+    if (!definition) {
+      content.push(line);
+      continue;
+    }
+
+    const id = normalizeReferenceId(definition[1]);
+    const rawUrl = definition[2] ?? definition[3] ?? '';
+    const safeUrl = getSafeCitationUrl(rawUrl);
+    if (id && safeUrl) {
+      referenceDefinitions.set(id, {
+        id: definition[1].trim(),
+        title: definition[4] ?? definition[5] ?? definition[6] ?? '',
+        url: safeUrl
+      });
+    }
+  }
+
+  return { content: content.join('\n'), referenceDefinitions };
+}
+
+function renderMarkdownLink(label: string, url: string): string {
+  return `<a class="md-link" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a>`;
+}
+
+function createCitationSource(
+  definition: MarkdownReferenceDefinition,
+  label: string
+): MarkdownCitationSource {
+  return {
+    id: definition.id,
+    label: label.trim(),
+    title: definition.title.trim(),
+    url: definition.url,
+    siteName: getCitationSiteName(definition.url)
+  };
+}
+
+function getCitationDisplayName(source: MarkdownCitationSource): string {
+  return source.label || source.siteName;
+}
+
+function renderCitationChipIcon(source: MarkdownCitationSource): string {
+  if (isGitHubCitationUrl(source.url)) {
+    return (
+      '<svg class="md-citation-chip-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
+        '<path d="M12 2C6.48 2 2 6.58 2 12.23c0 4.52 2.87 8.35 6.84 9.7.5.1.68-.22.68-.49 0-.24-.01-1.04-.01-1.88-2.78.62-3.37-1.2-3.37-1.2-.45-1.19-1.11-1.5-1.11-1.5-.91-.64.07-.63.07-.63 1 .08 1.53 1.06 1.53 1.06.9 1.57 2.35 1.12 2.92.86.09-.67.35-1.12.63-1.38-2.22-.26-4.56-1.15-4.56-5.1 0-1.13.39-2.05 1.03-2.78-.1-.26-.45-1.31.1-2.73 0 0 .84-.28 2.75 1.06A9.29 9.29 0 0 1 12 6.8c.85 0 1.7.12 2.5.35 1.9-1.34 2.74-1.06 2.74-1.06.55 1.42.2 2.47.1 2.73.64.73 1.03 1.65 1.03 2.78 0 3.96-2.34 4.83-4.57 5.09.36.32.68.93.68 1.88 0 1.36-.01 2.46-.01 2.8 0 .27.18.59.69.49A10.24 10.24 0 0 0 22 12.23C22 6.58 17.52 2 12 2Z"></path>' +
+      '</svg>'
+    );
+  }
+
+  return (
+    '<svg class="md-citation-chip-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
+      '<circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3c2.3 2.46 3.5 5.48 3.5 9S14.3 18.54 12 21c-2.3-2.46-3.5-5.48-3.5-9S9.7 5.46 12 3Z"></path>' +
+    '</svg>'
+  );
+}
+
+function renderCitationChip(groupIndex: number, sources: MarkdownCitationSource[]): string {
+  const firstSource = sources[0];
+  const label = `${getCitationDisplayName(firstSource)}${sources.length > 1 ? ` +${sources.length - 1}` : ''}`;
+  return (
+    `<button type="button" class="md-citation-chip" data-citation-group="${groupIndex}" ` +
+      `aria-label="查看来源：${escapeHtml(label)}" aria-haspopup="dialog" aria-expanded="false">` +
+      renderCitationChipIcon(firstSource) +
+      `<span class="md-citation-chip-label">${escapeHtml(label)}</span>` +
+    `</button>`
+  );
+}
+
+/** 将相邻数字 reference link 聚合为来源按钮，其余 reference link 继续作为普通外链。 */
+function renderReferenceLinks(
+  text: string,
+  context: MarkdownParseContext,
+  createSlot: (html: string) => string
+): string {
+  const referencePattern = /\[([^\]]+)\]\[([^\]]+)\]/g;
+  const matches = Array.from(text.matchAll(referencePattern));
+  if (matches.length === 0) {
+    return text;
+  }
+
+  const getDefinition = (match: RegExpMatchArray) =>
+    context.referenceDefinitions.get(normalizeReferenceId(match[2]));
+  const isCitation = (match: RegExpMatchArray) => /^\d+$/.test(match[2].trim()) && Boolean(getDefinition(match));
+
+  let result = '';
+  let cursor = 0;
+  let matchIndex = 0;
+
+  while (matchIndex < matches.length) {
+    const match = matches[matchIndex];
+    const matchStart = match.index ?? 0;
+    result += text.slice(cursor, matchStart);
+
+    if (isCitation(match)) {
+      const sources: MarkdownCitationSource[] = [];
+      let lastEnd = matchStart + match[0].length;
+      let currentIndex = matchIndex;
+
+      while (currentIndex < matches.length) {
+        const candidate = matches[currentIndex];
+        const candidateStart = candidate.index ?? 0;
+        const gap = text.slice(lastEnd, candidateStart);
+        if ((currentIndex !== matchIndex && !/^[ \t]*$/.test(gap)) || !isCitation(candidate)) {
+          break;
+        }
+
+        const definition = getDefinition(candidate);
+        if (!definition) {
+          break;
+        }
+        sources.push(createCitationSource(definition, candidate[1]));
+        lastEnd = candidateStart + candidate[0].length;
+        currentIndex += 1;
+      }
+
+      const groupIndex = context.citationGroups.length;
+      context.citationGroups.push({ sources });
+      result += createSlot(renderCitationChip(groupIndex, sources));
+      cursor = lastEnd;
+      matchIndex = currentIndex;
+      continue;
+    }
+
+    const definition = getDefinition(match);
+    result += definition ? createSlot(renderMarkdownLink(match[1], definition.url)) : match[0];
+    cursor = matchStart + match[0].length;
+    matchIndex += 1;
+  }
+
+  return result + text.slice(cursor);
+}
+
 /**
  * 渲染行内语法：行内代码、粗体、链接、裸 URL 自动链接。
  * 行内代码先以哨兵占位，避免其中的特殊字符被后续规则误处理。
  * 哨兵仅由字母、数字、下划线和 @ 组成，不受 HTML 转义影响，
  * 且几乎不可能与正文冲突。
  */
-function renderInline(text: string): string {
-  const codeSlots: string[] = [];
-  let result = text.replace(/`([^`]+)`/g, (_match, code: string) => {
-    codeSlots.push(`<code class="md-inline-code">${escapeHtml(code)}</code>`);
-    return `@@CODE_${codeSlots.length - 1}@@`;
-  });
+function renderInline(text: string, context: MarkdownParseContext): string {
+  const slots: string[] = [];
+  const createSlot = (html: string) => {
+    slots.push(html);
+    return `@@MD_SLOT_${slots.length - 1}@@`;
+  };
+
+  let result = text.replace(/`([^`]+)`/g, (_match, code: string) =>
+    createSlot(`<code class="md-inline-code">${escapeHtml(code)}</code>`)
+  );
+  result = renderReferenceLinks(result, context, createSlot);
+  result = result.replace(
+    /\[([^\]]+)\]\(([^)]+)\)/g,
+    (_match, label: string, url: string) => createSlot(renderMarkdownLink(label, url))
+  );
 
   result = escapeHtml(result);
   result = result.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-  result = result.replace(
-    /\[([^\]]+)\]\(([^)]+)\)/g,
-    (_match, label: string, url: string) =>
-      `<a class="md-link" href="${url}" target="_blank" rel="noopener noreferrer">${label}</a>`
-  );
   result = result.replace(
     /(^|[\s(])(https?:\/\/[^\s)]+)/g,
     (_match, prefix: string, url: string) =>
       `${prefix}<a class="md-link" href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`
   );
 
-  return result.replace(/@@CODE_(\d+)@@/g, (_match, index: string) => codeSlots[Number(index)]);
+  return result.replace(/@@MD_SLOT_(\d+)@@/g, (_match, index: string) => slots[Number(index)]);
 }
 
 interface ParseResult {
   html: string;
   headings: MarkdownHeading[];
+  citationGroups: MarkdownCitationGroup[];
 }
 
 type TableAlignment = 'left' | 'center' | 'right' | null;
@@ -143,14 +371,19 @@ function parseTableAlignments(line: string, columnCount: number): TableAlignment
 }
 
 /** 渲染带可访问横向滚动容器的 GFM 表格。 */
-function renderTable(headers: string[], alignments: TableAlignment[], rows: string[][]): string {
+function renderTable(
+  headers: string[],
+  alignments: TableAlignment[],
+  rows: string[][],
+  context: MarkdownParseContext
+): string {
   const renderCells = (cells: string[], tag: 'th' | 'td') =>
     headers
       .map((_header, index) => {
         const alignment = alignments[index];
         const alignmentClass = alignment ? ` is-${alignment}` : '';
         const scope = tag === 'th' ? ' scope="col"' : '';
-        return `<${tag}${scope} class="md-table-cell${alignmentClass}">${renderInline(cells[index] ?? '')}</${tag}>`;
+        return `<${tag}${scope} class="md-table-cell${alignmentClass}">${renderInline(cells[index] ?? '', context)}</${tag}>`;
       })
       .join('');
 
@@ -188,8 +421,13 @@ function renderCodeCopyButton(): string {
 }
 
 /** 将 Markdown 文本解析为 HTML，并收集标题用于目录。 */
-function parseMarkdown(source: string): ParseResult {
-  const lines = source.replace(/\r\n/g, '\n').split('\n');
+function parseMarkdown(source: string, inheritedContext?: MarkdownParseContext): ParseResult {
+  const extracted = inheritedContext ? null : extractReferenceDefinitions(source);
+  const context: MarkdownParseContext = inheritedContext ?? {
+    citationGroups: [],
+    referenceDefinitions: extracted?.referenceDefinitions ?? new Map()
+  };
+  const lines = (extracted?.content ?? source).replace(/\r\n/g, '\n').split('\n');
   const blocks: string[] = [];
   const headings: MarkdownHeading[] = [];
 
@@ -202,7 +440,7 @@ function parseMarkdown(source: string): ParseResult {
 
   const flushParagraph = () => {
     if (paragraph.length === 0) return;
-    blocks.push(`<p>${paragraph.map(renderInline).join('<br>')}</p>`);
+    blocks.push(`<p>${paragraph.map((line) => renderInline(line, context)).join('<br>')}</p>`);
     paragraph = [];
   };
 
@@ -212,7 +450,7 @@ function parseMarkdown(source: string): ParseResult {
       listItems = [];
       return;
     }
-    const items = listItems.map((item) => `<li>${renderInline(item)}</li>`).join('');
+    const items = listItems.map((item) => `<li>${renderInline(item, context)}</li>`).join('');
     blocks.push(`<${listType} class="md-list">${items}</${listType}>`);
     listType = null;
     listItems = [];
@@ -302,7 +540,7 @@ function parseMarkdown(source: string): ParseResult {
         nextLineIndex += 1;
       }
 
-      blocks.push(renderTable(tableHeaders, tableAlignments, tableRows));
+      blocks.push(renderTable(tableHeaders, tableAlignments, tableRows, context));
       lineIndex = nextLineIndex - 1;
       continue;
     }
@@ -323,7 +561,7 @@ function parseMarkdown(source: string): ParseResult {
         nextLineIndex += 1;
       }
 
-      const quote = parseMarkdown(quoteLines.join('\n'));
+      const quote = parseMarkdown(quoteLines.join('\n'), context);
       blocks.push(`<blockquote class="md-blockquote">${quote.html}</blockquote>`);
       lineIndex = nextLineIndex - 1;
       continue;
@@ -344,7 +582,7 @@ function parseMarkdown(source: string): ParseResult {
       const text = headingMatch[2].trim();
       const id = slugify(text);
       headings.push({ level, text, id });
-      blocks.push(`<h${level} id="${id}" class="md-heading">${renderInline(text)}</h${level}>`);
+      blocks.push(`<h${level} id="${id}" class="md-heading">${renderInline(text, context)}</h${level}>`);
       continue;
     }
 
@@ -374,7 +612,7 @@ function parseMarkdown(source: string): ParseResult {
   flushParagraph();
   flushList();
 
-  return { html: blocks.join('\n'), headings };
+  return { html: blocks.join('\n'), headings, citationGroups: context.citationGroups };
 }
 
 /** 记忆化的 Markdown 渲染 hook，返回 HTML 与标题目录。 */

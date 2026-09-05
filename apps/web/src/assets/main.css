@@ -1334,6 +1334,93 @@
     @apply font-semibold text-primary underline-offset-2 hover:underline;
   }
 
+  .md-surface .md-citation-chip {
+    @apply mx-0.5 inline-flex h-6 max-w-[190px] translate-y-[-1px] items-center gap-1 rounded-full border border-indigo-200 bg-indigo-50 px-2 text-xs font-bold leading-none text-indigo-700 transition-colors hover:border-indigo-300 hover:bg-indigo-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+  }
+
+  .md-surface .md-citation-chip.is-active {
+    @apply border-primary bg-primary text-primary-foreground;
+  }
+
+  .md-citation-chip-label {
+    @apply truncate;
+  }
+
+  .md-citation-chip-icon {
+    @apply h-3.5 w-3.5 flex-none fill-none stroke-current;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.8;
+  }
+
+  .md-citation-chip-icon path:only-child {
+    fill: currentColor;
+    stroke: none;
+  }
+
+  .md-citation-backdrop {
+    display: none;
+  }
+
+  .md-citation-popover {
+    @apply fixed z-[90] flex w-[min(460px,calc(100vw-28px))] flex-col overflow-hidden rounded-lg border bg-white shadow-2xl shadow-slate-950/20;
+  }
+
+  .md-citation-popover-head {
+    @apply flex min-h-11 items-center justify-between gap-2 border-b px-3;
+  }
+
+  .md-citation-source-brand {
+    @apply flex min-w-0 items-center gap-1.5 text-xs font-bold text-slate-600;
+  }
+
+  .md-citation-source-brand svg {
+    @apply h-4 w-4 flex-none text-slate-500;
+  }
+
+  .md-citation-source-brand span {
+    @apply truncate;
+  }
+
+  .md-citation-popover-actions,
+  .md-citation-pagination {
+    @apply flex flex-none items-center gap-1;
+  }
+
+  .md-citation-pagination span {
+    @apply min-w-8 text-center text-[11px] font-semibold tabular-nums text-slate-400;
+  }
+
+  .md-citation-pagination button,
+  .md-citation-close {
+    @apply grid h-7 w-7 place-items-center rounded-md border-0 bg-transparent p-0 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+  }
+
+  .md-citation-pagination button:disabled {
+    @apply cursor-not-allowed text-slate-300 hover:bg-transparent hover:text-slate-300;
+  }
+
+  .md-citation-pagination button svg,
+  .md-citation-close svg {
+    @apply h-4 w-4;
+  }
+
+  .md-citation-source-link {
+    @apply grid gap-1 px-3 py-3 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring;
+  }
+
+  .md-citation-source-link strong {
+    @apply break-words text-sm font-bold leading-5 text-slate-800;
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+
+  .md-citation-source-link span {
+    @apply truncate text-xs text-slate-500;
+  }
+
   .md-surface .md-table-scroll {
     @apply my-4 overflow-x-auto rounded-lg border border-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
   }
@@ -1785,6 +1872,20 @@
 }
 
 @media (max-width: 760px) {
+  .md-citation-backdrop {
+    @apply fixed inset-0 z-[89] block border-0 bg-slate-950/25;
+  }
+
+  .md-citation-popover.is-mobile {
+    @apply inset-x-0 bottom-0 top-auto w-full max-w-none rounded-b-none rounded-t-lg border-x-0 border-b-0;
+    max-height: min(76vh, 360px);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .md-citation-popover.is-mobile .md-citation-source-link {
+    @apply py-4;
+  }
+
   .md-annotation-popover-backdrop {
     @apply fixed inset-0 z-[81] block border-0 bg-slate-950/25;
   }
@@ -1819,7 +1920,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .detail-compact-action-bar {
+  .detail-compact-action-bar,
+  .md-surface .md-citation-chip,
+  .md-citation-pagination button,
+  .md-citation-close,
+  .md-citation-source-link {
     animation: none;
+    transition: none;
   }
 }

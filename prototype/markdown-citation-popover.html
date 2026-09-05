@@ -1,0 +1,793 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Markdown 引用来源浮层原型</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --background: #f8fafc;
+        --foreground: #0f172a;
+        --surface: #ffffff;
+        --muted: #64748b;
+        --muted-soft: #94a3b8;
+        --border: #e2e8f0;
+        --border-strong: #cbd5e1;
+        --primary: #4f46e5;
+        --primary-soft: #eef2ff;
+        --topbar-height: 64px;
+        --sidebar-width: 220px;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-width: 960px;
+        min-height: 100vh;
+        margin: 0;
+        background: var(--background);
+        color: var(--foreground);
+        font-size: 14px;
+      }
+
+      button,
+      a {
+        font: inherit;
+      }
+
+      button {
+        cursor: pointer;
+      }
+
+      button:focus-visible,
+      a:focus-visible {
+        outline: 2px solid rgba(79, 70, 229, 0.38);
+        outline-offset: 2px;
+      }
+
+      [hidden] {
+        display: none !important;
+      }
+
+      .icon {
+        width: 16px;
+        height: 16px;
+        flex: 0 0 auto;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .topbar {
+        position: fixed;
+        inset: 0 0 auto;
+        z-index: 40;
+        display: flex;
+        align-items: center;
+        height: var(--topbar-height);
+        min-width: 960px;
+        padding: 0 28px;
+        border-bottom: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.94);
+        backdrop-filter: blur(14px);
+      }
+
+      .brand {
+        display: flex;
+        width: var(--sidebar-width);
+        flex: 0 0 auto;
+        align-items: center;
+        gap: 10px;
+        font-size: 16px;
+        font-weight: 800;
+      }
+
+      .brand-mark {
+        display: grid;
+        width: 32px;
+        height: 32px;
+        place-items: center;
+        border-radius: 6px;
+        background: var(--primary);
+        color: #ffffff;
+        box-shadow: 0 8px 20px rgba(79, 70, 229, 0.2);
+      }
+
+      .global-search {
+        width: min(560px, 48vw);
+        height: 40px;
+        margin: 0 28px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: #f8fafc;
+        color: var(--muted-soft);
+        line-height: 38px;
+        padding: 0 14px;
+      }
+
+      .account {
+        margin-left: auto;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: #ffffff;
+        padding: 8px 12px;
+        color: #334155;
+        font-weight: 700;
+      }
+
+      .sidebar {
+        position: fixed;
+        inset: var(--topbar-height) auto 0 0;
+        z-index: 30;
+        width: var(--sidebar-width);
+        border-right: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.78);
+        padding: 20px 14px;
+      }
+
+      .nav-title {
+        margin: 24px 12px 10px;
+        color: var(--muted-soft);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .nav-item {
+        display: flex;
+        height: 42px;
+        align-items: center;
+        gap: 11px;
+        margin-bottom: 3px;
+        border-radius: 6px;
+        padding: 0 13px;
+        color: #475569;
+        font-weight: 700;
+      }
+
+      .nav-item.active {
+        background: var(--primary-soft);
+        color: var(--primary);
+      }
+
+      .main {
+        min-height: 100vh;
+        margin-left: var(--sidebar-width);
+        padding: 88px 28px 64px;
+      }
+
+      .page-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 24px;
+        margin-bottom: 20px;
+      }
+
+      .page-head-main,
+      .page-actions,
+      .button,
+      .source-chip,
+      .source-brand,
+      .source-nav,
+      .source-link-row {
+        display: flex;
+        align-items: center;
+      }
+
+      .page-head-main {
+        min-width: 0;
+        align-items: flex-start;
+        gap: 12px;
+      }
+
+      .back-button,
+      .button {
+        height: 36px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: #ffffff;
+        color: #475569;
+        font-weight: 700;
+      }
+
+      .back-button {
+        display: grid;
+        width: 36px;
+        flex: 0 0 auto;
+        place-items: center;
+      }
+
+      .button {
+        justify-content: center;
+        gap: 7px;
+        padding: 0 12px;
+      }
+
+      .back-button:hover,
+      .button:hover {
+        border-color: #c7d2fe;
+        background: var(--primary-soft);
+        color: var(--primary);
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 24px;
+        line-height: 1.3;
+      }
+
+      .subtitle {
+        margin: 8px 0 0;
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      .page-actions {
+        flex: 0 0 auto;
+        gap: 8px;
+      }
+
+      .detail-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 300px;
+        align-items: start;
+        gap: 16px;
+      }
+
+      .markdown-surface,
+      .detail-surface {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--surface);
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+      }
+
+      .markdown-surface {
+        min-height: 520px;
+        padding: 26px 28px;
+        color: #334155;
+        font-size: 15px;
+        line-height: 1.9;
+      }
+
+      .markdown-surface h2 {
+        margin: 0 0 18px;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 10px;
+        color: var(--foreground);
+        font-size: 20px;
+      }
+
+      .markdown-surface p {
+        margin: 14px 0;
+      }
+
+      .inline-code {
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        background: #f1f5f9;
+        padding: 2px 6px;
+        color: #e11d48;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .source-chip-wrap {
+        position: relative;
+        display: inline-block;
+        margin-left: 4px;
+        vertical-align: -5px;
+      }
+
+      .source-chip {
+        height: 26px;
+        max-width: 180px;
+        gap: 6px;
+        border: 1px solid #dbe1e8;
+        border-radius: 999px;
+        background: #f1f3f5;
+        padding: 0 9px 0 6px;
+        color: #475569;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1;
+        transition: border-color 140ms ease, background 140ms ease, color 140ms ease, box-shadow 140ms ease;
+      }
+
+      .source-chip:hover,
+      .source-chip[aria-expanded="true"] {
+        border-color: #cbd5e1;
+        background: #111827;
+        color: #ffffff;
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.13);
+      }
+
+      .source-chip-label {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .github-icon {
+        width: 16px;
+        height: 16px;
+        flex: 0 0 auto;
+        fill: currentColor;
+      }
+
+      .source-popover {
+        position: fixed;
+        z-index: 80;
+        width: min(460px, calc(100vw - 24px));
+        overflow: hidden;
+        border: 1px solid #dbe1e8;
+        border-radius: 8px;
+        background: #ffffff;
+        box-shadow: 0 20px 48px rgba(15, 23, 42, 0.18), 0 2px 8px rgba(15, 23, 42, 0.08);
+        opacity: 0;
+        transform: translateY(-4px);
+        transition: opacity 120ms ease, transform 120ms ease;
+      }
+
+      .source-popover.is-visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .source-popover-head {
+        display: flex;
+        height: 48px;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid #edf0f3;
+        padding: 0 12px;
+        background: #fafafa;
+      }
+
+      .source-nav {
+        gap: 4px;
+      }
+
+      .source-nav-button,
+      .source-close {
+        display: grid;
+        width: 32px;
+        height: 32px;
+        place-items: center;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: #64748b;
+      }
+
+      .source-nav-button:hover,
+      .source-close:hover {
+        background: #eef2f7;
+        color: #1e293b;
+      }
+
+      .source-nav-button:disabled {
+        cursor: default;
+        opacity: 0.35;
+      }
+
+      .source-counter {
+        color: #94a3b8;
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .source-close {
+        display: none;
+      }
+
+      .source-card-link {
+        display: block;
+        padding: 20px 24px 22px;
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .source-card-link:hover {
+        background: #fbfcfe;
+      }
+
+      .source-brand {
+        gap: 10px;
+        color: #111827;
+        font-size: 15px;
+        font-weight: 800;
+      }
+
+      .source-title {
+        display: -webkit-box;
+        overflow: hidden;
+        margin: 13px 0 0;
+        color: #0f172a;
+        font-size: 17px;
+        font-weight: 780;
+        line-height: 1.55;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 3;
+      }
+
+      .source-link-row {
+        gap: 6px;
+        min-width: 0;
+        margin-top: 12px;
+        color: #64748b;
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .source-link-row span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .detail-surface {
+        position: sticky;
+        top: 80px;
+        padding: 20px;
+      }
+
+      .meta-item + .meta-item {
+        margin-top: 18px;
+      }
+
+      .meta-label {
+        display: block;
+        margin-bottom: 6px;
+        color: #94a3b8;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .meta-value {
+        color: #475569;
+        font-weight: 700;
+        line-height: 1.6;
+      }
+
+      .tag {
+        display: inline-flex;
+        margin: 2px 4px 2px 0;
+        border: 1px solid #e0e7ff;
+        border-radius: 999px;
+        background: #f5f7ff;
+        padding: 3px 8px;
+        color: #4f46e5;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .mobile-backdrop {
+        display: none;
+      }
+
+      @media (max-width: 1180px) {
+        .detail-grid {
+          grid-template-columns: minmax(0, 1fr);
+        }
+
+        .detail-surface {
+          position: static;
+        }
+      }
+
+      @media (max-width: 760px) {
+        body {
+          min-width: 320px;
+        }
+
+        .topbar {
+          min-width: 320px;
+          padding: 0 16px;
+        }
+
+        .brand {
+          width: auto;
+        }
+
+        .brand span,
+        .global-search,
+        .sidebar,
+        .account,
+        .page-actions,
+        .detail-surface {
+          display: none;
+        }
+
+        .main {
+          margin-left: 0;
+          padding: 82px 14px 40px;
+        }
+
+        .page-head {
+          margin-bottom: 14px;
+        }
+
+        h1 {
+          font-size: 20px;
+        }
+
+        .subtitle {
+          font-size: 13px;
+        }
+
+        .markdown-surface {
+          min-height: 420px;
+          padding: 20px 18px;
+          font-size: 15px;
+        }
+
+        .source-popover {
+          inset: auto 0 0 !important;
+          width: 100%;
+          max-height: 76vh;
+          border-right: 0;
+          border-bottom: 0;
+          border-left: 0;
+          border-radius: 8px 8px 0 0;
+          transform: translateY(16px);
+        }
+
+        .source-popover.is-visible {
+          transform: translateY(0);
+        }
+
+        .source-close {
+          display: grid;
+        }
+
+        .source-card-link {
+          padding-bottom: calc(24px + env(safe-area-inset-bottom));
+        }
+
+        .mobile-backdrop {
+          position: fixed;
+          inset: 0;
+          z-index: 70;
+          border: 0;
+          background: rgba(15, 23, 42, 0.26);
+        }
+
+        .mobile-backdrop.is-visible {
+          display: block;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .source-chip,
+        .source-popover {
+          transition: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M4 7h16M7 4v6M17 4v6M6 14h4M14 14h4M6 18h7" /></svg>
+        </span>
+        <span>Prompt Skill Manager</span>
+      </div>
+      <div class="global-search">搜索 Prompt、解决方案、学习笔记...</div>
+      <button class="account" type="button">管理员</button>
+    </header>
+
+    <aside class="sidebar">
+      <div class="nav-title">资源管理</div>
+      <div class="nav-item">Prompt 管理</div>
+      <div class="nav-item">解决方案</div>
+      <div class="nav-item">学习笔记</div>
+      <div class="nav-item active">模型回答</div>
+      <div class="nav-item">UI 原型</div>
+    </aside>
+
+    <main class="main">
+      <div class="page-head">
+        <div class="page-head-main">
+          <button class="back-button" type="button" aria-label="返回">
+            <svg class="icon" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6" /></svg>
+          </button>
+          <div>
+            <h1>Codex CLI 会话恢复说明</h1>
+            <p class="subtitle">记录 Codex CLI 恢复历史会话的用法与上下文边界。</p>
+          </div>
+        </div>
+        <div class="page-actions">
+          <button class="button" type="button">复制 Markdown</button>
+          <button class="button" type="button">编辑</button>
+          <button class="button" type="button">批注</button>
+        </div>
+      </div>
+
+      <div class="detail-grid">
+        <article class="markdown-surface">
+          <h2>恢复之前的工作</h2>
+          <p>
+            <code class="inline-code">codex resume</code>
+            用于<strong>恢复之前的 Codex CLI 会话（thread/session）</strong>，继续之前未完成的工作。它和新开
+            <code class="inline-code">codex</code>
+            最大区别是：会保留原来的对话上下文、计划历史、审批状态等，不需要重新描述背景。
+            <span class="source-chip-wrap">
+              <button
+                class="source-chip"
+                id="source-trigger"
+                type="button"
+                aria-haspopup="dialog"
+                aria-expanded="false"
+                aria-controls="source-popover"
+              >
+                <svg class="github-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 .7a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2.2c-3.23.7-3.91-1.37-3.91-1.37-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.7.08-.7 1.16.08 1.78 1.2 1.78 1.2 1.03 1.77 2.71 1.26 3.37.96.1-.75.4-1.26.73-1.55-2.58-.3-5.29-1.29-5.29-5.69 0-1.26.45-2.29 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.16 1.18a10.9 10.9 0 0 1 5.76 0C17.03 5.05 18 5.36 18 5.36c.63 1.59.23 2.76.11 3.05.74.8 1.19 1.83 1.19 3.09 0 4.42-2.72 5.39-5.31 5.68.42.36.79 1.07.79 2.16v3.21c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .7Z" />
+                </svg>
+                <span class="source-chip-label">GitHub</span>
+              </button>
+            </span>
+          </p>
+
+        </article>
+
+        <aside class="detail-surface">
+          <div class="meta-item">
+            <span class="meta-label">来源</span>
+            <span class="meta-value">ChatGPT · GPT-5</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">分类</span>
+            <span class="meta-value">Codex</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">标签</span>
+            <span class="tag">Codex CLI</span>
+            <span class="tag">会话管理</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">更新时间</span>
+            <span class="meta-value">2026-09-04 10:30</span>
+          </div>
+        </aside>
+      </div>
+    </main>
+
+    <button class="mobile-backdrop" id="mobile-backdrop" type="button" aria-label="关闭来源预览"></button>
+
+    <section class="source-popover" id="source-popover" role="dialog" aria-label="引用来源预览" hidden>
+      <div class="source-popover-head">
+        <div class="source-nav" aria-label="切换引用来源">
+          <button class="source-nav-button" type="button" aria-label="上一个来源" disabled>
+            <svg class="icon" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6" /></svg>
+          </button>
+          <button class="source-nav-button" type="button" aria-label="下一个来源" disabled>
+            <svg class="icon" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6" /></svg>
+          </button>
+        </div>
+        <span class="source-counter">1 / 1</span>
+        <button class="source-close" id="source-close" type="button" aria-label="关闭来源预览">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12" /></svg>
+        </button>
+      </div>
+      <a
+        class="source-card-link"
+        href="https://github.com/llms-txt-archive/openai-platform/blob/main/codex/cli/features.md"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <div class="source-brand">
+          <svg class="github-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 .7a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2.2c-3.23.7-3.91-1.37-3.91-1.37-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.7.08-.7 1.16.08 1.78 1.2 1.78 1.2 1.03 1.77 2.71 1.26 3.37.96.1-.75.4-1.26.73-1.55-2.58-.3-5.29-1.29-5.29-5.69 0-1.26.45-2.29 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.16 1.18a10.9 10.9 0 0 1 5.76 0C17.03 5.05 18 5.36 18 5.36c.63 1.59.23 2.76.11 3.05.74.8 1.19 1.83 1.19 3.09 0 4.42-2.72 5.39-5.31 5.68.42.36.79 1.07.79 2.16v3.21c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .7Z" />
+          </svg>
+          <span>GitHub</span>
+        </div>
+        <p class="source-title">openai-platform/codex/cli/features.md at main · llms-txt-archive/openai-platform · GitHub</p>
+        <div class="source-link-row">
+          <span>github.com/llms-txt-archive/openai-platform</span>
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /></svg>
+        </div>
+      </a>
+    </section>
+
+    <script>
+      const trigger = document.querySelector('#source-trigger');
+      const popover = document.querySelector('#source-popover');
+      const closeButton = document.querySelector('#source-close');
+      const backdrop = document.querySelector('#mobile-backdrop');
+      const desktopMedia = window.matchMedia('(min-width: 761px)');
+      let pinned = false;
+      let closeTimer;
+
+      function positionPopover() {
+        if (!desktopMedia.matches) return;
+
+        const triggerRect = trigger.getBoundingClientRect();
+        const popoverRect = popover.getBoundingClientRect();
+        const gap = 10;
+        const viewportPadding = 12;
+        const spaceBelow = window.innerHeight - triggerRect.bottom;
+        const top = spaceBelow >= popoverRect.height + gap
+          ? triggerRect.bottom + gap
+          : triggerRect.top - popoverRect.height - gap;
+        const preferredLeft = triggerRect.left - 18;
+        const maxLeft = window.innerWidth - popoverRect.width - viewportPadding;
+
+        popover.style.top = `${Math.max(viewportPadding, top)}px`;
+        popover.style.left = `${Math.max(viewportPadding, Math.min(preferredLeft, maxLeft))}px`;
+      }
+
+      function openPopover(nextPinned = pinned) {
+        window.clearTimeout(closeTimer);
+        pinned = nextPinned;
+        popover.hidden = false;
+        trigger.setAttribute('aria-expanded', 'true');
+        backdrop.classList.toggle('is-visible', !desktopMedia.matches);
+        positionPopover();
+        requestAnimationFrame(() => popover.classList.add('is-visible'));
+      }
+
+      function closePopover(force = false) {
+        if (pinned && !force) return;
+        pinned = false;
+        popover.classList.remove('is-visible');
+        trigger.setAttribute('aria-expanded', 'false');
+        backdrop.classList.remove('is-visible');
+        window.setTimeout(() => {
+          if (trigger.getAttribute('aria-expanded') === 'false') popover.hidden = true;
+        }, 130);
+      }
+
+      function scheduleClose() {
+        window.clearTimeout(closeTimer);
+        closeTimer = window.setTimeout(() => closePopover(), 120);
+      }
+
+      trigger.addEventListener('mouseenter', () => {
+        if (desktopMedia.matches) openPopover();
+      });
+      trigger.addEventListener('mouseleave', scheduleClose);
+      trigger.addEventListener('focus', () => openPopover());
+      trigger.addEventListener('blur', () => {
+        if (!popover.matches(':focus-within')) scheduleClose();
+      });
+      trigger.addEventListener('click', () => {
+        if (trigger.getAttribute('aria-expanded') === 'true' && pinned) {
+          closePopover(true);
+          return;
+        }
+        openPopover(true);
+      });
+
+      popover.addEventListener('mouseenter', () => window.clearTimeout(closeTimer));
+      popover.addEventListener('mouseleave', scheduleClose);
+      popover.addEventListener('focusout', () => {
+        if (!popover.matches(':focus-within') && document.activeElement !== trigger) scheduleClose();
+      });
+
+      closeButton.addEventListener('click', () => closePopover(true));
+      backdrop.addEventListener('click', () => closePopover(true));
+
+      document.addEventListener('pointerdown', (event) => {
+        if (!pinned || trigger.contains(event.target) || popover.contains(event.target)) return;
+        closePopover(true);
+      });
+      document.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape' || popover.hidden) return;
+        closePopover(true);
+        trigger.focus();
+      });
+
+      window.addEventListener('resize', positionPopover);
+      window.addEventListener('scroll', positionPopover, { passive: true });
+    </script>
+  </body>
+</html>
