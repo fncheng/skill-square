@@ -896,6 +896,10 @@
     @apply bg-emerald-50 text-emerald-700;
   }
 
+  .tag-article-type.is-model-response {
+    @apply bg-violet-100 text-violet-700;
+  }
+
   .tag-article-main {
     @apply grid min-w-0 gap-1.5;
   }

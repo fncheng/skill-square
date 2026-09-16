@@ -144,7 +144,7 @@ export interface ModelResponsePayload {
 
 export interface ModelResponseFilters { search: string; category: string; }
 
-export type ContentResourceType = 'SOLUTION' | 'NOTE';
+export type ContentResourceType = 'SOLUTION' | 'NOTE' | 'MODEL_RESPONSE';
 export type ContentTagScope = 'ALL' | ContentResourceType;
 
 export interface ContentTagCloudItem {

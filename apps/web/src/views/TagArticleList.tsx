@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft,
   ArrowUpRight,
+  BotMessageSquare,
   CalendarDays,
   FileText,
   NotebookPen,
@@ -13,11 +14,12 @@ import {
 } from 'lucide-react';
 import { getContentTagItems } from '@/api/content-tags';
 import { Button } from '@/components/ui/button';
+import { useAuthStore } from '@/stores/auth';
 import type { ContentTagItemsResponse, ContentTagScope } from '@/types/domain';
 import { formatShortDate } from '@/utils/date';
 
 const pageSize = 12;
-const scopeOptions: Array<{ value: ContentTagScope; label: string }> = [
+const publicScopeOptions: Array<{ value: ContentTagScope; label: string }> = [
   { value: 'ALL', label: '全部' },
   { value: 'SOLUTION', label: '解决方案' },
   { value: 'NOTE', label: '学习笔记' }
@@ -34,6 +36,23 @@ export function TagArticleList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const isAdmin = useAuthStore((state) => state.status === 'admin');
+  const scopeOptions = useMemo(
+    () =>
+      isAdmin
+        ? [...publicScopeOptions, { value: 'MODEL_RESPONSE' as const, label: '模型回答' }]
+        : publicScopeOptions,
+    [isAdmin]
+  );
+
+  useEffect(() => {
+    if (!isAdmin && scope === 'MODEL_RESPONSE') {
+      // 登录会话失效后立即清除私有列表，并恢复至访客可见范围。
+      setResponse(null);
+      setScope('ALL');
+      setPage(1);
+    }
+  }, [isAdmin, scope]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
@@ -107,7 +126,9 @@ export function TagArticleList() {
               <h1 className="page-title">{tag}</h1>
               <span className="tag-article-title-count">{response?.total ?? 0} 篇</span>
             </div>
-            <p className="page-subtitle">包含该标签的解决方案与学习笔记，按最近更新时间排列。</p>
+            <p className="page-subtitle">
+              包含该标签的解决方案与学习笔记{isAdmin ? '及模型回答' : ''}，按最近更新时间排列。
+            </p>
           </div>
         </div>
       </div>
@@ -184,15 +205,32 @@ export function TagArticleList() {
         {!loading && !error
           ? response?.items.map((item) => {
               const isSolution = item.resourceType === 'SOLUTION';
+              const isModelResponse = item.resourceType === 'MODEL_RESPONSE';
               return (
                 <Link
                   key={`${item.resourceType}-${item.id}`}
                   className="tag-article-row"
-                  to={isSolution ? `/solutions/${item.id}` : `/notes/${item.id}`}
+                  to={
+                    isSolution
+                      ? `/solutions/${item.id}`
+                      : isModelResponse
+                        ? `/model-responses/${item.id}`
+                        : `/notes/${item.id}`
+                  }
                 >
-                  <span className={`tag-article-type ${isSolution ? 'is-solution' : 'is-note'}`}>
-                    {isSolution ? <FileText className="h-4 w-4" /> : <NotebookPen className="h-4 w-4" />}
-                    {isSolution ? '解决方案' : '学习笔记'}
+                  <span
+                    className={`tag-article-type ${
+                      isSolution ? 'is-solution' : isModelResponse ? 'is-model-response' : 'is-note'
+                    }`}
+                  >
+                    {isSolution ? (
+                      <FileText className="h-4 w-4" />
+                    ) : isModelResponse ? (
+                      <BotMessageSquare className="h-4 w-4" />
+                    ) : (
+                      <NotebookPen className="h-4 w-4" />
+                    )}
+                    {isSolution ? '解决方案' : isModelResponse ? '模型回答' : '学习笔记'}
                   </span>
 
                   <span className="tag-article-main">

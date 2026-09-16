@@ -57,14 +57,17 @@ export class ContentTagsService {
     };
   }
 
-  async findItems(query: ContentTagItemsQueryDto): Promise<ContentTagItemsResponseDto> {
+  async findItems(
+    query: ContentTagItemsQueryDto,
+    includeModelResponses: boolean
+  ): Promise<ContentTagItemsResponseDto> {
     const targetTag = this.normalizeTag(query.tag);
     const keyword = query.search?.trim().toLocaleLowerCase('zh-CN') ?? '';
     const resourceType = query.resourceType ?? ContentTagScope.ALL;
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 10;
     const offset = (page - 1) * pageSize;
-    const entries = this.buildEntriesQuery(resourceType, targetTag, keyword);
+    const entries = this.buildEntriesQuery(resourceType, targetTag, keyword, includeModelResponses);
 
     const [items, countRows] = await Promise.all([
       this.prisma.$queryRaw<ContentTagDatabaseRow[]>(Prisma.sql`
@@ -96,19 +99,33 @@ export class ContentTagsService {
     };
   }
 
-  private buildEntriesQuery(resourceType: ContentTagScope, targetTag: string, keyword: string) {
+  private buildEntriesQuery(
+    resourceType: ContentTagScope,
+    targetTag: string,
+    keyword: string,
+    includeModelResponses: boolean
+  ) {
     if (resourceType === ContentTagScope.SOLUTION) {
       return this.buildSolutionQuery(targetTag, keyword);
     }
     if (resourceType === ContentTagScope.NOTE) {
       return this.buildNoteQuery(targetTag, keyword);
     }
+    if (resourceType === ContentTagScope.MODEL_RESPONSE) {
+      return includeModelResponses
+        ? this.buildModelResponseQuery(targetTag, keyword)
+        : this.buildEmptyEntriesQuery();
+    }
 
-    return Prisma.sql`
+    const publicEntries = Prisma.sql`
       ${this.buildSolutionQuery(targetTag, keyword)}
       UNION ALL
       ${this.buildNoteQuery(targetTag, keyword)}
     `;
+
+    return includeModelResponses
+      ? Prisma.sql`${publicEntries} UNION ALL ${this.buildModelResponseQuery(targetTag, keyword)}`
+      : publicEntries;
   }
 
   private buildSolutionQuery(targetTag: string, keyword: string) {
@@ -140,6 +157,39 @@ export class ContentTagsService {
         resource."updatedAt"
       FROM "notes" AS resource
       WHERE ${this.buildWhereQuery(targetTag, keyword)}
+    `;
+  }
+
+  private buildModelResponseQuery(targetTag: string, keyword: string) {
+    return Prisma.sql`
+      SELECT
+        resource."id",
+        resource."title",
+        resource."summary",
+        resource."category",
+        resource."tags",
+        'MODEL_RESPONSE'::text AS "resourceType",
+        resource."createdAt",
+        resource."updatedAt"
+      FROM "model_responses" AS resource
+      WHERE ${this.buildWhereQuery(targetTag, keyword)}
+    `;
+  }
+
+  /** 为访客显式传入私有范围时返回空集，避免暴露私有资源是否存在。 */
+  private buildEmptyEntriesQuery() {
+    return Prisma.sql`
+      SELECT
+        resource."id",
+        resource."title",
+        resource."summary",
+        resource."category",
+        resource."tags",
+        'MODEL_RESPONSE'::text AS "resourceType",
+        resource."createdAt",
+        resource."updatedAt"
+      FROM "model_responses" AS resource
+      WHERE FALSE
     `;
   }
 

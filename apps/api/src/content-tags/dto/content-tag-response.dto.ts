@@ -3,12 +3,14 @@ import { ApiProperty } from '@nestjs/swagger';
 export enum ContentTagScope {
   ALL = 'ALL',
   SOLUTION = 'SOLUTION',
-  NOTE = 'NOTE'
+  NOTE = 'NOTE',
+  MODEL_RESPONSE = 'MODEL_RESPONSE'
 }
 
 export enum ContentTagResourceType {
   SOLUTION = 'SOLUTION',
-  NOTE = 'NOTE'
+  NOTE = 'NOTE',
+  MODEL_RESPONSE = 'MODEL_RESPONSE'
 }
 
 export class ContentTagCloudItemDto {

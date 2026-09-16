@@ -6,7 +6,7 @@ import {
   MarkdownAnnotationSurface,
   type MarkdownAnnotationSurfaceHandle
 } from '@/components/markdown/MarkdownAnnotationSurface';
-import { Badge } from '@/components/ui/badge';
+import { ContentTagLink } from '@/components/content/ContentTagLink';
 import { Button } from '@/components/ui/button';
 import { useConfirm } from '@/hooks/use-confirm';
 import { useToast } from '@/hooks/use-toast';
@@ -174,9 +174,7 @@ export function SolutionDetail() {
                 <span className="meta-label">标签</span>
                 <div className="tag-list">
                   {solution.tags.map((tag) => (
-                    <Badge key={tag} variant="secondary">
-                      {tag}
-                    </Badge>
+                    <ContentTagLink key={tag} tag={tag} />
                   ))}
                   {solution.tags.length === 0 ? <span className="meta-value">无标签</span> : null}
                 </div>

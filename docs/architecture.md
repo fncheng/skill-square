@@ -32,7 +32,7 @@ Prompt Skill Manager 用于管理 AI Prompt、Agent Workflow、Skill、Cursor Ru
 - `prompts`：Prompt CRUD、搜索、收藏、版本历史、回滚。
 - `categories`：分类 CRUD。
 - `tags`：标签 CRUD。
-- `content-tags`：聚合解决方案与学习笔记的字符串标签，并提供轻量词云统计与标签内容分页查询。
+- `content-tags`：聚合解决方案与学习笔记的字符串标签，并提供轻量词云统计与标签内容分页查询；分页查询在服务端确认管理员会话后额外纳入私有模型回答。
 - `annotations`：学习笔记、解决方案与模型回答的单人 Markdown 批注 CRUD、资源校验和文本锚点持久化。
 - `model-responses`：仅管理员可见的模型回答 CRUD、溯源字段、导入导出和批注关联；全部读取由专用管理员 Guard 保护。
 - `ui-prototypes`：单文件 HTML 原型 CRUD、筛选和源码大小校验。
