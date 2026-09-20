@@ -38,11 +38,11 @@ ghcr.io/fncheng/prompt-skill-manager-web
 
 当前触发规则如下：
 
-- 任意分支 `push`：构建 API 和 Web 镜像，用于验证 Dockerfile。
-- Pull Request：构建 API 和 Web 镜像，但不推送到 GHCR。
-- 默认分支 `push`：构建并推送分支标签、Commit SHA 标签和 `latest`。
-- 推送 `v*` Git 标签：构建并推送语义化版本标签。
-- 手动运行：只有选择默认分支或版本标签时才会推送镜像。
+- 只有推送名称匹配 `v*` 的 Git Tag 才会构建 API 和 Web 镜像，并推送到 GHCR。
+- 任意分支 `push`、Pull Request 和手动运行工作流均不会构建或推送镜像。
+- 应使用 `v<major>.<minor>.<patch>` 格式的语义化版本 Tag，例如 `v0.1.0`。
+
+仅 Tag 构建的具体实现、镜像标签规则和复用配置步骤见 [GitHub Actions：仅通过 Tag 构建并发布 GHCR 镜像](./github-actions-ghcr-tag-release.md)。
 
 工作流通过仓库自动生成的 `GITHUB_TOKEN` 登录 GHCR，不需要为 GitHub Actions 额外配置 Personal access token。Job 已声明：
 
@@ -72,15 +72,15 @@ linux/amd64
 git status
 ```
 
-将准备发布的改动提交并推送到默认分支。当前仓库默认分支是 `refactor/shadcn-react`：
+将准备发布的改动提交并推送到目标分支：
 
 ```bash
 git add <需要发布的文件>
 git commit -m "<本次提交信息>"
-git push origin refactor/shadcn-react
+git push origin <目标分支>
 ```
 
-进入 GitHub 仓库的 `Actions` 页面，确认 `Build API image` 和 `Build Web image` 均执行成功。
+普通分支推送不会触发 Docker 镜像构建。完成代码审查和其他必要验证后，再创建版本 Tag。
 
 ### 2. 创建版本标签
 
@@ -98,7 +98,7 @@ ghcr.io/fncheng/prompt-skill-manager-api:0.1.0
 ghcr.io/fncheng/prompt-skill-manager-web:0.1.0
 ```
 
-不要在默认分支构建尚未成功时创建版本标签，也不要将版本标签指向未经验证的临时分支提交。
+不要将版本标签指向未经验证的临时分支提交。
 
 ### 3. 确认镜像已经发布
 
@@ -372,7 +372,7 @@ sudo ufw enable
 
 ### 1. 发布镜像
 
-在本地将代码提交并推送到默认分支，等待默认分支 GitHub Actions 成功，然后创建版本标签：
+在本地将代码提交并推送到目标分支，完成代码审查和其他必要验证后，再创建版本标签：
 
 ```bash
 git tag -a v0.1.1 -m "release: v0.1.1"

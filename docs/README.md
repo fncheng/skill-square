@@ -2,7 +2,7 @@
 type: index
 status: active
 created: 2026-08-27
-updated: 2026-08-27
+updated: 2026-09-17
 related: []
 ---
 
@@ -16,6 +16,7 @@ related: []
 - `api/`：RESTful API 的接口、数据结构、认证和错误响应说明。
 - `architecture.md`：系统分层、模块边界、数据一致性和部署架构。
 - `docker-ghcr-deployment.md`、`docker-image-deployment.md`：在线和离线容器部署说明。
+- `github-actions-ghcr-tag-release.md`：仅通过版本 Tag 构建并发布 GHCR 镜像的工作流机制。
 - `_templates/`：Feature、需求、设计、原型、Bug 和 Investigation 文档模板。
 
 项目级历史决策、废弃方案和长期踩坑记录继续按仓库规则维护在 `docs/decisions.md`；仅在存在经过确认的内容时创建该文件。Bug、Investigation 或其他可选目录也只在产生真实记录时创建。
@@ -36,6 +37,7 @@ related: []
 - [架构设计](./architecture.md)
 - [API 文档索引](./api/README.md)
 - [Docker GHCR 在线部署指南](./docker-ghcr-deployment.md)
+- [GitHub Actions 仅 Tag 发布 GHCR 镜像](./github-actions-ghcr-tag-release.md)
 - [Docker 镜像离线部署指南](./docker-image-deployment.md)
 
 ## 受管理文档规范
