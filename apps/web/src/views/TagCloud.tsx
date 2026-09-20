@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileText, NotebookPen, RefreshCw, Search, Tags, X } from 'lucide-react';
+import { BookOpenText, FileText, NotebookPen, RefreshCw, Search, Tags, X } from 'lucide-react';
 import { getContentTagCloud } from '@/api/content-tags';
 import { Button } from '@/components/ui/button';
 import type { ContentTagCloudItem, ContentTagCloudResponse, ContentTagScope } from '@/types/domain';
@@ -8,7 +8,8 @@ import type { ContentTagCloudItem, ContentTagCloudResponse, ContentTagScope } fr
 const scopeOptions: Array<{ value: ContentTagScope; label: string }> = [
   { value: 'ALL', label: '全部内容' },
   { value: 'SOLUTION', label: '解决方案' },
-  { value: 'NOTE', label: '学习笔记' }
+  { value: 'NOTE', label: '学习笔记' },
+  { value: 'MISCELLANY', label: '杂谈' }
 ];
 
 function getScopedCount(item: ContentTagCloudItem, scope: ContentTagScope) {
@@ -17,6 +18,9 @@ function getScopedCount(item: ContentTagCloudItem, scope: ContentTagScope) {
   }
   if (scope === 'NOTE') {
     return item.noteCount;
+  }
+  if (scope === 'MISCELLANY') {
+    return item.miscellanyCount;
   }
   return item.total;
 }
@@ -93,7 +97,9 @@ export function TagCloud() {
       ? cloud?.taggedSolutionCount ?? 0
       : scope === 'NOTE'
         ? cloud?.taggedNoteCount ?? 0
-        : (cloud?.taggedSolutionCount ?? 0) + (cloud?.taggedNoteCount ?? 0);
+        : scope === 'MISCELLANY'
+          ? cloud?.taggedMiscellanyCount ?? 0
+          : (cloud?.taggedSolutionCount ?? 0) + (cloud?.taggedNoteCount ?? 0) + (cloud?.taggedMiscellanyCount ?? 0);
 
   return (
     <section className="tag-cloud-page">
@@ -104,7 +110,7 @@ export function TagCloud() {
           </span>
           <div>
             <h1 className="page-title">标签词云</h1>
-            <p className="page-subtitle">按使用频率浏览解决方案与学习笔记，点击标签查看相关内容。</p>
+            <p className="page-subtitle">按使用频率浏览解决方案、学习笔记与杂谈，点击标签查看相关内容。</p>
           </div>
         </div>
       </div>
@@ -199,7 +205,7 @@ export function TagCloud() {
 
         {!loading && !error && visibleTags.length === 0 ? (
           <div className="tag-cloud-state">
-            {scope === 'NOTE' ? <NotebookPen className="h-8 w-8" /> : <FileText className="h-8 w-8" />}
+            {scope === 'NOTE' ? <NotebookPen className="h-8 w-8" /> : scope === 'MISCELLANY' ? <BookOpenText className="h-8 w-8" /> : <FileText className="h-8 w-8" />}
             <strong>{search ? '没有匹配的标签' : '当前范围暂无标签'}</strong>
             <span>{search ? '请尝试缩短关键词或切换内容类型。' : '为内容添加标签后会自动出现在这里。'}</span>
           </div>

@@ -3,7 +3,7 @@ import { Request } from 'express';
 import { AuthService } from '../../auth/auth.service';
 import { AnnotationResourceTypeDto } from '../dto/annotation-resource-type';
 
-/** 仅在批注目标为私有模型回答时校验管理员，保持笔记与解决方案的公开读取行为。 */
+/** 仅在批注目标为私有模型回答时校验管理员，保持公开 Markdown 内容的读取行为。 */
 @Injectable()
 export class ModelResponseAnnotationGuard implements CanActivate {
   constructor(private readonly authService: AuthService) {}

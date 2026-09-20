@@ -16,7 +16,7 @@ export class ContentTagsController {
   ) {}
 
   @Get()
-  @ApiOperation({ summary: '获取解决方案与学习笔记的标签词云数据' })
+  @ApiOperation({ summary: '获取解决方案、学习笔记与杂谈的标签词云数据' })
   @ApiOkResponse({ type: ContentTagCloudResponseDto })
   findCloud() {
     return this.contentTagsService.findCloud();

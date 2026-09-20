@@ -112,6 +112,22 @@ model Note {
   @@map("notes")
 }
 
+model Miscellany {
+  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title       String       @db.VarChar(200)
+  summary     String       @default("") @db.VarChar(500)
+  content     String       @db.Text
+  category    String       @default("") @db.VarChar(80)
+  tags        String[]     @default([])
+  annotations Annotation[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @default(now()) @updatedAt
+
+  @@index([title])
+  @@index([category])
+  @@map("miscellanies")
+}
+
 model ModelResponse {
   id            String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   title         String       @db.VarChar(200)
@@ -150,6 +166,7 @@ model UiPrototype {
 enum AnnotationResourceType {
   NOTE
   SOLUTION
+  MISCELLANY
   MODEL_RESPONSE
 }
 
@@ -160,6 +177,8 @@ model Annotation {
   note              Note?                  @relation(fields: [noteId], references: [id], onDelete: Cascade)
   solutionId        String?                @db.Uuid
   solution          Solution?              @relation(fields: [solutionId], references: [id], onDelete: Cascade)
+  miscellanyId      String?                @db.Uuid
+  miscellany        Miscellany?            @relation(fields: [miscellanyId], references: [id], onDelete: Cascade)
   modelResponseId   String?                @db.Uuid
   modelResponse     ModelResponse?         @relation(fields: [modelResponseId], references: [id], onDelete: Cascade)
   content           String                 @db.Text
@@ -174,6 +193,7 @@ model Annotation {
 
   @@index([noteId])
   @@index([solutionId])
+  @@index([miscellanyId])
   @@index([modelResponseId])
   @@index([resourceType, createdAt])
   @@map("annotations")

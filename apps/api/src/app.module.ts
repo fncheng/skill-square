@@ -8,6 +8,7 @@ import { CategoriesModule } from './categories/categories.module';
 import { ContentTagsModule } from './content-tags/content-tags.module';
 import { NotesModule } from './notes/notes.module';
 import { ModelResponsesModule } from './model-responses/model-responses.module';
+import { MiscellaniesModule } from './miscellanies/miscellanies.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { PromptsModule } from './prompts/prompts.module';
 import { SearchModule } from './search/search.module';
@@ -26,6 +27,7 @@ import { UiPrototypesModule } from './ui-prototypes/ui-prototypes.module';
     ContentTagsModule,
     SolutionsModule,
     NotesModule,
+    MiscellaniesModule,
     ModelResponsesModule,
     AnnotationsModule,
     UiPrototypesModule,

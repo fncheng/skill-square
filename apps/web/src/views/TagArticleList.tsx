@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   ArrowUpRight,
   BotMessageSquare,
+  BookOpenText,
   CalendarDays,
   FileText,
   NotebookPen,
@@ -22,7 +23,8 @@ const pageSize = 12;
 const publicScopeOptions: Array<{ value: ContentTagScope; label: string }> = [
   { value: 'ALL', label: '全部' },
   { value: 'SOLUTION', label: '解决方案' },
-  { value: 'NOTE', label: '学习笔记' }
+  { value: 'NOTE', label: '学习笔记' },
+  { value: 'MISCELLANY', label: '杂谈' }
 ];
 
 export function TagArticleList() {
@@ -127,7 +129,7 @@ export function TagArticleList() {
               <span className="tag-article-title-count">{response?.total ?? 0} 篇</span>
             </div>
             <p className="page-subtitle">
-              包含该标签的解决方案与学习笔记{isAdmin ? '及模型回答' : ''}，按最近更新时间排列。
+              包含该标签的解决方案、学习笔记与杂谈{isAdmin ? '及模型回答' : ''}，按最近更新时间排列。
             </p>
           </div>
         </div>
@@ -205,6 +207,7 @@ export function TagArticleList() {
         {!loading && !error
           ? response?.items.map((item) => {
               const isSolution = item.resourceType === 'SOLUTION';
+              const isMiscellany = item.resourceType === 'MISCELLANY';
               const isModelResponse = item.resourceType === 'MODEL_RESPONSE';
               return (
                 <Link
@@ -215,22 +218,26 @@ export function TagArticleList() {
                       ? `/solutions/${item.id}`
                       : isModelResponse
                         ? `/model-responses/${item.id}`
-                        : `/notes/${item.id}`
+                        : isMiscellany
+                          ? `/miscellanies/${item.id}`
+                          : `/notes/${item.id}`
                   }
                 >
                   <span
                     className={`tag-article-type ${
-                      isSolution ? 'is-solution' : isModelResponse ? 'is-model-response' : 'is-note'
+                      isSolution ? 'is-solution' : isModelResponse ? 'is-model-response' : isMiscellany ? 'is-miscellany' : 'is-note'
                     }`}
                   >
                     {isSolution ? (
                       <FileText className="h-4 w-4" />
                     ) : isModelResponse ? (
                       <BotMessageSquare className="h-4 w-4" />
+                    ) : isMiscellany ? (
+                      <BookOpenText className="h-4 w-4" />
                     ) : (
                       <NotebookPen className="h-4 w-4" />
                     )}
-                    {isSolution ? '解决方案' : isModelResponse ? '模型回答' : '学习笔记'}
+                    {isSolution ? '解决方案' : isModelResponse ? '模型回答' : isMiscellany ? '杂谈' : '学习笔记'}
                   </span>
 
                   <span className="tag-article-main">

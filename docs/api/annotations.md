@@ -1,6 +1,6 @@
 # Markdown 批注接口
 
-批注用于给学习笔记、解决方案或模型回答中的一段原文补充 Markdown 内容。批注与正文分别保存，不会修改原始 Markdown。
+批注用于给学习笔记、解决方案、杂谈或模型回答中的一段原文补充 Markdown 内容。批注与正文分别保存，不会修改原始 Markdown。
 
 ## 文本锚点
 
@@ -19,8 +19,8 @@
 
 | 参数 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
-| `resourceType` | `NOTE \| SOLUTION \| MODEL_RESPONSE` | 是 | 文档类型；`MODEL_RESPONSE` 必须有管理员会话 |
-| `resourceId` | `string` | 是 | 笔记或解决方案 UUID |
+| `resourceType` | `NOTE \| SOLUTION \| MISCELLANY \| MODEL_RESPONSE` | 是 | 文档类型；`MODEL_RESPONSE` 必须有管理员会话 |
+| `resourceId` | `string` | 是 | Markdown 内容 UUID |
 
 ### 示例请求
 
@@ -36,7 +36,7 @@ GET /api/annotations?resourceType=NOTE&resourceId=8f2a9c44-1d6e-4b0a-9b2f-5c0c1a
 
 | 字段 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
-| `resourceType` | `NOTE \| SOLUTION` | 是 | 文档类型 |
+| `resourceType` | `NOTE \| SOLUTION \| MISCELLANY \| MODEL_RESPONSE` | 是 | 文档类型；模型回答需管理员会话 |
 | `resourceId` | `string` | 是 | 文档 UUID |
 | `content` | `string` | 是 | Markdown 批注内容，最大长度 `50000` |
 | `exact` | `string` | 是 | 被批注原文，长度 `1-500` |
@@ -72,4 +72,4 @@ GET /api/annotations?resourceType=NOTE&resourceId=8f2a9c44-1d6e-4b0a-9b2f-5c0c1a
 
 删除批注，状态码为 `204 No Content`。删除操作不会修改关联的 Markdown 正文。
 
-删除笔记、解决方案或模型回答时，其批注会由数据库外键级联删除。模型回答相关的读取与写入均要求管理员会话。
+删除笔记、解决方案、杂谈或模型回答时，其批注会由数据库外键级联删除。模型回答相关的读取与写入均要求管理员会话。

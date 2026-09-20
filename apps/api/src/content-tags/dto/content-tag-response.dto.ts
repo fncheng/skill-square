@@ -4,12 +4,14 @@ export enum ContentTagScope {
   ALL = 'ALL',
   SOLUTION = 'SOLUTION',
   NOTE = 'NOTE',
+  MISCELLANY = 'MISCELLANY',
   MODEL_RESPONSE = 'MODEL_RESPONSE'
 }
 
 export enum ContentTagResourceType {
   SOLUTION = 'SOLUTION',
   NOTE = 'NOTE',
+  MISCELLANY = 'MISCELLANY',
   MODEL_RESPONSE = 'MODEL_RESPONSE'
 }
 
@@ -25,6 +27,9 @@ export class ContentTagCloudItemDto {
 
   @ApiProperty()
   noteCount: number;
+
+  @ApiProperty()
+  miscellanyCount: number;
 }
 
 export class ContentTagCloudResponseDto {
@@ -39,6 +44,9 @@ export class ContentTagCloudResponseDto {
 
   @ApiProperty()
   taggedNoteCount: number;
+
+  @ApiProperty()
+  taggedMiscellanyCount: number;
 }
 
 export class ContentTagItemDto {

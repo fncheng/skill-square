@@ -14,6 +14,7 @@ interface TagAccumulator {
   total: number;
   solutionCount: number;
   noteCount: number;
+  miscellanyCount: number;
 }
 
 interface ContentTagDatabaseRow {
@@ -36,14 +37,16 @@ export class ContentTagsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findCloud(): Promise<ContentTagCloudResponseDto> {
-    const [solutions, notes] = await Promise.all([
+    const [solutions, notes, miscellanies] = await Promise.all([
       this.prisma.solution.findMany({ select: { tags: true } }),
-      this.prisma.note.findMany({ select: { tags: true } })
+      this.prisma.note.findMany({ select: { tags: true } }),
+      this.prisma.miscellany.findMany({ select: { tags: true } })
     ]);
     const tags = new Map<string, TagAccumulator>();
 
     solutions.forEach((item) => this.addResourceTags(tags, item.tags, ContentTagResourceType.SOLUTION));
     notes.forEach((item) => this.addResourceTags(tags, item.tags, ContentTagResourceType.NOTE));
+    miscellanies.forEach((item) => this.addResourceTags(tags, item.tags, ContentTagResourceType.MISCELLANY));
 
     const items = Array.from(tags.values()).sort(
       (left, right) => right.total - left.total || left.name.localeCompare(right.name, 'zh-CN')
@@ -53,7 +56,8 @@ export class ContentTagsService {
       items,
       totalTags: items.length,
       taggedSolutionCount: solutions.filter((item) => item.tags.length > 0).length,
-      taggedNoteCount: notes.filter((item) => item.tags.length > 0).length
+      taggedNoteCount: notes.filter((item) => item.tags.length > 0).length,
+      taggedMiscellanyCount: miscellanies.filter((item) => item.tags.length > 0).length
     };
   }
 
@@ -111,6 +115,9 @@ export class ContentTagsService {
     if (resourceType === ContentTagScope.NOTE) {
       return this.buildNoteQuery(targetTag, keyword);
     }
+    if (resourceType === ContentTagScope.MISCELLANY) {
+      return this.buildMiscellanyQuery(targetTag, keyword);
+    }
     if (resourceType === ContentTagScope.MODEL_RESPONSE) {
       return includeModelResponses
         ? this.buildModelResponseQuery(targetTag, keyword)
@@ -121,6 +128,8 @@ export class ContentTagsService {
       ${this.buildSolutionQuery(targetTag, keyword)}
       UNION ALL
       ${this.buildNoteQuery(targetTag, keyword)}
+      UNION ALL
+      ${this.buildMiscellanyQuery(targetTag, keyword)}
     `;
 
     return includeModelResponses
@@ -176,6 +185,22 @@ export class ContentTagsService {
     `;
   }
 
+  private buildMiscellanyQuery(targetTag: string, keyword: string) {
+    return Prisma.sql`
+      SELECT
+        resource."id",
+        resource."title",
+        resource."summary",
+        resource."category",
+        resource."tags",
+        'MISCELLANY'::text AS "resourceType",
+        resource."createdAt",
+        resource."updatedAt"
+      FROM "miscellanies" AS resource
+      WHERE ${this.buildWhereQuery(targetTag, keyword)}
+    `;
+  }
+
   /** 为访客显式传入私有范围时返回空集，避免暴露私有资源是否存在。 */
   private buildEmptyEntriesQuery() {
     return Prisma.sql`
@@ -225,7 +250,7 @@ export class ContentTagsService {
   private addResourceTags(
     accumulator: Map<string, TagAccumulator>,
     resourceTags: string[],
-    resourceType: ContentTagResourceType.SOLUTION | ContentTagResourceType.NOTE
+    resourceType: ContentTagResourceType.SOLUTION | ContentTagResourceType.NOTE | ContentTagResourceType.MISCELLANY
   ) {
     const uniqueTags = new Map<string, string>();
     resourceTags.forEach((tag) => {
@@ -240,13 +265,16 @@ export class ContentTagsService {
         name,
         total: 0,
         solutionCount: 0,
-        noteCount: 0
+        noteCount: 0,
+        miscellanyCount: 0
       };
       current.total += 1;
       if (resourceType === ContentTagResourceType.SOLUTION) {
         current.solutionCount += 1;
-      } else {
+      } else if (resourceType === ContentTagResourceType.NOTE) {
         current.noteCount += 1;
+      } else {
+        current.miscellanyCount += 1;
       }
       accumulator.set(key, current);
     });

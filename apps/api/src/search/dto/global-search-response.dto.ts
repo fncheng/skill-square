@@ -4,6 +4,7 @@ export enum GlobalSearchResourceType {
   PROMPT = 'PROMPT',
   SOLUTION = 'SOLUTION',
   NOTE = 'NOTE',
+  MISCELLANY = 'MISCELLANY',
   UI_PROTOTYPE = 'UI_PROTOTYPE',
   MODEL_RESPONSE = 'MODEL_RESPONSE'
 }

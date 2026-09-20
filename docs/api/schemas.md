@@ -200,6 +200,39 @@ interface CreateNoteRequest {
 
 `UpdateNoteRequest` 与 `CreateNoteRequest` 字段一致，但所有字段均可选；传入 `tags` 时，去除首尾空白并去重后至少包含一项。
 
+## Miscellany
+
+```ts
+interface Miscellany {
+  id: string;
+  title: string;
+  summary: string;
+  content: string;
+  category: string;
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+杂谈与学习笔记具有相同的 Markdown、分类和字符串标签字段，但作为独立资源维护，并通过 `MISCELLANY` 表示批注和导入导出类型。
+
+## CreateMiscellanyRequest
+
+```ts
+interface CreateMiscellanyRequest {
+  title: string;
+  summary?: string;
+  content: string;
+  category?: string;
+  tags: string[];
+}
+```
+
+## UpdateMiscellanyRequest
+
+`UpdateMiscellanyRequest` 与 `CreateMiscellanyRequest` 字段一致，但所有字段均可选；传入 `tags` 时至少包含一项。
+
 ## ModelResponse
 
 ```ts
@@ -290,7 +323,7 @@ interface CreateUiPrototypeRequest {
 ## Annotation
 
 ```ts
-type AnnotationResourceType = 'NOTE' | 'SOLUTION' | 'MODEL_RESPONSE';
+type AnnotationResourceType = 'NOTE' | 'SOLUTION' | 'MISCELLANY' | 'MODEL_RESPONSE';
 
 interface Annotation {
   id: string;
@@ -359,7 +392,7 @@ interface CreateTagRequest {
 interface ContentTransferFile {
   format: 'prompt-skill-manager-transfer';
   version: 1 | 2;
-  resourceType: 'NOTE' | 'SOLUTION' | 'MODEL_RESPONSE';
+  resourceType: 'NOTE' | 'SOLUTION' | 'MISCELLANY' | 'MODEL_RESPONSE';
   exportedAt: string;
   resource: {
     title: string;
@@ -398,10 +431,12 @@ interface ContentTagCloudResponse {
     total: number;
     solutionCount: number;
     noteCount: number;
+    miscellanyCount: number;
   }>;
   totalTags: number;
   taggedSolutionCount: number;
   taggedNoteCount: number;
+  taggedMiscellanyCount: number;
 }
 ```
 
@@ -415,7 +450,7 @@ interface ContentTagItemsResponse {
     summary: string;
     category: string;
     tags: string[];
-    resourceType: 'SOLUTION' | 'NOTE';
+    resourceType: 'SOLUTION' | 'NOTE' | 'MISCELLANY' | 'MODEL_RESPONSE';
     createdAt: string;
     updatedAt: string;
   }>;

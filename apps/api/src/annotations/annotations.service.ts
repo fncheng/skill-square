@@ -30,6 +30,7 @@ export class AnnotationsService {
         resourceType: dto.resourceType as AnnotationResourceType,
         noteId: dto.resourceType === AnnotationResourceTypeDto.NOTE ? dto.resourceId : null,
         solutionId: dto.resourceType === AnnotationResourceTypeDto.SOLUTION ? dto.resourceId : null,
+        miscellanyId: dto.resourceType === AnnotationResourceTypeDto.MISCELLANY ? dto.resourceId : null,
         modelResponseId: dto.resourceType === AnnotationResourceTypeDto.MODEL_RESPONSE ? dto.resourceId : null,
         content: dto.content,
         exact: dto.exact,
@@ -88,11 +89,19 @@ export class AnnotationsService {
       ? await this.prisma.note.findUnique({ where: { id: resourceId }, select: { id: true } })
       : resourceType === AnnotationResourceTypeDto.SOLUTION
         ? await this.prisma.solution.findUnique({ where: { id: resourceId }, select: { id: true } })
-        : await this.prisma.modelResponse.findUnique({ where: { id: resourceId }, select: { id: true } });
+        : resourceType === AnnotationResourceTypeDto.MISCELLANY
+          ? await this.prisma.miscellany.findUnique({ where: { id: resourceId }, select: { id: true } })
+          : await this.prisma.modelResponse.findUnique({ where: { id: resourceId }, select: { id: true } });
 
     if (!resource) {
       throw new NotFoundException(
-        resourceType === AnnotationResourceTypeDto.NOTE ? '笔记不存在。' : resourceType === AnnotationResourceTypeDto.SOLUTION ? '解决方案不存在。' : '模型回答不存在。'
+        resourceType === AnnotationResourceTypeDto.NOTE
+          ? '笔记不存在。'
+          : resourceType === AnnotationResourceTypeDto.SOLUTION
+            ? '解决方案不存在。'
+            : resourceType === AnnotationResourceTypeDto.MISCELLANY
+              ? '杂谈不存在。'
+              : '模型回答不存在。'
       );
     }
   }
@@ -103,6 +112,7 @@ export class AnnotationsService {
   ): Prisma.AnnotationWhereInput {
     if (resourceType === AnnotationResourceTypeDto.NOTE) return { resourceType: AnnotationResourceType.NOTE, noteId: resourceId };
     if (resourceType === AnnotationResourceTypeDto.SOLUTION) return { resourceType: AnnotationResourceType.SOLUTION, solutionId: resourceId };
+    if (resourceType === AnnotationResourceTypeDto.MISCELLANY) return { resourceType: AnnotationResourceType.MISCELLANY, miscellanyId: resourceId };
     return { resourceType: AnnotationResourceType.MODEL_RESPONSE, modelResponseId: resourceId };
   }
 
@@ -120,7 +130,7 @@ export class AnnotationsService {
     return {
       id: annotation.id,
       resourceType: annotation.resourceType,
-      resourceId: annotation.noteId ?? annotation.solutionId ?? annotation.modelResponseId!,
+      resourceId: annotation.noteId ?? annotation.solutionId ?? annotation.miscellanyId ?? annotation.modelResponseId!,
       content: annotation.content,
       exact: annotation.exact,
       prefix: annotation.prefix,

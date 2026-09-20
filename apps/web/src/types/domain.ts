@@ -116,6 +116,30 @@ export interface NoteFilters {
   category: string;
 }
 
+export interface Miscellany {
+  id: string;
+  title: string;
+  summary: string;
+  content: string;
+  category: string;
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MiscellanyPayload {
+  title: string;
+  summary: string;
+  content: string;
+  category: string;
+  tags: string[];
+}
+
+export interface MiscellanyFilters {
+  search: string;
+  category: string;
+}
+
 export interface ModelResponse {
   id: string;
   title: string;
@@ -144,7 +168,7 @@ export interface ModelResponsePayload {
 
 export interface ModelResponseFilters { search: string; category: string; }
 
-export type ContentResourceType = 'SOLUTION' | 'NOTE' | 'MODEL_RESPONSE';
+export type ContentResourceType = 'SOLUTION' | 'NOTE' | 'MISCELLANY' | 'MODEL_RESPONSE';
 export type ContentTagScope = 'ALL' | ContentResourceType;
 
 export interface ContentTagCloudItem {
@@ -152,6 +176,7 @@ export interface ContentTagCloudItem {
   total: number;
   solutionCount: number;
   noteCount: number;
+  miscellanyCount: number;
 }
 
 export interface ContentTagCloudResponse {
@@ -159,6 +184,7 @@ export interface ContentTagCloudResponse {
   totalTags: number;
   taggedSolutionCount: number;
   taggedNoteCount: number;
+  taggedMiscellanyCount: number;
 }
 
 export interface ContentTagItem {
@@ -205,7 +231,7 @@ export interface UiPrototypeFilters {
   category: string;
 }
 
-export type GlobalSearchResourceType = 'PROMPT' | 'SOLUTION' | 'NOTE' | 'UI_PROTOTYPE' | 'MODEL_RESPONSE';
+export type GlobalSearchResourceType = 'PROMPT' | 'SOLUTION' | 'NOTE' | 'MISCELLANY' | 'UI_PROTOTYPE' | 'MODEL_RESPONSE';
 
 export interface GlobalSearchItem {
   id: string;
@@ -218,7 +244,7 @@ export interface GlobalSearchResponse {
   items: GlobalSearchItem[];
 }
 
-export type AnnotationResourceType = 'NOTE' | 'SOLUTION' | 'MODEL_RESPONSE';
+export type AnnotationResourceType = 'NOTE' | 'SOLUTION' | 'MISCELLANY' | 'MODEL_RESPONSE';
 
 export interface AnnotationAnchor {
   exact: string;

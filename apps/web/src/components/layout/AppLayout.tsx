@@ -8,6 +8,7 @@ import {
   Folder,
   House,
   Lightbulb,
+  BookOpenText,
   LogIn,
   LogOut,
   type LucideProps,
@@ -26,7 +27,7 @@ import { GlobalSearch } from './GlobalSearch';
 type IconComponent = ComponentType<LucideProps>;
 
 interface PrimaryNavItem {
-  key: 'prompts' | 'favorites' | 'solutions' | 'notes' | 'tagCloud' | 'uiPrototypes' | 'modelResponses';
+  key: 'prompts' | 'favorites' | 'solutions' | 'notes' | 'miscellanies' | 'tagCloud' | 'uiPrototypes' | 'modelResponses';
   label: string;
   to: string;
   icon: IconComponent;
@@ -43,6 +44,7 @@ const primaryNav: PrimaryNavItem[] = [
   { key: 'favorites', label: '我的收藏', to: '/prompts?favorite=true', icon: Star },
   { key: 'solutions', label: '解决方案', to: '/solutions', icon: Lightbulb },
   { key: 'notes', label: '学习笔记', to: '/notes', icon: NotebookPen },
+  { key: 'miscellanies', label: '杂谈', to: '/miscellanies', icon: BookOpenText },
   { key: 'modelResponses', label: '模型回答', to: '/model-responses', icon: BotMessageSquare },
   { key: 'tagCloud', label: '标签词云', to: '/tag-cloud', icon: Tags },
   { key: 'uiPrototypes', label: 'UI 原型', to: '/ui-prototypes', icon: PanelsTopLeft }
@@ -73,6 +75,9 @@ export function AppLayout() {
     }
     if (item.key === 'notes') {
       return pathname.startsWith('/notes');
+    }
+    if (item.key === 'miscellanies') {
+      return pathname.startsWith('/miscellanies');
     }
     if (item.key === 'tagCloud') {
       return pathname === '/tag-cloud' || pathname === '/tag-articles';

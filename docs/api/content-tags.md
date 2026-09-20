@@ -1,6 +1,6 @@
 # 内容标签词云接口
 
-内容标签接口聚合解决方案与学习笔记的字符串标签，为标签词云和标签内容行列表提供轻量数据，不返回 Markdown 正文。标签内容列表会在服务端验证有效管理员会话；验证通过时额外查询私有模型回答，访客始终不会取得模型回答数据。
+内容标签接口聚合解决方案、学习笔记与杂谈的字符串标签，为标签词云和标签内容行列表提供轻量数据，不返回 Markdown 正文。标签内容列表会在服务端验证有效管理员会话；验证通过时额外查询私有模型回答，访客始终不会取得模型回答数据。
 
 标签名称聚合和筛选忽略大小写；同一篇内容中的同名标签只计数一次。
 
@@ -17,12 +17,14 @@
       "name": "React",
       "total": 10,
       "solutionCount": 6,
-      "noteCount": 4
+      "noteCount": 3,
+      "miscellanyCount": 1
     }
   ],
   "totalTags": 24,
   "taggedSolutionCount": 18,
-  "taggedNoteCount": 12
+  "taggedNoteCount": 12,
+  "taggedMiscellanyCount": 8
 }
 ```
 
@@ -30,14 +32,14 @@
 
 ## GET /api/content-tags/items
 
-分页获取指定标签下的解决方案与学习笔记，仅返回行列表所需字段，按更新时间倒序排列。有效管理员会话的 `ALL` 范围额外包含模型回答；访客即使显式传入 `MODEL_RESPONSE` 也只会得到空列表。标签筛选、关键词搜索、计数和分页均在数据库中完成；指定单一内容类型时只查询对应资源表。
+分页获取指定标签下的解决方案、学习笔记与杂谈，仅返回行列表所需字段，按更新时间倒序排列。有效管理员会话的 `ALL` 范围额外包含模型回答；访客即使显式传入 `MODEL_RESPONSE` 也只会得到空列表。标签筛选、关键词搜索、计数和分页均在数据库中完成；指定单一内容类型时只查询对应资源表。
 
 ### Query 参数
 
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 | --- | --- | --- | --- | --- |
 | `tag` | `string` | 是 | - | 标签名称，长度 `1-80`，精确匹配并忽略大小写 |
-| `resourceType` | `ALL \| SOLUTION \| NOTE \| MODEL_RESPONSE` | 否 | `ALL` | 内容类型；`MODEL_RESPONSE` 仅对有效管理员会话可见 |
+| `resourceType` | `ALL \| SOLUTION \| NOTE \| MISCELLANY \| MODEL_RESPONSE` | 否 | `ALL` | 内容类型；`MODEL_RESPONSE` 仅对有效管理员会话可见 |
 | `search` | `string` | 否 | - | 在标题、摘要、分类和标签中搜索，最大长度 `120` |
 | `page` | `number` | 否 | `1` | 页码，从 `1` 开始 |
 | `pageSize` | `number` | 否 | `10` | 每页数量，最大值为 `100` |

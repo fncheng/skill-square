@@ -20,7 +20,7 @@ export class SearchService {
     }
 
     const take = query.limit;
-    const [prompts, solutions, notes, uiPrototypes, session] = await Promise.all([
+    const [prompts, solutions, notes, miscellanies, uiPrototypes, session] = await Promise.all([
       this.prisma.prompt.findMany({
         where: { name: { contains: keyword, mode: 'insensitive' } },
         select: { id: true, name: true, updatedAt: true },
@@ -34,6 +34,12 @@ export class SearchService {
         take
       }),
       this.prisma.note.findMany({
+        where: { title: { contains: keyword, mode: 'insensitive' } },
+        select: { id: true, title: true, updatedAt: true },
+        orderBy: { updatedAt: 'desc' },
+        take
+      }),
+      this.prisma.miscellany.findMany({
         where: { title: { contains: keyword, mode: 'insensitive' } },
         select: { id: true, title: true, updatedAt: true },
         orderBy: { updatedAt: 'desc' },
@@ -69,6 +75,10 @@ export class SearchService {
       ...notes.map((note) => ({
         ...note,
         resourceType: GlobalSearchResourceType.NOTE
+      })),
+      ...miscellanies.map((miscellany) => ({
+        ...miscellany,
+        resourceType: GlobalSearchResourceType.MISCELLANY
       })),
       ...uiPrototypes.map((uiPrototype) => ({
         ...uiPrototype,

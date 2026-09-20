@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { BotMessageSquare, FileText, Lightbulb, LoaderCircle, NotebookPen, PanelsTopLeft, Search, X } from 'lucide-react';
+import { BookOpenText, BotMessageSquare, FileText, Lightbulb, LoaderCircle, NotebookPen, PanelsTopLeft, Search, X } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { globalSearch } from '@/api/search';
 import type { GlobalSearchItem, GlobalSearchResourceType } from '@/types/domain';
@@ -12,6 +12,7 @@ const resourceConfig: Record<
   PROMPT: { label: 'Prompt', path: '/prompts', icon: FileText },
   SOLUTION: { label: '解决方案', path: '/solutions', icon: Lightbulb },
   NOTE: { label: '学习笔记', path: '/notes', icon: NotebookPen },
+  MISCELLANY: { label: '杂谈', path: '/miscellanies', icon: BookOpenText },
   UI_PROTOTYPE: { label: 'UI 原型', path: '/ui-prototypes', icon: PanelsTopLeft },
   MODEL_RESPONSE: { label: '模型回答', path: '/model-responses', icon: BotMessageSquare }
 };
@@ -147,7 +148,7 @@ export function GlobalSearch() {
           type="search"
           className="global-search-input"
           value={query}
-          placeholder="搜索 Prompt、解决方案、笔记和 UI 原型"
+          placeholder="搜索 Prompt、解决方案、笔记、杂谈和 UI 原型"
           aria-label="全局搜索"
           aria-autocomplete="list"
           aria-controls="global-search-results"

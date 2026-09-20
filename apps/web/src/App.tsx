@@ -5,6 +5,9 @@ import { CategoryManage } from './views/CategoryManage';
 import { NoteDetail } from './views/NoteDetail';
 import { NoteEditor } from './views/NoteEditor';
 import { NoteList } from './views/NoteList';
+import { MiscellanyDetail } from './views/MiscellanyDetail';
+import { MiscellanyEditor } from './views/MiscellanyEditor';
+import { MiscellanyList } from './views/MiscellanyList';
 import { ModelResponseDetail } from './views/ModelResponseDetail';
 import { ModelResponseEditor } from './views/ModelResponseEditor';
 import { ModelResponseList } from './views/ModelResponseList';
@@ -34,6 +37,8 @@ export default function App() {
         <Route path="/solutions/:id" element={<SolutionDetail />} />
         <Route path="/notes" element={<NoteList />} />
         <Route path="/notes/:id" element={<NoteDetail />} />
+        <Route path="/miscellanies" element={<MiscellanyList />} />
+        <Route path="/miscellanies/:id" element={<MiscellanyDetail />} />
         <Route path="/tag-cloud" element={<TagCloud />} />
         <Route path="/tag-articles" element={<TagArticleList />} />
         <Route path="/ui-prototypes" element={<UiPrototypeList />} />
@@ -49,6 +54,8 @@ export default function App() {
           <Route path="/solutions/:id/edit" element={<SolutionEditor />} />
           <Route path="/notes/new" element={<NoteEditor />} />
           <Route path="/notes/:id/edit" element={<NoteEditor />} />
+          <Route path="/miscellanies/new" element={<MiscellanyEditor />} />
+          <Route path="/miscellanies/:id/edit" element={<MiscellanyEditor />} />
           <Route path="/ui-prototypes/new" element={<UiPrototypeEditor />} />
           <Route path="/ui-prototypes/:id/edit" element={<UiPrototypeEditor />} />
           <Route path="/categories" element={<CategoryManage />} />
