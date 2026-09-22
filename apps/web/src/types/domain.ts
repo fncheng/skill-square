@@ -233,11 +233,15 @@ export interface UiPrototypeFilters {
 
 export type GlobalSearchResourceType = 'PROMPT' | 'SOLUTION' | 'NOTE' | 'MISCELLANY' | 'UI_PROTOTYPE' | 'MODEL_RESPONSE';
 
+export type GlobalSearchMatchField = 'TITLE' | 'SUMMARY' | 'TAG';
+
 export interface GlobalSearchItem {
   id: string;
   title: string;
   resourceType: GlobalSearchResourceType;
   updatedAt: string;
+  matchField: GlobalSearchMatchField;
+  matchText?: string;
 }
 
 export interface GlobalSearchResponse {

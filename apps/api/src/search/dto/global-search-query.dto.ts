@@ -3,7 +3,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsInt, IsString, Max, MaxLength, Min } from 'class-validator';
 
 export class GlobalSearchQueryDto {
-  @ApiProperty({ description: '标题搜索关键词。', maxLength: 120 })
+  @ApiProperty({ description: '搜索标题、摘要或标签的关键词。', maxLength: 120 })
   @IsString()
   @MaxLength(120)
   query: string;

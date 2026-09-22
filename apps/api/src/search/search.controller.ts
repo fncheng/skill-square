@@ -11,7 +11,7 @@ export class SearchController {
   constructor(private readonly searchService: SearchService) {}
 
   @Get()
-  @ApiOperation({ summary: '按标题全局搜索内容' })
+  @ApiOperation({ summary: '按标题、摘要或标签全局搜索内容' })
   @ApiOkResponse({ type: GlobalSearchResponseDto })
   search(@Query() query: GlobalSearchQueryDto, @Req() request: Request) {
     return this.searchService.search(query, request);

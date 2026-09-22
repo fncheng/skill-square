@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { BookOpenText, BotMessageSquare, FileText, Lightbulb, LoaderCircle, NotebookPen, PanelsTopLeft, Search, X } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { globalSearch } from '@/api/search';
@@ -16,6 +16,30 @@ const resourceConfig: Record<
   UI_PROTOTYPE: { label: 'UI 原型', path: '/ui-prototypes', icon: PanelsTopLeft },
   MODEL_RESPONSE: { label: '模型回答', path: '/model-responses', icon: BotMessageSquare }
 };
+
+/** 通过 React 文本节点分段高亮，避免将搜索文本解释为 HTML。 */
+function highlightKeyword(text: string, keyword: string): ReactNode[] {
+  const normalizedKeyword = keyword.toLocaleLowerCase();
+  const normalizedText = text.toLocaleLowerCase();
+  const nodes: ReactNode[] = [];
+  let cursor = 0;
+  let matchIndex = normalizedText.indexOf(normalizedKeyword, cursor);
+
+  while (matchIndex >= 0) {
+    if (matchIndex > cursor) {
+      nodes.push(text.slice(cursor, matchIndex));
+    }
+    nodes.push(<mark key={`${matchIndex}-${cursor}`}>{text.slice(matchIndex, matchIndex + keyword.length)}</mark>);
+    cursor = matchIndex + keyword.length;
+    matchIndex = normalizedText.indexOf(normalizedKeyword, cursor);
+  }
+
+  if (cursor < text.length) {
+    nodes.push(text.slice(cursor));
+  }
+
+  return nodes.length > 0 ? nodes : [text];
+}
 
 export function GlobalSearch() {
   const navigate = useNavigate();
@@ -148,7 +172,7 @@ export function GlobalSearch() {
           type="search"
           className="global-search-input"
           value={query}
-          placeholder="搜索 Prompt、解决方案、笔记、杂谈和 UI 原型"
+          placeholder="搜索标题、摘要或标签"
           aria-label="全局搜索"
           aria-autocomplete="list"
           aria-controls="global-search-results"
@@ -186,7 +210,7 @@ export function GlobalSearch() {
             ) : error ? (
               <div className="global-search-state is-error">搜索暂时不可用，请稍后重试。</div>
             ) : items.length === 0 ? (
-              <div className="global-search-state">没有找到标题包含“{query.trim()}”的内容。</div>
+              <div className="global-search-state">没有找到包含“{query.trim()}”的内容。</div>
             ) : (
               items.map((item, index) => {
                 const resource = resourceConfig[item.resourceType];
@@ -206,8 +230,16 @@ export function GlobalSearch() {
                       <Icon className="h-4 w-4" />
                     </span>
                     <span className="global-search-result-copy">
-                      <strong>{item.title}</strong>
-                      <span>{resource.label}</span>
+                      <strong>{highlightKeyword(item.title, query.trim())}</strong>
+                      <span className="global-search-result-meta">
+                        <span className="global-search-result-meta-label">{resource.label}</span>
+                        {item.matchField === 'TAG' && item.matchText ? (
+                          <span className="global-search-result-context">· 标签：{highlightKeyword(item.matchText, query.trim())}</span>
+                        ) : null}
+                        {item.matchField === 'SUMMARY' && item.matchText ? (
+                          <span className="global-search-result-context">· {highlightKeyword(item.matchText, query.trim())}</span>
+                        ) : null}
+                      </span>
                     </span>
                   </button>
                 );
