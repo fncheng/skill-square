@@ -644,6 +644,13 @@
     @apply text-sm font-extrabold text-slate-800;
   }
 
+  @media (min-width: 961px) and (pointer: fine) {
+    .markdown-editor-workspace.is-fullscreen .editor-preview-content :is(h1, h2, h3, h4, h5, h6, p).is-source-hovered {
+      background: #fef3c7;
+      box-shadow: inset 3px 0 #f59e0b;
+    }
+  }
+
   .detail-grid {
     @apply grid items-start gap-4;
     grid-template-columns: minmax(0, 1fr) 300px;

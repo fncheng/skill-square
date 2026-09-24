@@ -23,11 +23,17 @@ export interface MarkdownCitationGroup {
   sources: MarkdownCitationSource[];
 }
 
+export type MarkdownSourceBlockKind = 'heading' | 'paragraph' | 'other';
+
 /** 顶层渲染块在原始 Markdown 中的行范围，用于编辑器与预览的语义滚动定位。 */
 export interface MarkdownSourceBlock {
   blockId: string;
+  /** 仅标题和普通段落可作为右侧预览的鼠标指向高亮目标。 */
+  kind: MarkdownSourceBlockKind;
   startLine: number;
   endLine: number;
+  /** 仅当引用定义过滤在标题/段落的原始行范围内留下间隙时记录实际渲染行。 */
+  renderedSourceLines?: ReadonlySet<number>;
 }
 
 export interface UseMarkdownReturn {
@@ -494,16 +500,32 @@ function parseMarkdownInternal(
   let fenceLines: string[] = [];
 
   /** 顶层元素写入稳定的块标识，供全屏编辑器建立源码行与预览位置的映射。 */
-  const pushBlock = (html: string, startLineIndex: number, endLineIndex: number) => {
+  const pushBlock = (
+    html: string,
+    startLineIndex: number,
+    endLineIndex: number,
+    kind: MarkdownSourceBlockKind
+  ) => {
     if (!tracksSourceBlocks) {
       blocks.push(html);
       return;
     }
 
     const blockId = `md-block-${sourceBlocks.length}`;
-    const startLine = sourceLineNumbers[Math.max(0, startLineIndex)] ?? 1;
-    const endLine = sourceLineNumbers[Math.max(startLineIndex, endLineIndex)] ?? startLine;
-    sourceBlocks.push({ blockId, startLine, endLine });
+    const normalizedStartIndex = Math.max(0, startLineIndex);
+    const normalizedEndIndex = Math.max(normalizedStartIndex, endLineIndex);
+    const startLine = sourceLineNumbers[normalizedStartIndex] ?? 1;
+    const endLine = sourceLineNumbers[normalizedEndIndex] ?? startLine;
+    const hasFilteredLineGap = kind !== 'other' && endLine - startLine !== normalizedEndIndex - normalizedStartIndex;
+    sourceBlocks.push({
+      blockId,
+      kind,
+      startLine,
+      endLine,
+      renderedSourceLines: !hasFilteredLineGap
+        ? undefined
+        : new Set(sourceLineNumbers.slice(normalizedStartIndex, normalizedEndIndex + 1))
+    });
     blocks.push(html.replace(/^<([a-z][\w-]*)(?=\s|>)/i, `<$1 data-md-block-id="${blockId}"`));
   };
 
@@ -512,7 +534,8 @@ function parseMarkdownInternal(
     pushBlock(
       `<p>${paragraph.map((line) => renderInline(line, context)).join('<br>')}</p>`,
       paragraphStartLine,
-      endLineIndex
+      endLineIndex,
+      'paragraph'
     );
     paragraph = [];
     paragraphStartLine = null;
@@ -526,7 +549,7 @@ function parseMarkdownInternal(
       return;
     }
     const items = listItems.map((item) => `<li>${renderInline(item, context)}</li>`).join('');
-    pushBlock(`<${listType} class="md-list">${items}</${listType}>`, listStartLine, endLineIndex);
+    pushBlock(`<${listType} class="md-list">${items}</${listType}>`, listStartLine, endLineIndex, 'other');
     listType = null;
     listItems = [];
     listStartLine = null;
@@ -555,7 +578,8 @@ function parseMarkdownInternal(
           `</div>` +
         `</section>`,
         startLineIndex,
-        endLineIndex
+        endLineIndex,
+        'other'
       );
       fenceLines = [];
       fenceLang = '';
@@ -570,7 +594,8 @@ function parseMarkdownInternal(
         `<pre class="md-pre"${langAttr}><code>${code}</code></pre>` +
       `</div>`,
       startLineIndex,
-      endLineIndex
+      endLineIndex,
+      'other'
     );
     fenceLines = [];
     fenceLang = '';
@@ -624,7 +649,7 @@ function parseMarkdownInternal(
         nextLineIndex += 1;
       }
 
-      pushBlock(renderTable(tableHeaders, tableAlignments, tableRows, context), lineIndex, nextLineIndex - 1);
+      pushBlock(renderTable(tableHeaders, tableAlignments, tableRows, context), lineIndex, nextLineIndex - 1, 'other');
       lineIndex = nextLineIndex - 1;
       continue;
     }
@@ -646,7 +671,7 @@ function parseMarkdownInternal(
       }
 
       const quote = parseMarkdownInternal(quoteLines.join('\n'), context, options);
-      pushBlock(`<blockquote class="md-blockquote">${quote.html}</blockquote>`, lineIndex, nextLineIndex - 1);
+      pushBlock(`<blockquote class="md-blockquote">${quote.html}</blockquote>`, lineIndex, nextLineIndex - 1, 'other');
       lineIndex = nextLineIndex - 1;
       continue;
     }
@@ -654,7 +679,7 @@ function parseMarkdownInternal(
     if (isHorizontalRule(line)) {
       flushParagraph(lineIndex - 1);
       flushList(lineIndex - 1);
-      pushBlock('<hr class="md-divider">', lineIndex, lineIndex);
+      pushBlock('<hr class="md-divider">', lineIndex, lineIndex, 'other');
       continue;
     }
 
@@ -666,7 +691,12 @@ function parseMarkdownInternal(
       const text = headingMatch[2].trim();
       const id = slugify(text);
       headings.push({ level, text, id });
-      pushBlock(`<h${level} id="${id}" class="md-heading">${renderInline(text, context)}</h${level}>`, lineIndex, lineIndex);
+      pushBlock(
+        `<h${level} id="${id}" class="md-heading">${renderInline(text, context)}</h${level}>`,
+        lineIndex,
+        lineIndex,
+        'heading'
+      );
       continue;
     }
 

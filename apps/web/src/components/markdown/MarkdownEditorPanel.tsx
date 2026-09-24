@@ -10,7 +10,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode
 } from 'react';
-import type { editor as MonacoEditorNamespace } from 'monaco-editor';
+import { editor as MonacoEditorApi, type editor as MonacoEditorNamespace } from 'monaco-editor';
 import { ArrowDownUp, Eye, Minimize2, PanelRightOpen, PencilLine, X } from 'lucide-react';
 import { MarkdownContent } from '@/components/markdown/MarkdownContent';
 import { PromptMonacoEditor } from '@/components/prompt/PromptMonacoEditor';
@@ -56,6 +56,16 @@ interface ScrollMetrics {
   scrollTop: number;
   clientHeight: number;
   maxScrollTop: number;
+}
+
+interface PreviewBlockCache {
+  sourceBlock: MarkdownSourceBlock;
+  element: HTMLElement;
+}
+
+interface SourcePointerPosition {
+  clientX: number;
+  clientY: number;
 }
 
 const MIN_LEFT_PANE_PERCENT = 35;
@@ -137,6 +147,31 @@ function mapBlockPosition(
   return block[toTop] + (block[toBottom] - block[toTop]) * progress;
 }
 
+/** 按原始源码行定位块，并排除空行和解析前被过滤的引用定义行。 */
+function findSourceBlockAtLine(blocks: PreviewBlockCache[], lineNumber: number): PreviewBlockCache | null {
+  let left = 0;
+  let right = blocks.length - 1;
+
+  while (left <= right) {
+    const middle = Math.floor((left + right) / 2);
+    const block = blocks[middle];
+    if (lineNumber < block.sourceBlock.startLine) {
+      right = middle - 1;
+    } else if (lineNumber > block.sourceBlock.endLine) {
+      left = middle + 1;
+    } else {
+      if (block.sourceBlock.kind === 'other') {
+        return block;
+      }
+      return !block.sourceBlock.renderedSourceLines || block.sourceBlock.renderedSourceLines.has(lineNumber)
+        ? block
+        : null;
+    }
+  }
+
+  return null;
+}
+
 /** 将分栏比例限制在工作区可读性边界内。 */
 function clampPanePercent(value: number): number {
   return Math.min(MAX_LEFT_PANE_PERCENT, Math.max(MIN_LEFT_PANE_PERCENT, value));
@@ -164,18 +199,24 @@ export function MarkdownEditorPanel({
   const [monacoEditor, setMonacoEditor] = useState<MonacoEditor | null>(null);
   const [previewElement, setPreviewElement] = useState<HTMLDivElement | null>(null);
   const [previewRenderVersion, setPreviewRenderVersion] = useState(0);
+  const [finePointer, setFinePointer] = useState(() => window.matchMedia('(pointer: fine)').matches);
   const workspaceRef = useRef<HTMLDivElement>(null);
   const metadataRef = useRef<HTMLElement>(null);
   const metadataButtonRef = useRef<HTMLButtonElement>(null);
   const deferredValue = useDeferredValue(value);
   const previewBlocksRef = useRef<MarkdownSourceBlock[]>([]);
+  const previewBlockCacheRef = useRef<PreviewBlockCache[]>([]);
   const previewSourceRef = useRef('');
   const scrollGeometryRef = useRef<ScrollSyncBlock[]>([]);
   const activeScrollSideRef = useRef<ScrollSyncSide>('source');
   const queuedScrollSideRef = useRef<ScrollSyncSide | null>(null);
   const scrollSyncFrameRef = useRef<number | null>(null);
   const geometryFrameRef = useRef<number | null>(null);
+  const previewHighlightFrameRef = useRef<number | null>(null);
+  const sourcePointerRef = useRef<SourcePointerPosition | null>(null);
+  const highlightedPreviewElementRef = useRef<HTMLElement | null>(null);
   const scrollSyncActiveRef = useRef(false);
+  const previewHoverActiveRef = useRef(false);
   const programmaticScrollTargetsRef = useRef<Record<ScrollSyncSide, number | null>>({
     source: null,
     preview: null
@@ -184,17 +225,28 @@ export function MarkdownEditorPanel({
   const previewVisible = fullscreen || previewing;
   const previewMatchesSource = deferredValue === value && previewSourceRef.current === value;
   const scrollSyncActive = fullscreen && desktopSplit && scrollSyncEnabled && previewVisible && previewMatchesSource;
+  const previewHoverActive = scrollSyncActive && finePointer;
   // rAF 闭包可能晚于 React 状态提交执行，因此每次渲染都同步写入当前有效性。
   scrollSyncActiveRef.current = scrollSyncActive;
+  previewHoverActiveRef.current = previewHoverActive;
   const workspaceTitle = fullscreenTitle?.trim() || '未命名 Markdown 文档';
   const metadataInactive = fullscreen && !metadataOpen;
 
+  /** 预览内容替换或条件失效时，立即撤销旧节点上的高亮类。 */
+  const clearPreviewHighlight = useCallback(() => {
+    highlightedPreviewElementRef.current?.classList.remove('is-source-hovered');
+    highlightedPreviewElementRef.current = null;
+  }, []);
+
   /** 同一份 deferred Markdown 提交后，才允许其块映射驱动 Monaco 的当前源码。 */
   const handlePreviewBlocksRendered = useCallback((source: string, sourceBlocks: MarkdownSourceBlock[]) => {
+    clearPreviewHighlight();
     previewSourceRef.current = source;
     previewBlocksRef.current = sourceBlocks;
+    previewBlockCacheRef.current = [];
+    scrollGeometryRef.current = [];
     setPreviewRenderVersion((current) => current + 1);
-  }, []);
+  }, [clearPreviewHighlight]);
 
   /** 关闭侧板后将焦点返回到触发按钮，避免键盘焦点停留在不可见表单中。 */
   const closeMetadata = useCallback(() => {
@@ -210,6 +262,14 @@ export function MarkdownEditorPanel({
     return () => mediaQuery.removeEventListener('change', updateDesktopSplit);
   }, []);
 
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(pointer: fine)');
+    const updateFinePointer = () => setFinePointer(mediaQuery.matches);
+    updateFinePointer();
+    mediaQuery.addEventListener('change', updateFinePointer);
+    return () => mediaQuery.removeEventListener('change', updateFinePointer);
+  }, []);
+
   /** 在预览提交、分栏改宽或异步图表重排后，批量重建两侧的内容块几何缓存。 */
   const rebuildScrollGeometry = useCallback(() => {
     if (
@@ -220,12 +280,14 @@ export function MarkdownEditorPanel({
       deferredValue !== value
     ) {
       scrollGeometryRef.current = [];
+      previewBlockCacheRef.current = [];
       return;
     }
 
     const previewBounds = previewElement.getBoundingClientRect();
     const lineCount = monacoEditor.getModel()?.getLineCount() ?? 0;
     const nextGeometry: ScrollSyncBlock[] = [];
+    const nextBlockCache: PreviewBlockCache[] = [];
     const previewBlockElements = new Map<string, HTMLElement>();
     previewElement.querySelectorAll<HTMLElement>('[data-md-block-id]').forEach((element) => {
       const blockId = element.dataset.mdBlockId;
@@ -236,7 +298,12 @@ export function MarkdownEditorPanel({
 
     for (const sourceBlock of previewBlocksRef.current) {
       const blockElement = previewBlockElements.get(sourceBlock.blockId);
-      if (!blockElement || lineCount === 0) {
+      if (!blockElement) {
+        continue;
+      }
+
+      nextBlockCache.push({ sourceBlock, element: blockElement });
+      if (lineCount === 0) {
         continue;
       }
 
@@ -257,6 +324,7 @@ export function MarkdownEditorPanel({
     }
 
     scrollGeometryRef.current = nextGeometry;
+    previewBlockCacheRef.current = nextBlockCache;
   }, [deferredValue, monacoEditor, previewElement, value]);
 
   const performScrollSync = useCallback((side: ScrollSyncSide) => {
@@ -310,6 +378,55 @@ export function MarkdownEditorPanel({
     }
   }, [monacoEditor, previewElement, scrollSyncActive]);
 
+  /** 每帧至多根据当前指针位置命中一次 Monaco 行号，并只切换一个预览块的样式。 */
+  const queuePreviewHoverHighlight = useCallback(() => {
+    if (previewHighlightFrameRef.current !== null) {
+      return;
+    }
+
+    previewHighlightFrameRef.current = window.requestAnimationFrame(() => {
+      previewHighlightFrameRef.current = null;
+      const pointerPosition = sourcePointerRef.current;
+      if (
+        !previewHoverActiveRef.current ||
+        !pointerPosition ||
+        !monacoEditor ||
+        previewSourceRef.current !== value ||
+        deferredValue !== value
+      ) {
+        clearPreviewHighlight();
+        return;
+      }
+
+      const target = monacoEditor.getTargetAtClientPoint(pointerPosition.clientX, pointerPosition.clientY);
+      if (
+        !target ||
+        (target.type !== MonacoEditorApi.MouseTargetType.CONTENT_TEXT &&
+          target.type !== MonacoEditorApi.MouseTargetType.CONTENT_EMPTY)
+      ) {
+        clearPreviewHighlight();
+        return;
+      }
+
+      const lineNumber = target.position?.lineNumber;
+      const sourceBlock = lineNumber === undefined
+        ? null
+        : findSourceBlockAtLine(previewBlockCacheRef.current, lineNumber);
+      if (!sourceBlock || sourceBlock.sourceBlock.kind === 'other') {
+        clearPreviewHighlight();
+        return;
+      }
+
+      if (highlightedPreviewElementRef.current === sourceBlock.element) {
+        return;
+      }
+
+      clearPreviewHighlight();
+      sourceBlock.element.classList.add('is-source-hovered');
+      highlightedPreviewElementRef.current = sourceBlock.element;
+    });
+  }, [clearPreviewHighlight, deferredValue, monacoEditor, value]);
+
   /** 连续滚动事件只在动画帧末尾同步一次，避免滚轮滚动时重复读写布局。 */
   const queueScrollSync = useCallback((side: ScrollSyncSide) => {
     if (!scrollSyncActive) {
@@ -348,8 +465,9 @@ export function MarkdownEditorPanel({
       }
       rebuildScrollGeometry();
       queueScrollSync(activeScrollSideRef.current);
+      queuePreviewHoverHighlight();
     });
-  }, [queueScrollSync, rebuildScrollGeometry]);
+  }, [queuePreviewHoverHighlight, queueScrollSync, rebuildScrollGeometry]);
 
   useEffect(() => () => {
     if (scrollSyncFrameRef.current !== null) {
@@ -358,7 +476,11 @@ export function MarkdownEditorPanel({
     if (geometryFrameRef.current !== null) {
       window.cancelAnimationFrame(geometryFrameRef.current);
     }
-  }, []);
+    if (previewHighlightFrameRef.current !== null) {
+      window.cancelAnimationFrame(previewHighlightFrameRef.current);
+    }
+    clearPreviewHighlight();
+  }, [clearPreviewHighlight]);
 
   /** 同步条件或预览版本变化时，废弃旧 rAF 与其捕获的几何缓存。 */
   useEffect(() => {
@@ -374,6 +496,7 @@ export function MarkdownEditorPanel({
     programmaticScrollTargetsRef.current = { source: null, preview: null };
     if (!scrollSyncActive) {
       scrollGeometryRef.current = [];
+      previewBlockCacheRef.current = [];
     }
   }, [deferredValue, desktopSplit, fullscreen, previewRenderVersion, scrollSyncActive, value]);
 
@@ -423,6 +546,8 @@ export function MarkdownEditorPanel({
     const sourceSubscription = monacoEditor.onDidScrollChange((event) => {
       if (event.scrollTopChanged) {
         handleIncomingScroll('source', monacoEditor.getScrollTop());
+        // 先排队预览跟随滚动，再按静止指针重新命中源码行。
+        queuePreviewHoverHighlight();
       }
     });
     const handlePreviewScroll = () => handleIncomingScroll('preview', previewElement.scrollTop);
@@ -433,7 +558,15 @@ export function MarkdownEditorPanel({
       sourceSubscription.dispose();
       previewElement.removeEventListener('scroll', handlePreviewScroll);
     };
-  }, [monacoEditor, previewElement, queueScrollSync, requestGeometryRebuild, scrollSyncActive]);
+  }, [monacoEditor, previewElement, queuePreviewHoverHighlight, queueScrollSync, requestGeometryRebuild, scrollSyncActive]);
+
+  useLayoutEffect(() => {
+    if (!previewHoverActive) {
+      clearPreviewHighlight();
+      return;
+    }
+    queuePreviewHoverHighlight();
+  }, [clearPreviewHighlight, previewHoverActive, previewRenderVersion, queuePreviewHoverHighlight]);
 
   useEffect(() => {
     if (!fullscreen) {
@@ -560,6 +693,20 @@ export function MarkdownEditorPanel({
       event.preventDefault();
       setLeftPanePercent((current) => clampPanePercent(current + 5));
     }
+  };
+
+  /** 仅记录鼠标位置；实际 Monaco 命中与预览 DOM 更新合并到动画帧中执行。 */
+  const handleSourcePointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== 'mouse') {
+      return;
+    }
+    sourcePointerRef.current = { clientX: event.clientX, clientY: event.clientY };
+    queuePreviewHoverHighlight();
+  };
+
+  const handleSourcePointerLeave = () => {
+    sourcePointerRef.current = null;
+    clearPreviewHighlight();
   };
 
   const workspaceStyle = {
@@ -701,7 +848,11 @@ export function MarkdownEditorPanel({
             data-mobile-view={previewing ? 'preview' : 'edit'}
             style={workspaceStyle}
           >
-            <div className={`editor-mode-panel markdown-editor-source-pane${!fullscreen && previewing ? ' is-hidden' : ''}`}>
+            <div
+              className={`editor-mode-panel markdown-editor-source-pane${!fullscreen && previewing ? ' is-hidden' : ''}`}
+              onPointerMove={handleSourcePointerMove}
+              onPointerLeave={handleSourcePointerLeave}
+            >
               <PromptMonacoEditor value={value} onChange={onChange} onEditorChange={setMonacoEditor} />
             </div>
 
