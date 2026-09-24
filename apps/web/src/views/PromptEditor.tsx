@@ -1,6 +1,6 @@
 import { useEffect, useState, type ChangeEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Check } from 'lucide-react';
+import { Check, Maximize2 } from 'lucide-react';
 import { MarkdownEditorPanel } from '@/components/markdown/MarkdownEditorPanel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,6 +32,7 @@ export function PromptEditor() {
   const isEdit = Boolean(id);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<PromptPayload>(emptyForm);
+  const [fullscreen, setFullscreen] = useState(false);
 
   useEffect(() => {
     const bootstrap = async () => {
@@ -92,17 +93,28 @@ export function PromptEditor() {
         title={isEdit ? '编辑 Prompt' : '新建 Prompt'}
         subtitle="维护 Prompt 基础信息、分类、标签与正文内容。"
         back={isEdit && id ? `/prompts/${id}` : '/prompts'}
-        actions={
+        actions={<>
+          <Button type="button" variant="outline" onClick={() => setFullscreen(true)}>
+            <Maximize2 className="h-4 w-4" />
+            全屏双栏
+          </Button>
           <Button disabled={saving} onClick={handleSubmit}>
             <Check className="h-4 w-4" />
             {saving ? '保存中...' : '保存'}
           </Button>
-        }
+        </>}
       />
 
-      <div className="editor-layout">
-        <div className="form-surface">
-          <div className="form-grid">
+      <MarkdownEditorPanel
+        title="Prompt 内容"
+        value={form.content}
+        onChange={(content) => setForm((prev) => ({ ...prev, content }))}
+        fullscreen={fullscreen}
+        onFullscreenChange={setFullscreen}
+        fullscreenTitle={form.name || '未命名 Prompt'}
+        onSave={() => void handleSubmit()}
+        saving={saving}
+        metadata={<>
             <label className="form-field">
               <span className="form-label">名称</span>
               <Input
@@ -165,15 +177,8 @@ export function PromptEditor() {
               />
               <span>收藏该 Prompt</span>
             </label>
-          </div>
-        </div>
-
-        <MarkdownEditorPanel
-          title="Prompt 内容"
-          value={form.content}
-          onChange={(content) => setForm((prev) => ({ ...prev, content }))}
-        />
-      </div>
+        </>}
+      />
     </section>
   );
 }

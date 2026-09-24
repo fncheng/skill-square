@@ -491,6 +491,17 @@
     grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
   }
 
+  .markdown-editor-workspace {
+    @apply min-w-0;
+  }
+
+  .markdown-editor-fullscreen-toolbar,
+  .markdown-editor-metadata-backdrop,
+  .markdown-editor-metadata-head,
+  .markdown-editor-mobile-tabs {
+    display: none;
+  }
+
   .editor-surface {
     @apply flex min-h-[660px] flex-col overflow-hidden rounded-lg border bg-card shadow-sm;
   }
@@ -519,6 +530,24 @@
     @apply flex-1;
   }
 
+  .markdown-editor-panes,
+  .markdown-editor-source-pane,
+  .markdown-editor-preview-pane {
+    @apply flex min-h-0 flex-1;
+  }
+
+  .markdown-editor-source-pane.is-hidden {
+    display: none;
+  }
+
+  .markdown-editor-preview-pane > * {
+    @apply min-h-0 flex-1;
+  }
+
+  .markdown-editor-divider {
+    display: none;
+  }
+
   .editor-preview-scroll {
     @apply min-h-0 flex-1 overflow-auto bg-white;
   }
@@ -533,6 +562,81 @@
 
   .monaco-host {
     @apply min-h-0 flex-1;
+  }
+
+  .markdown-editor-workspace.is-fullscreen {
+    @apply fixed inset-0 z-[70] grid min-w-0 bg-white;
+    grid-template-rows: 52px minmax(0, 1fr);
+    height: 100dvh;
+  }
+
+  .markdown-editor-workspace.is-fullscreen .markdown-editor-fullscreen-toolbar {
+    @apply relative z-[3] flex min-w-0 items-center justify-between gap-3 border-b bg-white px-4;
+  }
+
+  .markdown-editor-toolbar-title {
+    @apply min-w-0 flex-1 truncate text-sm font-extrabold text-slate-800;
+  }
+
+  .markdown-editor-toolbar-actions {
+    @apply flex flex-none items-center gap-2;
+  }
+
+  .markdown-editor-workspace.is-fullscreen .markdown-editor-workspace-body {
+    @apply block min-h-0;
+  }
+
+  .markdown-editor-workspace.is-fullscreen .editor-surface {
+    @apply h-full min-h-0 rounded-none border-0 shadow-none;
+  }
+
+  .markdown-editor-workspace.is-fullscreen .editor-head {
+    display: none;
+  }
+
+  .markdown-editor-workspace.is-fullscreen .markdown-editor-panes {
+    @apply grid h-full min-h-0;
+    grid-template-columns: minmax(0, var(--markdown-editor-left-pane)) 12px minmax(0, 1fr);
+  }
+
+  .markdown-editor-workspace.is-fullscreen .markdown-editor-source-pane,
+  .markdown-editor-workspace.is-fullscreen .markdown-editor-preview-pane {
+    @apply min-h-0 overflow-hidden;
+  }
+
+  .markdown-editor-workspace.is-fullscreen .markdown-editor-preview-pane {
+    @apply border-l;
+  }
+
+  .markdown-editor-workspace.is-fullscreen .markdown-editor-divider {
+    @apply relative z-[1] block cursor-col-resize border-x border-transparent bg-slate-50 p-0 outline-none transition-colors hover:border-primary/40 hover:bg-primary/10 focus-visible:border-primary focus-visible:bg-primary/10;
+    touch-action: none;
+  }
+
+  .markdown-editor-workspace.is-fullscreen .markdown-editor-divider::before {
+    content: '';
+    @apply absolute left-1/2 top-1/2 h-10 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-slate-300;
+  }
+
+  .markdown-editor-workspace.is-fullscreen .markdown-editor-metadata-backdrop {
+    @apply absolute bottom-0 left-0 right-0 top-[52px] z-[1] block border-0 bg-slate-950/25 p-0;
+  }
+
+  .markdown-editor-workspace.is-fullscreen .markdown-editor-metadata {
+    @apply absolute bottom-0 right-0 top-[52px] z-[2] w-full max-w-[420px] overflow-y-auto rounded-none border-y-0 border-r-0 bg-white shadow-2xl transition-transform;
+    transform: translateX(100%);
+  }
+
+  .markdown-editor-workspace.is-fullscreen .markdown-editor-metadata.is-open {
+    transform: translateX(0);
+  }
+
+  .markdown-editor-workspace.is-fullscreen .markdown-editor-metadata-head {
+    @apply mb-5 flex items-center justify-between border-b pb-3;
+  }
+
+  .markdown-editor-workspace.is-fullscreen .markdown-editor-metadata-head strong {
+    @apply text-sm font-extrabold text-slate-800;
   }
 
   .detail-grid {
@@ -1892,6 +1996,66 @@
 
   .ui-prototype-preview-stage {
     @apply px-4;
+  }
+}
+
+@media (max-width: 960px) {
+  .markdown-editor-workspace.is-fullscreen .markdown-editor-fullscreen-toolbar {
+    @apply gap-2 px-3;
+  }
+
+  .markdown-editor-workspace.is-fullscreen .markdown-editor-toolbar-actions {
+    @apply gap-1;
+  }
+
+  .markdown-editor-workspace.is-fullscreen .markdown-editor-toolbar-actions button {
+    @apply px-2;
+  }
+
+  .markdown-editor-workspace.is-fullscreen .markdown-editor-toolbar-actions button svg {
+    @apply h-4 w-4;
+  }
+
+  .markdown-editor-workspace.is-fullscreen .markdown-editor-mobile-tabs {
+    @apply flex shrink-0 items-center gap-1 border-b bg-slate-50 p-1;
+  }
+
+  .markdown-editor-workspace.is-fullscreen .markdown-editor-mobile-tabs button {
+    @apply h-8 flex-1 rounded border-0 bg-transparent px-3 text-xs font-bold text-slate-500 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+  }
+
+  .markdown-editor-workspace.is-fullscreen .markdown-editor-mobile-tabs button.is-active {
+    @apply bg-white text-slate-900 shadow-sm;
+  }
+
+  .markdown-editor-workspace.is-fullscreen .markdown-editor-panes {
+    @apply block;
+    height: auto;
+    flex: 1 1 0%;
+    min-height: 0;
+  }
+
+  .markdown-editor-workspace.is-fullscreen .markdown-editor-divider {
+    display: none;
+  }
+
+  .markdown-editor-workspace.is-fullscreen .markdown-editor-source-pane,
+  .markdown-editor-workspace.is-fullscreen .markdown-editor-preview-pane {
+    display: none;
+    height: 100%;
+  }
+
+  .markdown-editor-workspace.is-fullscreen .markdown-editor-panes[data-mobile-view='edit'] .markdown-editor-source-pane,
+  .markdown-editor-workspace.is-fullscreen .markdown-editor-panes[data-mobile-view='preview'] .markdown-editor-preview-pane {
+    display: flex;
+  }
+
+  .markdown-editor-workspace.is-fullscreen .markdown-editor-preview-pane {
+    @apply border-l-0;
+  }
+
+  .markdown-editor-workspace.is-fullscreen .markdown-editor-metadata {
+    max-width: min(420px, calc(100vw - 20px));
   }
 }
 

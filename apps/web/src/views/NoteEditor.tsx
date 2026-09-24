@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Check } from 'lucide-react';
+import { Check, Maximize2 } from 'lucide-react';
 import { MarkdownEditorPanel } from '@/components/markdown/MarkdownEditorPanel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,6 +40,7 @@ export function NoteEditor() {
   const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
   const [tagsText, setTagsText] = useState('');
   const [form, setForm] = useState<NotePayload>(emptyForm);
+  const [fullscreen, setFullscreen] = useState(false);
 
   useEffect(() => {
     const bootstrap = async () => {
@@ -103,17 +104,28 @@ export function NoteEditor() {
         title={isEdit ? '编辑笔记' : '新建笔记'}
         subtitle="维护标题、摘要、分类、标签与 Markdown 正文内容。"
         back={isEdit && id ? `/notes/${id}` : '/notes'}
-        actions={
+        actions={<>
+          <Button type="button" variant="outline" onClick={() => setFullscreen(true)}>
+            <Maximize2 className="h-4 w-4" />
+            全屏双栏
+          </Button>
           <Button disabled={saving} onClick={handleSubmit}>
             <Check className="h-4 w-4" />
             {saving ? '保存中...' : '保存'}
           </Button>
-        }
+        </>}
       />
 
-      <div className="editor-layout">
-        <div className="form-surface">
-          <div className="form-grid">
+      <MarkdownEditorPanel
+        title="正文内容"
+        value={form.content}
+        onChange={(content) => setForm((prev) => ({ ...prev, content }))}
+        fullscreen={fullscreen}
+        onFullscreenChange={setFullscreen}
+        fullscreenTitle={form.title || '未命名笔记'}
+        onSave={() => void handleSubmit()}
+        saving={saving}
+        metadata={<>
             <label className="form-field">
               <span className="form-label">标题</span>
               <Input
@@ -162,15 +174,8 @@ export function NoteEditor() {
               />
               <span className="text-xs text-muted-foreground">至少填写一个，使用中文或英文逗号分隔，自动去重。</span>
             </label>
-          </div>
-        </div>
-
-        <MarkdownEditorPanel
-          title="正文内容"
-          value={form.content}
-          onChange={(content) => setForm((prev) => ({ ...prev, content }))}
-        />
-      </div>
+        </>}
+      />
     </section>
   );
 }
