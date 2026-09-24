@@ -35,7 +35,7 @@ export function PromptEditor() {
   const tags = usePromptStore((state) => state.tags);
   const fetchCategories = usePromptStore((state) => state.fetchCategories);
   const fetchTags = usePromptStore((state) => state.fetchTags);
-  const createdDraft = locationState?.created?.id === id ? locationState.created : undefined;
+  const createdDraft = locationState?.created?.id === id ? locationState?.created : undefined;
 
   const isEdit = Boolean(id);
   const [saving, setSaving] = useState(false);
