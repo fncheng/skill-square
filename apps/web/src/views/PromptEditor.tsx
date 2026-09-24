@@ -1,5 +1,5 @@
-import { useEffect, useState, type ChangeEvent } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Check, Maximize2 } from 'lucide-react';
 import { MarkdownEditorPanel } from '@/components/markdown/MarkdownEditorPanel';
 import { Button } from '@/components/ui/button';
@@ -20,46 +20,70 @@ const emptyForm: PromptPayload = {
   isFavorite: false
 };
 
+interface EditorNavigationState {
+  fullscreen?: boolean;
+  created?: { id: string; payload: PromptPayload };
+}
+
 export function PromptEditor() {
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const locationState = location.state as EditorNavigationState | null;
   const categories = usePromptStore((state) => state.categories);
   const tags = usePromptStore((state) => state.tags);
   const fetchCategories = usePromptStore((state) => state.fetchCategories);
   const fetchTags = usePromptStore((state) => state.fetchTags);
+  const createdDraft = locationState?.created?.id === id ? locationState.created : undefined;
 
   const isEdit = Boolean(id);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState<PromptPayload>(emptyForm);
-  const [fullscreen, setFullscreen] = useState(false);
+  const [form, setForm] = useState<PromptPayload>(() => createdDraft?.payload ?? emptyForm);
+  const formRef = useRef(form);
+  // 同步表单引用，确保保存请求等待期间的输入能随新建路由保留。
+  const updateForm = (updater: (previous: PromptPayload) => PromptPayload) => {
+    const nextForm = updater(formRef.current);
+    formRef.current = nextForm;
+    setForm(nextForm);
+  };
+  const [fullscreen, setFullscreen] = useState(() => locationState?.fullscreen === true);
 
   useEffect(() => {
     const bootstrap = async () => {
+      const hasCreatedDraft = Boolean(isEdit && id && createdDraft);
+      if (hasCreatedDraft) {
+        // 新建导航状态仅用于首屏初始化，消费后避免刷新时恢复陈旧快照。
+        navigate(location.pathname, { replace: true, state: null });
+      }
+
       await Promise.all([fetchCategories(), fetchTags()]);
 
       if (isEdit && id) {
+        if (hasCreatedDraft) return;
         const prompt = await getPrompt(id);
-        setForm({
+        updateForm(() => ({
           name: prompt.name,
           description: prompt.description,
           content: prompt.content,
           categoryId: prompt.categoryId,
           tagIds: prompt.tags.map((tag) => tag.id),
           isFavorite: prompt.isFavorite
-        });
+        }));
       }
     };
     void bootstrap();
+    // 路由 ID 变化时消费一次导航表单；清除 location.state 后不重复加载以免覆盖编辑内容。
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const handleTagsChange = (event: ChangeEvent<HTMLSelectElement>) => {
     const tagIds = Array.from(event.target.selectedOptions, (option) => option.value);
-    setForm((prev) => ({ ...prev, tagIds }));
+    updateForm((prev) => ({ ...prev, tagIds }));
   };
 
-  const handleSubmit = async () => {
+  /** 全屏工作区保存后留在编辑页；普通页头保存继续进入详情页。 */
+  const handleSubmit = async (keepFullscreen = false) => {
     if (!form.name.trim()) {
       toast({ title: '请输入 Prompt 名称', variant: 'destructive' });
       return;
@@ -81,6 +105,16 @@ export function PromptEditor() {
       };
       const prompt = isEdit && id ? await updatePrompt(id, payload) : await createPrompt(payload);
       toast({ title: 'Prompt 已保存', variant: 'success' });
+      if (keepFullscreen) {
+        setFullscreen(true);
+        if (!isEdit) {
+          navigate(`/prompts/${prompt.id}/edit`, {
+            replace: true,
+            state: { fullscreen: true, created: { id: prompt.id, payload: formRef.current } }
+          });
+        }
+        return;
+      }
       navigate(`/prompts/${prompt.id}`);
     } finally {
       setSaving(false);
@@ -96,9 +130,9 @@ export function PromptEditor() {
         actions={<>
           <Button type="button" variant="outline" onClick={() => setFullscreen(true)}>
             <Maximize2 className="h-4 w-4" />
-            全屏双栏
+            全屏
           </Button>
-          <Button disabled={saving} onClick={handleSubmit}>
+          <Button disabled={saving} onClick={() => void handleSubmit()}>
             <Check className="h-4 w-4" />
             {saving ? '保存中...' : '保存'}
           </Button>
@@ -108,11 +142,11 @@ export function PromptEditor() {
       <MarkdownEditorPanel
         title="Prompt 内容"
         value={form.content}
-        onChange={(content) => setForm((prev) => ({ ...prev, content }))}
+        onChange={(content) => updateForm((prev) => ({ ...prev, content }))}
         fullscreen={fullscreen}
         onFullscreenChange={setFullscreen}
         fullscreenTitle={form.name || '未命名 Prompt'}
-        onSave={() => void handleSubmit()}
+        onSave={() => void handleSubmit(true)}
         saving={saving}
         metadata={<>
             <label className="form-field">
@@ -121,7 +155,7 @@ export function PromptEditor() {
                 value={form.name}
                 maxLength={160}
                 placeholder="输入 Prompt 名称"
-                onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+                onChange={(event) => updateForm((prev) => ({ ...prev, name: event.target.value }))}
               />
               <span className="text-xs text-muted-foreground">{form.name.length}/160</span>
             </label>
@@ -133,7 +167,7 @@ export function PromptEditor() {
                 maxLength={1000}
                 rows={5}
                 placeholder="输入 Prompt 描述"
-                onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
+                onChange={(event) => updateForm((prev) => ({ ...prev, description: event.target.value }))}
               />
               <span className="text-xs text-muted-foreground">{form.description.length}/1000</span>
             </label>
@@ -144,7 +178,7 @@ export function PromptEditor() {
                 value={form.categoryId ?? ''}
                 className="native-select w-full"
                 onChange={(event) =>
-                  setForm((prev) => ({ ...prev, categoryId: event.target.value || null }))
+                  updateForm((prev) => ({ ...prev, categoryId: event.target.value || null }))
                 }
               >
                 <option value="">不设置分类</option>
@@ -173,7 +207,7 @@ export function PromptEditor() {
                 checked={form.isFavorite}
                 className="h-4 w-4 accent-indigo-600"
                 type="checkbox"
-                onChange={(event) => setForm((prev) => ({ ...prev, isFavorite: event.target.checked }))}
+                onChange={(event) => updateForm((prev) => ({ ...prev, isFavorite: event.target.checked }))}
               />
               <span>收藏该 Prompt</span>
             </label>
