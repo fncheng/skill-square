@@ -1,5 +1,6 @@
 import Editor, { loader } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor';
+import { useCallback, useEffect, useRef } from 'react';
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 
 // 使用本地打包的 monaco，避免默认从 CDN 加载，保证离线部署可用。
@@ -14,6 +15,8 @@ loader.config({ monaco });
 interface PromptMonacoEditorProps {
   value: string;
   onChange?: (value: string) => void;
+  /** 编辑器实例生命周期变化，用于需要读取 Monaco 布局或滚动状态的宿主。 */
+  onEditorChange?: (editor: monaco.editor.IStandaloneCodeEditor | null) => void;
   language?: string;
   readOnly?: boolean;
 }
@@ -21,15 +24,31 @@ interface PromptMonacoEditorProps {
 export function PromptMonacoEditor({
   value,
   onChange,
+  onEditorChange,
   language = 'markdown',
   readOnly = false
 }: PromptMonacoEditorProps) {
+  const onEditorChangeRef = useRef(onEditorChange);
+
+  useEffect(() => {
+    onEditorChangeRef.current = onEditorChange;
+  }, [onEditorChange]);
+
+  useEffect(() => () => {
+    onEditorChangeRef.current?.(null);
+  }, []);
+
+  const handleMount = useCallback((editor: monaco.editor.IStandaloneCodeEditor) => {
+    onEditorChangeRef.current?.(editor);
+  }, []);
+
   return (
     <div className="monaco-host">
       <Editor
         value={value}
         language={language}
         height="100%"
+        onMount={handleMount}
         onChange={(next) => onChange?.(next ?? '')}
         options={{
           readOnly,

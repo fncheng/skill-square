@@ -550,6 +550,7 @@
 
   .editor-preview-scroll {
     @apply min-h-0 flex-1 overflow-auto bg-white;
+    overscroll-behavior: contain;
   }
 
   .md-surface.editor-preview-content {
@@ -580,6 +581,10 @@
 
   .markdown-editor-toolbar-actions {
     @apply flex flex-none items-center gap-2;
+  }
+
+  .markdown-editor-scroll-sync[aria-pressed='true'] {
+    @apply border-primary/40 bg-primary/10 text-primary hover:bg-primary/15;
   }
 
   .markdown-editor-workspace.is-fullscreen .markdown-editor-workspace-body {
@@ -2000,6 +2005,10 @@
 }
 
 @media (max-width: 960px) {
+  .markdown-editor-workspace.is-fullscreen .markdown-editor-scroll-sync {
+    display: none;
+  }
+
   .markdown-editor-workspace.is-fullscreen .markdown-editor-fullscreen-toolbar {
     @apply gap-2 px-3;
   }

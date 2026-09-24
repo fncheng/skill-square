@@ -23,10 +23,23 @@ export interface MarkdownCitationGroup {
   sources: MarkdownCitationSource[];
 }
 
+/** 顶层渲染块在原始 Markdown 中的行范围，用于编辑器与预览的语义滚动定位。 */
+export interface MarkdownSourceBlock {
+  blockId: string;
+  startLine: number;
+  endLine: number;
+}
+
 export interface UseMarkdownReturn {
   html: string;
   headings: MarkdownHeading[];
   citationGroups: MarkdownCitationGroup[];
+  sourceBlocks: MarkdownSourceBlock[];
+}
+
+export interface UseMarkdownOptions {
+  /** 仅编辑器预览需要源码行号与 DOM 块标识，详情页保持既有 HTML。 */
+  includeSourceBlocks?: boolean;
 }
 
 /** 转义 HTML 特殊字符，避免文档内容造成 XSS。 */
@@ -102,26 +115,37 @@ export function getCitationSiteName(url: string): string {
  * 在块级解析前移除 reference definition，避免尾部来源定义被渲染为正文。
  * 围栏代码内的文本必须原样保留，防止示例 Markdown 被误识别为定义。
  */
-function extractReferenceDefinitions(source: string): { content: string; referenceDefinitions: Map<string, MarkdownReferenceDefinition> } {
+interface ReferenceExtractionResult {
+  lines: string[];
+  /** 过滤后的解析行下标对应的原始 Markdown 行号，行号从 1 开始。 */
+  sourceLineNumbers: number[];
+  referenceDefinitions: Map<string, MarkdownReferenceDefinition>;
+}
+
+function extractReferenceDefinitions(source: string): ReferenceExtractionResult {
   const referenceDefinitions = new Map<string, MarkdownReferenceDefinition>();
-  const content: string[] = [];
+  const lines: string[] = [];
+  const sourceLineNumbers: number[] = [];
   let inFence = false;
 
-  for (const line of source.replace(/\r\n/g, '\n').split('\n')) {
+  for (const [lineIndex, line] of source.replace(/\r\n/g, '\n').split('\n').entries()) {
     if (/^```/.test(line)) {
       inFence = !inFence;
-      content.push(line);
+      lines.push(line);
+      sourceLineNumbers.push(lineIndex + 1);
       continue;
     }
 
     if (inFence) {
-      content.push(line);
+      lines.push(line);
+      sourceLineNumbers.push(lineIndex + 1);
       continue;
     }
 
     const definition = line.match(/^\s{0,3}\[([^\]]+)\]:\s*(?:<([^>]+)>|(\S+))(?:\s+(?:"([^"]*)"|'([^']*)'|\(([^)]*)\)))?\s*$/);
     if (!definition) {
-      content.push(line);
+      lines.push(line);
+      sourceLineNumbers.push(lineIndex + 1);
       continue;
     }
 
@@ -137,7 +161,7 @@ function extractReferenceDefinitions(source: string): { content: string; referen
     }
   }
 
-  return { content: content.join('\n'), referenceDefinitions };
+  return { lines, sourceLineNumbers, referenceDefinitions };
 }
 
 function renderMarkdownLink(label: string, url: string): string {
@@ -310,6 +334,7 @@ interface ParseResult {
   html: string;
   headings: MarkdownHeading[];
   citationGroups: MarkdownCitationGroup[];
+  sourceBlocks: MarkdownSourceBlock[];
 }
 
 type TableAlignment = 'left' | 'center' | 'right' | null;
@@ -441,49 +466,81 @@ function renderCodeCopyButton(): string {
 }
 
 /** 将 Markdown 文本解析为 HTML，并收集标题用于目录。 */
-function parseMarkdown(source: string, inheritedContext?: MarkdownParseContext): ParseResult {
+function parseMarkdownInternal(
+  source: string,
+  inheritedContext?: MarkdownParseContext,
+  options?: UseMarkdownOptions
+): ParseResult {
   const extracted = inheritedContext ? null : extractReferenceDefinitions(source);
   const context: MarkdownParseContext = inheritedContext ?? {
     citationGroups: [],
     referenceDefinitions: extracted?.referenceDefinitions ?? new Map()
   };
-  const lines = (extracted?.content ?? source).replace(/\r\n/g, '\n').split('\n');
+  const lines = extracted?.lines ?? source.replace(/\r\n/g, '\n').split('\n');
+  const sourceLineNumbers = extracted?.sourceLineNumbers ?? lines.map((_line, index) => index + 1);
   const blocks: string[] = [];
   const headings: MarkdownHeading[] = [];
+  const sourceBlocks: MarkdownSourceBlock[] = [];
+  const tracksSourceBlocks = !inheritedContext && options?.includeSourceBlocks === true;
 
   let paragraph: string[] = [];
+  let paragraphStartLine: number | null = null;
   let listItems: string[] = [];
   let listType: 'ul' | 'ol' | null = null;
+  let listStartLine: number | null = null;
   let inFence = false;
+  let fenceStartLine: number | null = null;
   let fenceLang = '';
   let fenceLines: string[] = [];
 
-  const flushParagraph = () => {
-    if (paragraph.length === 0) return;
-    blocks.push(`<p>${paragraph.map((line) => renderInline(line, context)).join('<br>')}</p>`);
-    paragraph = [];
+  /** 顶层元素写入稳定的块标识，供全屏编辑器建立源码行与预览位置的映射。 */
+  const pushBlock = (html: string, startLineIndex: number, endLineIndex: number) => {
+    if (!tracksSourceBlocks) {
+      blocks.push(html);
+      return;
+    }
+
+    const blockId = `md-block-${sourceBlocks.length}`;
+    const startLine = sourceLineNumbers[Math.max(0, startLineIndex)] ?? 1;
+    const endLine = sourceLineNumbers[Math.max(startLineIndex, endLineIndex)] ?? startLine;
+    sourceBlocks.push({ blockId, startLine, endLine });
+    blocks.push(html.replace(/^<([a-z][\w-]*)(?=\s|>)/i, `<$1 data-md-block-id="${blockId}"`));
   };
 
-  const flushList = () => {
-    if (!listType || listItems.length === 0) {
+  const flushParagraph = (endLineIndex: number) => {
+    if (paragraph.length === 0 || paragraphStartLine === null) return;
+    pushBlock(
+      `<p>${paragraph.map((line) => renderInline(line, context)).join('<br>')}</p>`,
+      paragraphStartLine,
+      endLineIndex
+    );
+    paragraph = [];
+    paragraphStartLine = null;
+  };
+
+  const flushList = (endLineIndex: number) => {
+    if (!listType || listItems.length === 0 || listStartLine === null) {
       listType = null;
       listItems = [];
+      listStartLine = null;
       return;
     }
     const items = listItems.map((item) => `<li>${renderInline(item, context)}</li>`).join('');
-    blocks.push(`<${listType} class="md-list">${items}</${listType}>`);
+    pushBlock(`<${listType} class="md-list">${items}</${listType}>`, listStartLine, endLineIndex);
     listType = null;
     listItems = [];
+    listStartLine = null;
   };
 
-  const flushFence = () => {
+  const flushFence = (endLineIndex: number) => {
+    const startLineIndex = fenceStartLine ?? endLineIndex;
     const rawCode = fenceLines.join('\n');
     const code = escapeHtml(rawCode);
     const normalizedLang = fenceLang.toLowerCase();
 
     if (normalizedLang === 'mermaid') {
       const encodedCode = encodeURIComponent(rawCode);
-      blocks.push(
+      pushBlock(
         `<section class="md-mermaid-block">` +
           `<div class="md-mermaid-controls" role="group" aria-label="Mermaid 显示模式">` +
             `<button type="button" class="md-mermaid-toggle is-active" data-mermaid-mode="preview" aria-pressed="true">图表</button>` +
@@ -496,22 +553,28 @@ function parseMarkdown(source: string, inheritedContext?: MarkdownParseContext):
             renderCodeCopyButton() +
             `<pre class="md-pre" data-lang="mermaid"><code>${code}</code></pre>` +
           `</div>` +
-        `</section>`
+        `</section>`,
+        startLineIndex,
+        endLineIndex
       );
       fenceLines = [];
       fenceLang = '';
+      fenceStartLine = null;
       return;
     }
 
     const langAttr = fenceLang ? ` data-lang="${escapeHtml(fenceLang)}"` : '';
-    blocks.push(
+    pushBlock(
       `<div class="md-code-block">` +
         renderCodeCopyButton() +
         `<pre class="md-pre"${langAttr}><code>${code}</code></pre>` +
-      `</div>`
+      `</div>`,
+      startLineIndex,
+      endLineIndex
     );
     fenceLines = [];
     fenceLang = '';
+    fenceStartLine = null;
   };
 
   for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
@@ -519,12 +582,13 @@ function parseMarkdown(source: string, inheritedContext?: MarkdownParseContext):
     const fenceMatch = line.match(/^```(.*)$/);
     if (fenceMatch) {
       if (inFence) {
-        flushFence();
+        flushFence(lineIndex);
         inFence = false;
       } else {
-        flushParagraph();
-        flushList();
+        flushParagraph(lineIndex - 1);
+        flushList(lineIndex - 1);
         inFence = true;
+        fenceStartLine = lineIndex;
         fenceLang = fenceMatch[1].trim();
       }
       continue;
@@ -536,8 +600,8 @@ function parseMarkdown(source: string, inheritedContext?: MarkdownParseContext):
     }
 
     if (line.trim() === '') {
-      flushParagraph();
-      flushList();
+      flushParagraph(lineIndex - 1);
+      flushList(lineIndex - 1);
       continue;
     }
 
@@ -546,8 +610,8 @@ function parseMarkdown(source: string, inheritedContext?: MarkdownParseContext):
       ? parseTableAlignments(lines[lineIndex + 1] ?? '', tableHeaders.length)
       : null;
     if (tableHeaders && tableAlignments) {
-      flushParagraph();
-      flushList();
+      flushParagraph(lineIndex - 1);
+      flushList(lineIndex - 1);
 
       const tableRows: string[][] = [];
       let nextLineIndex = lineIndex + 2;
@@ -560,15 +624,15 @@ function parseMarkdown(source: string, inheritedContext?: MarkdownParseContext):
         nextLineIndex += 1;
       }
 
-      blocks.push(renderTable(tableHeaders, tableAlignments, tableRows, context));
+      pushBlock(renderTable(tableHeaders, tableAlignments, tableRows, context), lineIndex, nextLineIndex - 1);
       lineIndex = nextLineIndex - 1;
       continue;
     }
 
     const blockquoteMatch = line.match(/^ {0,3}>\s?(.*)$/);
     if (blockquoteMatch) {
-      flushParagraph();
-      flushList();
+      flushParagraph(lineIndex - 1);
+      flushList(lineIndex - 1);
 
       const quoteLines: string[] = [blockquoteMatch[1]];
       let nextLineIndex = lineIndex + 1;
@@ -581,35 +645,36 @@ function parseMarkdown(source: string, inheritedContext?: MarkdownParseContext):
         nextLineIndex += 1;
       }
 
-      const quote = parseMarkdown(quoteLines.join('\n'), context);
-      blocks.push(`<blockquote class="md-blockquote">${quote.html}</blockquote>`);
+      const quote = parseMarkdownInternal(quoteLines.join('\n'), context, options);
+      pushBlock(`<blockquote class="md-blockquote">${quote.html}</blockquote>`, lineIndex, nextLineIndex - 1);
       lineIndex = nextLineIndex - 1;
       continue;
     }
 
     if (isHorizontalRule(line)) {
-      flushParagraph();
-      flushList();
-      blocks.push('<hr class="md-divider">');
+      flushParagraph(lineIndex - 1);
+      flushList(lineIndex - 1);
+      pushBlock('<hr class="md-divider">', lineIndex, lineIndex);
       continue;
     }
 
     const headingMatch = line.match(/^(#{1,6})\s+(.*)$/);
     if (headingMatch) {
-      flushParagraph();
-      flushList();
+      flushParagraph(lineIndex - 1);
+      flushList(lineIndex - 1);
       const level = headingMatch[1].length;
       const text = headingMatch[2].trim();
       const id = slugify(text);
       headings.push({ level, text, id });
-      blocks.push(`<h${level} id="${id}" class="md-heading">${renderInline(text, context)}</h${level}>`);
+      pushBlock(`<h${level} id="${id}" class="md-heading">${renderInline(text, context)}</h${level}>`, lineIndex, lineIndex);
       continue;
     }
 
     const ulMatch = line.match(/^\s*[-*]\s+(.*)$/);
     if (ulMatch) {
-      flushParagraph();
-      if (listType && listType !== 'ul') flushList();
+      flushParagraph(lineIndex - 1);
+      if (listType && listType !== 'ul') flushList(lineIndex - 1);
+      if (!listType) listStartLine = lineIndex;
       listType = 'ul';
       listItems.push(ulMatch[1]);
       continue;
@@ -617,25 +682,36 @@ function parseMarkdown(source: string, inheritedContext?: MarkdownParseContext):
 
     const olMatch = line.match(/^\s*\d+\.\s+(.*)$/);
     if (olMatch) {
-      flushParagraph();
-      if (listType && listType !== 'ol') flushList();
+      flushParagraph(lineIndex - 1);
+      if (listType && listType !== 'ol') flushList(lineIndex - 1);
+      if (!listType) listStartLine = lineIndex;
       listType = 'ol';
       listItems.push(olMatch[1]);
       continue;
     }
 
-    flushList();
+    flushList(lineIndex - 1);
+    if (paragraphStartLine === null) paragraphStartLine = lineIndex;
     paragraph.push(line.trim());
   }
 
-  if (inFence) flushFence();
-  flushParagraph();
-  flushList();
+  if (inFence) flushFence(lines.length - 1);
+  flushParagraph(lines.length - 1);
+  flushList(lines.length - 1);
 
-  return { html: blocks.join('\n'), headings, citationGroups: context.citationGroups };
+  return { html: blocks.join('\n'), headings, citationGroups: context.citationGroups, sourceBlocks };
+}
+
+/** 供编辑器映射测试和 `useMarkdown` 复用的纯 Markdown 解析入口。 */
+export function parseMarkdown(source: string, options?: UseMarkdownOptions): ParseResult {
+  return parseMarkdownInternal(source, undefined, options);
 }
 
 /** 记忆化的 Markdown 渲染 hook，返回 HTML 与标题目录。 */
-export function useMarkdown(source: string): UseMarkdownReturn {
-  return useMemo(() => parseMarkdown(source || ''), [source]);
+export function useMarkdown(source: string, options?: UseMarkdownOptions): UseMarkdownReturn {
+  const includeSourceBlocks = options?.includeSourceBlocks === true;
+  return useMemo(
+    () => parseMarkdown(source || '', { includeSourceBlocks }),
+    [includeSourceBlocks, source]
+  );
 }
