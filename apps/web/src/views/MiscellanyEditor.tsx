@@ -22,7 +22,7 @@ export function MiscellanyEditor() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const locationState = location.state as EditorNavigationState | null;
-  const createdDraft = locationState?.created?.id === id ? locationState.created : undefined;
+  const createdDraft = locationState?.created?.id === id ? locationState?.created : undefined;
   const isEdit = Boolean(id);
   const [saving, setSaving] = useState(false);
   const [categoryOptions, setCategoryOptions] = useState<string[]>([]);

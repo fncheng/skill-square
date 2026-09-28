@@ -18,7 +18,7 @@ function parseTags(value: string): string[] { return Array.from(new Set(value.sp
 export function ModelResponseEditor() {
   const { id } = useParams<{ id: string }>(); const location = useLocation(); const navigate = useNavigate(); const { toast } = useToast(); const isEdit = Boolean(id);
   const locationState = location.state as EditorNavigationState | null;
-  const createdDraft = locationState?.created?.id === id ? locationState.created : undefined;
+  const createdDraft = locationState?.created?.id === id ? locationState?.created : undefined;
   const [saving, setSaving] = useState(false); const [categories, setCategories] = useState<string[]>([]); const [tagsText, setTagsText] = useState(() => createdDraft?.tagsText ?? ''); const tagsTextRef = useRef(tagsText); const [form, setForm] = useState<ModelResponsePayload>(() => createdDraft?.payload ?? emptyForm); const formRef = useRef(form); const [fullscreen, setFullscreen] = useState(() => locationState?.fullscreen === true);
   const updateTagsText = (value: string) => { tagsTextRef.current = value; setTagsText(value); };
   // 同步表单引用，确保保存请求等待期间的输入能随新建路由保留。
