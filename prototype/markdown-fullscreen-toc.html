@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Markdown 全屏编辑 · 目录原型</title>
+  <style>
+    :root{--primary:#4f46e5;--accent:#eef2ff;--text:#1e293b;--muted:#64748b;--line:#e2e8f0;--sidebar:248px;--ratio:50%;color-scheme:light}
+    *{box-sizing:border-box}body{margin:0;background:#fff;color:var(--text);font:14px/1.6 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif}
+    button,input{font:inherit}button{cursor:pointer}button:disabled{cursor:default;opacity:.5}[hidden]{display:none!important}svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:none}
+    button:focus-visible,a:focus-visible,input:focus-visible,[contenteditable]:focus-visible{outline:2px solid var(--primary);outline-offset:3px}
+    .workspace{height:100vh;height:100dvh;display:grid;grid-template-rows:52px minmax(0,1fr);overflow:hidden}
+    .toolbar{position:relative;z-index:5;display:flex;align-items:center;gap:16px;padding:0 16px;border-bottom:1px solid var(--line);background:#fff;min-width:0}
+    .document-title{flex:1;min-width:0;font-size:14px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .actions{display:flex;gap:8px;align-items:center;flex:none}.btn{display:inline-flex;height:32px;align-items:center;justify-content:center;gap:7px;padding:0 11px;border:1px solid var(--line);border-radius:6px;background:#fff;color:#334155;font-weight:500;white-space:nowrap}
+    .btn:hover{background:#f8fafc;border-color:#cbd5e1}.btn[aria-pressed="true"],.btn[aria-expanded="true"]{color:var(--primary);border-color:#c7d2fe;background:var(--accent)}
+    .btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}.btn.primary:hover{background:#4338ca}.icon-btn{width:28px;height:28px;padding:0;border-color:transparent;background:transparent;color:var(--muted)}
+    .workbody{position:relative;display:flex;min-height:0;min-width:0;overflow:hidden}.outline{display:flex;width:var(--sidebar);flex:none;min-height:0;flex-direction:column;border-right:1px solid var(--line);background:#fafbfe;z-index:3}
+    .outline-head{height:49px;display:flex;align-items:center;gap:8px;padding:0 14px;flex:none;border-bottom:1px solid #edf0f5}.outline-head h2{font-size:13px;font-weight:700;margin:0}.count{font-size:11px;color:#94a3b8;font-variant-numeric:tabular-nums}.outline-head .icon-btn{margin-left:auto}
+    .outline-scroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:12px 10px 20px}.toc-link{position:relative;display:flex;align-items:flex-start;gap:9px;min-height:35px;padding:8px 10px;margin:2px 0;border-radius:5px;text-decoration:none;color:#64748b;font-size:12px;line-height:1.55;overflow-wrap:anywhere}
+    .toc-link:hover{background:#f0f2f8;color:#334155}.toc-link[aria-current="location"]{background:#e9edff;color:#4338ca;font-weight:600}.toc-link[aria-current="location"]:before{position:absolute;content:"";width:2px;top:8px;bottom:8px;left:0;background:var(--primary);border-radius:1px}
+    .toc-link.level-1{font-weight:700;color:#334155;margin-bottom:10px}.toc-link.level-3{padding-left:25px;font-size:12px}.toc-link.level-4,.toc-link.level-5,.toc-link.level-6{padding-left:39px}.toc-marker{width:5px;height:5px;margin-top:7px;border:1px solid #a8b1c2;border-radius:50%;flex:none}.toc-link[aria-current] .toc-marker{background:var(--primary);border-color:var(--primary)}.toc-link.level-1 .toc-marker{border-radius:1px}
+    .outline-footer{padding:12px 16px;border-top:1px solid var(--line);font-size:11px;line-height:1.6;color:#94a3b8;flex:none}.outline-footer strong{font-weight:500;color:#64748b}.toc-state{padding:34px 14px;color:var(--muted);font-size:12px;text-align:center;line-height:1.8}.toc-state svg{width:25px;height:25px;display:block;margin:0 auto 12px;color:#94a3b8}.toc-state strong{display:block;color:#475569;font-weight:500;margin-bottom:4px}.toc-state .btn{margin-top:12px}.skeleton{height:10px;margin:16px 8px;background:#e8ecf4;border-radius:3px;width:75%;animation:pulse 1.2s infinite}.skeleton:nth-child(even){width:56%;margin-left:24px}@keyframes pulse{50%{opacity:.4}}
+    .editing{flex:1;display:flex;flex-direction:column;min-height:0;min-width:0}.mobile-tabs{display:none}.panes{display:grid;grid-template-columns:minmax(0,var(--ratio)) 12px minmax(0,1fr);flex:1;min-height:0;min-width:0}
+    .pane{display:flex;flex-direction:column;min-width:0;min-height:0}.pane-head{display:flex;align-items:center;justify-content:space-between;height:40px;flex:none;padding:0 18px;border-bottom:1px solid #edf0f5;background:#fff;font-size:11px;color:#94a3b8}.pane-head strong{font-size:11px;font-weight:600;letter-spacing:.8px;color:#64748b}.pane-head span{white-space:nowrap}.source-pane{background:#fff}.source-scroll{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:16px 0 32px;scroll-padding-top:18px}.source-editor{counter-reset:line;outline:none;min-height:100%;font:13px/22px ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;tab-size:2;color:#334155;white-space:pre-wrap;overflow-wrap:anywhere;padding-right:20px}
+    .source-line{position:relative;counter-increment:line;min-height:22px;padding-left:58px;padding-right:10px}.source-line:before{content:counter(line);position:absolute;left:0;top:0;width:42px;text-align:right;font-size:12px;color:#adb6c5;user-select:none;pointer-events:none}.source-line.is-heading{color:#3b48a2;font-weight:600}.source-line.is-code{color:#7c3b6e}.source-line.is-target{background:#eef2ff;box-shadow:inset 3px 0 #818cf8}
+    .divider{position:relative;width:12px;padding:0;border:0;border-left:1px solid #f1f5f9;border-right:1px solid var(--line);background:#f8fafc;cursor:col-resize;touch-action:none}.divider:before{content:"";position:absolute;left:4px;top:calc(50% - 20px);height:40px;width:3px;border-radius:2px;background:#cbd5e1}.divider:hover,.divider:focus-visible{background:#eef2ff}
+    .preview-scroll{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;scroll-padding-top:24px}.article{padding:26px 28px 80px;max-width:800px;margin:auto;font-size:14px;line-height:1.85;color:#475569;overflow-wrap:anywhere}.article h1,.article h2,.article h3,.article h4,.article h5,.article h6{color:#1e293b;line-height:1.5;scroll-margin-top:24px}.article h1{font-size:25px;margin:0 0 20px;padding-bottom:14px;border-bottom:1px solid var(--line)}.article h2{font-size:19px;margin:30px 0 13px}.article h3{font-size:16px;margin:23px 0 10px}.article h4,.article h5,.article h6{font-size:14px;margin:22px 0 10px}.article p{margin:0 0 16px}.article ul{padding-left:22px;margin:0 0 18px}.article li{padding:2px 0}.article li::marker{color:#818cf8}.article code{padding:2px 5px;border-radius:4px;background:#f1f5f9;color:#8b3d63;font:12px/1.7 ui-monospace,SFMono-Regular,Consolas,monospace}.article pre{margin:16px 0 22px;padding:17px 18px;border:1px solid var(--line);border-radius:6px;background:#f8fafc;white-space:pre-wrap;overflow-wrap:anywhere}.article pre code{padding:0;background:none;color:#475569}.article blockquote{padding:10px 14px;margin:16px 0 20px;border-left:3px solid #a5b4fc;background:#f8faff;font-size:13px;color:#64748b}.article .is-target{background:#eef2ff;box-shadow:inset 3px 0 #818cf8}.preview-empty{display:grid;place-items:center;min-height:100%;color:#94a3b8;padding:24px;font-size:13px;text-align:center}
+    .scrim{position:absolute;inset:0;z-index:2;border:0;background:#0f172a33;padding:0}.metadata{position:absolute;z-index:4;top:0;right:0;bottom:0;width:min(420px,100%);border-left:1px solid var(--line);background:#fff;box-shadow:-12px 0 28px #0f172a0f;display:flex;flex-direction:column}.metadata .outline-head{height:53px}.metadata-fields{overflow:auto;min-height:0;padding:20px;display:grid;gap:20px}.field{display:grid;gap:7px;font-size:12px;color:#64748b}.field input{width:100%;min-width:0;height:37px;padding:0 11px;border:1px solid var(--line);border-radius:6px;color:#334155;background:#fff}.required{color:#e11d48}.toast{position:fixed;right:20px;bottom:20px;z-index:10;padding:10px 16px;border:1px solid #dbe3ee;border-radius:6px;background:#fff;box-shadow:0 5px 24px #0f172a14;color:#334155;font-size:13px;max-width:calc(100vw - 40px)}
+    @media(max-width:1279px){.outline{position:absolute;left:0;top:0;bottom:0;width:280px;max-width:calc(100% - 48px);box-shadow:12px 0 30px #0f172a12;z-index:4;background:#fff}.outline-footer{background:#fafbfe}}
+    @media(max-width:960px){.toolbar{padding:0 10px;gap:8px}.actions{gap:5px}.btn{padding:0 8px}.actions .label{display:none}.actions .btn{width:32px}.actions #syncButton{display:none}.document-title{font-size:13px}.mobile-tabs{display:flex;height:42px;border-bottom:1px solid var(--line);flex:none}.mobile-tabs button{flex:1;border:0;border-bottom:2px solid transparent;background:#fff;color:var(--muted);font-size:13px}.mobile-tabs button[aria-selected="true"]{color:var(--primary);border-bottom-color:var(--primary);font-weight:600}.panes{display:flex}.pane{flex:1}.pane-head{display:none}.divider{display:none}.panes[data-view="edit"] .preview-pane,.panes[data-view="preview"] .source-pane{display:none}.article{padding:22px 20px 60px}.article h1{font-size:23px}.source-editor{font-size:12px}.source-line{padding-left:48px}.source-line:before{width:34px}.outline{width:296px}.outline-head{height:48px}}
+    @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;scroll-behavior:auto!important}}
+  </style>
+</head>
+<body>
+  <!-- 离线交互原型。源码编辑区域模拟 Monaco 外观，不是生产编辑器替换方案。 -->
+  <svg aria-hidden="true" width="0" height="0" hidden>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h12M9 12h12M9 18h12M3 6h.01M3 12h.01M3 18h.01"/></symbol>
+    <symbol id="i-sync" viewBox="0 0 24 24"><path d="M7 3v18m-4-4 4 4 4-4M17 21V3m-4 4 4-4 4 4"/></symbol>
+    <symbol id="i-panel" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16M8 9l3 3-3 3"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+    <symbol id="i-exit" viewBox="0 0 24 24"><path d="M8 3v5H3M16 21v-5h5M8 8 3 3m13 13 5 5"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h5"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="m12 3 10 18H2zM12 9v4M12 17h.01"/></symbol>
+  </svg>
+  <main class="workspace" aria-label="Markdown 全屏编辑">
+    <header class="toolbar">
+      <div class="document-title" title="React 组件状态与副作用学习笔记">React 组件状态与副作用学习笔记</div>
+      <div class="actions">
+        <button class="btn" id="tocButton" type="button" aria-controls="outline" aria-expanded="true" title="显示或收起目录" aria-label="显示或收起目录"><svg><use href="#i-list"/></svg><span class="label">目录</span></button>
+        <button class="btn" id="syncButton" type="button" aria-pressed="true" title="切换双栏同步滚动" aria-label="切换双栏同步滚动"><svg><use href="#i-sync"/></svg><span class="label">同步滚动</span></button>
+        <button class="btn" id="metadataButton" type="button" aria-expanded="false" aria-controls="metadata" title="元数据" aria-label="元数据"><svg><use href="#i-panel"/></svg><span class="label">元数据</span></button>
+        <button class="btn primary" id="saveButton" type="button" title="保存" aria-label="保存"><span>保存</span></button>
+        <button class="btn" id="exitButton" type="button" title="退出全屏" aria-label="退出全屏"><svg><use href="#i-exit"/></svg><span class="label">退出</span></button>
+      </div>
+    </header>
+    <div class="workbody">
+      <button class="scrim" id="scrim" type="button" aria-label="关闭侧栏" hidden tabindex="-1"></button>
+      <aside class="outline" id="outline" aria-labelledby="outlineTitle">
+        <div class="outline-head"><svg><use href="#i-list"/></svg><h2 id="outlineTitle">文档目录</h2><span class="count" id="headingCount"></span><button class="btn icon-btn" id="closeToc" type="button" title="收起目录" aria-label="收起目录"><svg><use href="#i-close"/></svg></button></div>
+        <div class="outline-scroll" id="outlineScroll"><nav id="toc" aria-label="文档章节"></nav><div class="toc-state" id="tocState" role="status" hidden></div></div>
+        <div class="outline-footer">当前章节<br><strong id="currentHeading">—</strong></div>
+      </aside>
+      <section class="editing" id="editing" aria-label="编辑和预览">
+        <div class="mobile-tabs" role="tablist" aria-label="Markdown 工作区视图"><button id="editTab" type="button" role="tab" aria-selected="true" aria-controls="sourcePane">编辑</button><button id="previewTab" type="button" role="tab" aria-selected="false" aria-controls="previewPane">预览</button></div>
+        <div class="panes" id="panes" data-view="edit">
+          <section class="pane source-pane" id="sourcePane" aria-label="Markdown 源码"><div class="pane-head"><strong>MARKDOWN</strong><span id="sourcePosition">第 1 行</span></div><div class="source-scroll" id="sourceScroll"><div class="source-editor" id="sourceEditor" contenteditable="plaintext-only" role="textbox" aria-label="Markdown 正文" aria-multiline="true" spellcheck="false"></div></div></section>
+          <button class="divider" id="divider" type="button" role="separator" aria-label="调整编辑和预览列宽" aria-orientation="vertical" aria-valuemin="35" aria-valuemax="70" aria-valuenow="50" title="拖动调整双栏宽度"></button>
+          <section class="pane preview-pane" id="previewPane" aria-label="Markdown 预览"><div class="pane-head"><strong>预览</strong><span id="previewStatus" role="status">已同步</span></div><div class="preview-scroll" id="previewScroll"><article class="article" id="previewContent"></article><div class="preview-empty" id="previewEmpty" hidden>暂无可预览的 Markdown 内容</div></div></section>
+        </div>
+      </section>
+      <aside class="metadata" id="metadata" role="dialog" aria-modal="true" aria-labelledby="metadataTitle" hidden>
+        <div class="outline-head"><h2 id="metadataTitle">元数据</h2><button class="btn icon-btn" id="closeMetadata" type="button" aria-label="关闭元数据面板" title="关闭元数据面板"><svg><use href="#i-close"/></svg></button></div>
+        <div class="metadata-fields"><label class="field">标题 <span class="required">*</span><input id="documentTitle" value="React 组件状态与副作用学习笔记" maxlength="200"></label><label class="field">摘要<input value="整理组件状态、Effect 执行时机与常见实践。"></label><label class="field">分类<input value="React"></label><label class="field">标签 <span class="required">*</span><input value="React, Hooks, 前端"></label></div>
+      </aside>
+    </div>
+  </main>
+  <div class="toast" id="toast" role="status" hidden></div>
+  <script>
+    // ?state=loading / error / empty 可用于检查目录状态；不在实际界面添加演示控件。
+    /** @typedef {{ id: string, text: string, level: number, line: number }} Heading */
+    /** @typedef {{ line: number, element: HTMLElement }} PreviewBlock */
+    const byId = (id) => document.getElementById(id);
+    const source = byId('sourceEditor');
+    const sourceScroll = byId('sourceScroll');
+    const previewScroll = byId('previewScroll');
+    const preview = byId('previewContent');
+    const outline = byId('outline');
+    const toc = byId('toc');
+    const editing = byId('editing');
+    const metadata = byId('metadata');
+    const panes = byId('panes');
+    const scrim = byId('scrim');
+    const wide = matchMedia('(min-width: 1280px)');
+    const split = matchMedia('(min-width: 961px)');
+    /** @type {Heading[]} */
+    let headings = [];
+    /** @type {PreviewBlock[]} */
+    let blocks = [];
+    let tocOpen = wide.matches;
+    let metadataOpen = false;
+    let restoreToc = false;
+    let activeId = '';
+    let syncEnabled = true;
+    let ratio = 50;
+    let updateTimer = 0;
+    let syncFrame = 0;
+    let programmaticUntil = 0;
+    let toastTimer = 0;
+    let previewRevision = 0;
+    let currentText = '';
+    const demoText = [
+      '# React 组件状态与副作用', '',
+      '状态描述组件当前的界面，Effect 负责与外部系统同步。理解这两者的边界，可以让组件更容易维护。', '',
+      '## 1. 理解组件状态', '',
+      '使用 `useState` 保存会随交互变化的数据。调用更新函数后，React 会为组件安排一次新的渲染。', '',
+      '### 状态是一次渲染的快照', '',
+      '每次渲染得到的状态值都是固定的。事件处理函数读取的是创建该函数时对应的状态，而不是未来某次渲染的状态。', '',
+      '```tsx', 'const [count, setCount] = useState(0);', '', 'function increment() {', '  setCount(previous => previous + 1);', '}', '```', '',
+      '### 选择合适的状态结构', '',
+      '- 将始终一起变化的数据组织在一起。', '- 避免保存可以从已有状态计算出的数据。', '- 使用稳定的标识关联列表中的元素。', '',
+      '## 2. 什么时候使用 Effect', '',
+      '当组件需要与 React 之外的系统保持同步时，使用 Effect。例如订阅浏览器事件、建立网络连接或管理计时器。', '',
+      '### 与外部系统同步', '',
+      '先明确连接的生命周期，再决定依赖项。组件重新渲染并不意味着需要重新创建每一个外部连接。', '',
+      '```tsx', 'useEffect(() => {', '  const connection = connect(roomId);', '  connection.open();', '  return () => connection.close();', '}, [roomId]);', '```', '',
+      '### 依赖项与清理函数', '',
+      '当依赖项发生变化时，React 会先执行上一次的清理函数，再运行新的 Effect。组件卸载时也会执行清理。', '',
+      '> 一个 Effect 应当描述一个独立的同步过程。不要把无关的行为混在同一个 Effect 中。', '',
+      '## 3. 常见问题与实践', '',
+      '先从触发条件和数据来源判断问题，再决定是否需要增加状态或 Effect。', '',
+      '### 避免不必要的 Effect', '',
+      '筛选列表、拼接名称等纯计算可以在渲染期间完成。不要通过额外的 Effect 将派生结果再次写入状态。', '',
+      '### 异步请求与过时响应', '',
+      '请求参数改变后，旧请求可能比新请求更晚返回。使用清理机制隔离过时响应，避免旧结果覆盖当前页面。', '',
+      '```tsx', 'useEffect(() => {', '  const controller = new AbortController();', '  loadData(query, controller.signal);', '  return () => controller.abort();', '}, [query]);', '```', '',
+      '### 自定义 Hook 的边界', '',
+      '将可复用的状态和同步逻辑组织到自定义 Hook 中。Hook 的参数应当表达业务含义，而不是隐藏依赖关系。', '',
+      '## 4. 小结', '',
+      '用状态描述界面，用事件处理用户操作，用 Effect 同步外部系统。保持每部分职责清晰，组件就更容易理解。', '',
+      '- 状态更新基于当前渲染的快照。', '- 派生数据优先直接计算。', '- Effect 应当具有清晰的依赖和清理逻辑。', ''
+    ].join('\n');
+
+    /** 转义用户编辑内容，原型不执行 Markdown 中的 HTML。 */
+    function escapeHtml(text) { return text.replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char])); }
+    function inline(text) { return escapeHtml(text).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>'); }
+
+    /** 原型仅模拟源码编辑和行定位，保持同一编辑节点以保留输入焦点。 */
+    function setSource(text) {
+      source.innerHTML = text.split('\n').map((line, index) => `<div class="source-line${/^#{1,6}\s/.test(line) ? ' is-heading' : ''}${/^```/.test(line) ? ' is-code' : ''}" data-line="${index + 1}">${line ? escapeHtml(line) : '<br>'}</div>`).join('');
+      currentText = text;
+      render(text);
+    }
+
+    /** 离线预览只覆盖此原型的 Markdown 示例，不替代项目 useMarkdown。 */
+    function render(text) {
+      const lines = text.split('\n');
+      const html = [];
+      headings = [];
+      blocks = [];
+      let fence = false;
+      let fenceStart = 0;
+      let code = [];
+      let list = [];
+      let listStart = 0;
+      const push = (markup, line) => html.push(`<div data-source-line="${line}">${markup}</div>`);
+      const flushList = () => { if (list.length) { push(`<ul>${list.map(item => `<li>${inline(item)}</li>`).join('')}</ul>`, listStart); list = []; } };
+      lines.forEach((line, index) => {
+        const row = index + 1;
+        if (/^```/.test(line)) {
+          flushList();
+          if (fence) { push(`<pre><code>${escapeHtml(code.join('\n'))}</code></pre>`, fenceStart); code = []; }
+          else fenceStart = row;
+          fence = !fence;
+          return;
+        }
+        if (fence) { code.push(line); return; }
+        const heading = line.match(/^(#{1,6})\s+(.*)$/);
+        if (heading) {
+          flushList();
+          const entry = { id: `section-${row}`, text: heading[2].trim(), level: heading[1].length, line: row };
+          headings.push(entry);
+          push(`<h${entry.level} id="${entry.id}">${inline(entry.text)}</h${entry.level}>`, row);
+        } else if (/^-\s/.test(line)) {
+          if (!list.length) listStart = row;
+          list.push(line.replace(/^-\s+/, ''));
+        } else {
+          flushList();
+          if (/^>\s?/.test(line)) push(`<blockquote>${inline(line.replace(/^>\s?/, ''))}</blockquote>`, row);
+          else if (line.trim()) push(`<p>${inline(line)}</p>`, row);
+        }
+      });
+      flushList();
+      if (code.length) push(`<pre><code>${escapeHtml(code.join('\n'))}</code></pre>`, fenceStart);
+      preview.innerHTML = html.join('');
+      byId('previewEmpty').hidden = !!text.trim();
+      preview.hidden = !text.trim();
+      blocks = Array.from(preview.querySelectorAll('[data-source-line]')).map(element => ({ line: Number(element.dataset.sourceLine), element }));
+      toc.innerHTML = headings.map(item => `<a class="toc-link level-${item.level}" href="#${item.id}" data-id="${item.id}" title="${escapeHtml(item.text)}"><span class="toc-marker" aria-hidden="true"></span><span>${escapeHtml(item.text)}</span></a>`).join('');
+      byId('headingCount').textContent = String(headings.length);
+      byId('previewStatus').textContent = '已同步';
+      showTocState(headings.length ? 'ready' : 'empty');
+      setActive(headings.some(item => item.id === activeId) ? activeId : (headings[0]?.id || ''));
+    }
+
+    /** 状态发生于目录区域，编辑区和预览仍可继续使用。 */
+    function showTocState(state) {
+      const box = byId('tocState');
+      box.hidden = state === 'ready';
+      toc.hidden = state !== 'ready';
+      outline.setAttribute('aria-busy', String(state === 'loading'));
+      if (state === 'empty') box.innerHTML = '<svg><use href="#i-list"/></svg><strong>暂无目录</strong>添加 Markdown 标题后将在这里显示。';
+      if (state === 'loading') box.innerHTML = '<div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><span>正在更新目录…</span>';
+      if (state === 'error') {
+        box.innerHTML = '<svg><use href="#i-alert"/></svg><strong>目录暂时无法显示</strong><button class="btn" type="button" id="retryToc">重试</button>';
+        byId('retryToc').onclick = () => render(currentText);
+      }
+    }
+
+    function setActive(id) {
+      activeId = id;
+      toc.querySelectorAll('a').forEach(link => {
+        if (link.dataset.id === id) link.setAttribute('aria-current', 'location');
+        else link.removeAttribute('aria-current');
+      });
+      byId('currentHeading').textContent = headings.find(item => item.id === id)?.text || '—';
+    }
+
+    /** 宽屏侧栏不阻断编辑；较窄视口使用模态抽屉并隔离底层焦点。 */
+    function updatePanels() {
+      outline.hidden = !tocOpen;
+      metadata.hidden = !metadataOpen;
+      byId('tocButton').setAttribute('aria-expanded', String(tocOpen));
+      byId('metadataButton').setAttribute('aria-expanded', String(metadataOpen));
+      const modalToc = tocOpen && !wide.matches;
+      scrim.hidden = !(modalToc || metadataOpen);
+      editing.inert = modalToc || metadataOpen;
+      outline.inert = metadataOpen;
+      if (modalToc) { outline.setAttribute('role', 'dialog'); outline.setAttribute('aria-modal', 'true'); }
+      else { outline.removeAttribute('role'); outline.removeAttribute('aria-modal'); }
+    }
+    function toggleToc(open, returnFocus = false) {
+      if (metadataOpen) closeMetadata(false);
+      tocOpen = open;
+      updatePanels();
+      if (open && !wide.matches) byId('closeToc').focus();
+      if (returnFocus) byId('tocButton').focus();
+    }
+    function closeMetadata(returnFocus = true) {
+      metadataOpen = false;
+      tocOpen = restoreToc;
+      updatePanels();
+      if (returnFocus) byId('metadataButton').focus();
+    }
+    byId('tocButton').onclick = () => toggleToc(!tocOpen, tocOpen);
+    byId('closeToc').onclick = () => toggleToc(false, true);
+    byId('metadataButton').onclick = () => {
+      if (metadataOpen) return closeMetadata();
+      restoreToc = tocOpen;
+      tocOpen = false;
+      metadataOpen = true;
+      updatePanels();
+      byId('closeMetadata').focus();
+    };
+    byId('closeMetadata').onclick = () => closeMetadata();
+    scrim.onclick = () => metadataOpen ? closeMetadata() : toggleToc(false, true);
+
+    /** 目录点击同时定位两栏；窄屏保留原来的编辑/预览视图。 */
+    toc.onclick = event => {
+      const link = event.target.closest('a');
+      if (!link) return;
+      event.preventDefault();
+      const heading = headings.find(item => item.id === link.dataset.id);
+      if (!heading) return;
+      setActive(heading.id);
+      if (!wide.matches) toggleToc(false, true);
+      programmaticUntil = performance.now() + 250;
+      const target = byId(heading.id);
+      source.querySelectorAll('.is-target').forEach(element => element.classList.remove('is-target'));
+      preview.querySelectorAll('.is-target').forEach(element => element.classList.remove('is-target'));
+      const row = source.querySelector(`[data-line="${heading.line}"]`);
+      if (row) {
+        sourceScroll.scrollTop += row.getBoundingClientRect().top - sourceScroll.getBoundingClientRect().top - 22;
+        row.classList.add('is-target');
+      }
+      if (target) {
+        target.classList.add('is-target');
+        if (previewScroll.clientHeight) previewScroll.scrollTop += target.getBoundingClientRect().top - previewScroll.getBoundingClientRect().top - 24;
+      }
+      byId('sourcePosition').textContent = `第 ${heading.line} 行`;
+    };
+
+    function switchView(view) {
+      panes.dataset.view = view;
+      byId('editTab').setAttribute('aria-selected', String(view === 'edit'));
+      byId('previewTab').setAttribute('aria-selected', String(view === 'preview'));
+      // 从隐藏视图切回来时恢复当前目录目标，避免移动端定位无效。
+      const heading = headings.find(item => item.id === activeId);
+      if (!heading) return;
+      programmaticUntil = performance.now() + 250;
+      const target = view === 'preview' ? byId(heading.id) : source.querySelector(`[data-line="${heading.line}"]`);
+      const container = view === 'preview' ? previewScroll : sourceScroll;
+      if (target) container.scrollTop += target.getBoundingClientRect().top - container.getBoundingClientRect().top - 24;
+    }
+    byId('editTab').onclick = () => switchView('edit');
+    byId('previewTab').onclick = () => switchView('preview');
+    byId('syncButton').onclick = () => {
+      syncEnabled = !syncEnabled;
+      byId('syncButton').setAttribute('aria-pressed', String(syncEnabled));
+    };
+
+    /** 使用原型 DOM 块模拟语义同步滚动，同时更新当前位置。 */
+    function onScroll(side) {
+      if (performance.now() < programmaticUntil) return;
+      cancelAnimationFrame(syncFrame);
+      syncFrame = requestAnimationFrame(() => {
+        const from = side === 'source' ? sourceScroll : previewScroll;
+        const elements = side === 'source'
+          ? Array.from(source.querySelectorAll('[data-line]')).map(element => ({line: Number(element.dataset.line), element}))
+          : blocks;
+        let current = elements[0];
+        const top = from.getBoundingClientRect().top + 32;
+        for (const item of elements) { if (item.element.getBoundingClientRect().top <= top) current = item; else break; }
+        if (!current) return;
+        const chapter = headings.filter(item => item.line <= current.line).at(-1) || headings[0];
+        if (chapter) setActive(chapter.id);
+        if (side === 'source') byId('sourcePosition').textContent = `第 ${current.line} 行`;
+        if (!syncEnabled || !split.matches) return;
+        const target = side === 'source'
+          ? blocks.filter(item => item.line <= current.line).at(-1)?.element
+          : source.querySelector(`[data-line="${current.line}"]`);
+        const to = side === 'source' ? previewScroll : sourceScroll;
+        if (target) {
+          programmaticUntil = performance.now() + 80;
+          to.scrollTop += target.getBoundingClientRect().top - to.getBoundingClientRect().top - 24;
+        }
+      });
+    }
+    sourceScroll.onscroll = () => onScroll('source');
+    previewScroll.onscroll = () => onScroll('preview');
+
+    /** 按源码行读取文本，避免空行中的 br 被 innerText 重复计为换行。 */
+    function readSource() {
+      const children = Array.from(source.children);
+      if (children.length && Array.from(source.childNodes).every(node => node.nodeType === Node.ELEMENT_NODE)) {
+        return children.map(element => element.innerText.replace(/\r/g, '').replace(/\n$/, '')).join('\n');
+      }
+      return source.innerText.replace(/\r/g, '');
+    }
+
+    source.addEventListener('input', () => {
+      const text = readSource();
+      currentText = text;
+      byId('previewStatus').textContent = '更新中…';
+      clearTimeout(updateTimer);
+      const revision = ++previewRevision;
+      updateTimer = setTimeout(() => {
+        if (revision !== previewRevision) return;
+        render(text);
+        // 只补充行定位数据，不重建可编辑节点和光标。
+        source.querySelectorAll(':scope > div').forEach((element, index) => {
+          element.classList.add('source-line');
+          element.dataset.line = String(index + 1);
+          element.classList.toggle('is-heading', /^#{1,6}\s/.test(element.textContent));
+        });
+      }, 250);
+    });
+
+    function setRatio(value) {
+      ratio = Math.min(70, Math.max(35, value));
+      panes.style.setProperty('--ratio', `${ratio}%`);
+      byId('divider').setAttribute('aria-valuenow', String(Math.round(ratio)));
+    }
+    byId('divider').onpointerdown = event => {
+      event.preventDefault();
+      event.currentTarget.setPointerCapture(event.pointerId);
+    };
+    byId('divider').onpointermove = event => {
+      if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
+      const box = panes.getBoundingClientRect();
+      setRatio((event.clientX - box.left) / box.width * 100);
+    };
+    byId('divider').onpointerup = event => {
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    };
+    byId('divider').onkeydown = event => {
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); setRatio(ratio + (event.key === 'ArrowRight' ? 2 : -2)); }
+    };
+
+    function notify(text) {
+      const toast = byId('toast');
+      toast.textContent = text;
+      toast.hidden = false;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.hidden = true, 2600);
+    }
+    byId('saveButton').onclick = () => notify('原型演示：保存完成');
+    byId('exitButton').onclick = () => notify('原型演示：返回普通编辑界面');
+    byId('documentTitle').oninput = event => {
+      const title = event.target.value.trim() || '未命名 Markdown 文档';
+      document.querySelector('.document-title').textContent = title;
+      document.querySelector('.document-title').title = title;
+    };
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape') {
+        if (metadataOpen) closeMetadata();
+        else if (tocOpen) toggleToc(false, true);
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const modal = metadataOpen ? metadata : (tocOpen && !wide.matches ? outline : null);
+      if (!modal) return;
+      const focusable = Array.from(modal.querySelectorAll('button:not(:disabled),a[href],input')).filter(element => element.getClientRects().length);
+      const first = focusable[0];
+      const last = focusable.at(-1);
+      if (event.shiftKey && (document.activeElement === first || !modal.contains(document.activeElement))) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && (document.activeElement === last || !modal.contains(document.activeElement))) { event.preventDefault(); first?.focus(); }
+    });
+    wide.addEventListener('change', () => {
+      updatePanels();
+      if (tocOpen && !wide.matches) byId('closeToc').focus();
+    });
+    split.addEventListener('change', () => {
+      if (editing.inert) return;
+      switchView(panes.dataset.view);
+    });
+    const state = new URLSearchParams(location.search).get('state');
+    setSource(state === 'empty' ? '在这里记录你的想法。\n\n添加 Markdown 标题后，目录会自动更新。' : demoText);
+    updatePanels();
+    if (state === 'loading' || state === 'error') { toggleToc(true); showTocState(state); }
+  </script>
+</body>
+</html>

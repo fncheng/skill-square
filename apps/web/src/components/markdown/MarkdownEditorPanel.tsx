@@ -11,12 +11,14 @@ import {
   type ReactNode
 } from 'react';
 import { editor as MonacoEditorApi, type editor as MonacoEditorNamespace } from 'monaco-editor';
-import { ArrowDownUp, Eye, Minimize2, PanelRightOpen, PencilLine, X } from 'lucide-react';
+import { ArrowDownUp, Eye, ListTree, Minimize2, PanelRightOpen, PencilLine, X } from 'lucide-react';
 import { MarkdownContent } from '@/components/markdown/MarkdownContent';
+import { MarkdownEditorToc } from '@/components/markdown/MarkdownEditorToc';
 import { PromptMonacoEditor } from '@/components/prompt/PromptMonacoEditor';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useMarkdown, type MarkdownSourceBlock } from '@/hooks/use-markdown';
+import { useMarkdown, type MarkdownHeading, type MarkdownSourceBlock } from '@/hooks/use-markdown';
+import type { MarkdownEditorPendingTocNavigation, MarkdownEditorTocEntry } from '@/types/markdown-editor';
 
 interface MarkdownEditorPanelProps {
   /** 正文区标题。 */
@@ -39,7 +41,7 @@ interface MarkdownEditorPanelProps {
 interface MarkdownPreviewProps {
   source: string;
   onScrollContainerChange: (element: HTMLDivElement | null) => void;
-  onBlocksRendered: (source: string, sourceBlocks: MarkdownSourceBlock[]) => void;
+  onBlocksRendered: (source: string, headings: MarkdownHeading[], sourceBlocks: MarkdownSourceBlock[]) => void;
 }
 
 type ScrollSyncSide = 'source' | 'preview';
@@ -68,20 +70,26 @@ interface SourcePointerPosition {
   clientY: number;
 }
 
+interface TocPreviewPosition {
+  entry: MarkdownEditorTocEntry;
+  previewTop: number;
+}
+
 const MIN_LEFT_PANE_PERCENT = 35;
 const MAX_LEFT_PANE_PERCENT = 70;
 const DEFAULT_LEFT_PANE_PERCENT = 50;
 const DESKTOP_SPLIT_MEDIA_QUERY = '(min-width: 961px)';
+const WIDE_TOC_MEDIA_QUERY = '(min-width: 1280px)';
 const SCROLL_ANCHOR_VIEWPORT_RATIO = 0.25;
 const SCROLL_WRITE_TOLERANCE = 2;
 
 /** 预览保持与详情页一致的 Markdown 解析和引用呈现链路。 */
 function MarkdownPreview({ source, onScrollContainerChange, onBlocksRendered }: MarkdownPreviewProps) {
-  const { html, citationGroups, sourceBlocks } = useMarkdown(source, { includeSourceBlocks: true });
+  const { html, citationGroups, headings, sourceBlocks } = useMarkdown(source, { includeSourceBlocks: true });
 
   useLayoutEffect(() => {
-    onBlocksRendered(source, sourceBlocks);
-  }, [onBlocksRendered, source, sourceBlocks]);
+    onBlocksRendered(source, headings, sourceBlocks);
+  }, [headings, onBlocksRendered, source, sourceBlocks]);
 
   if (!source.trim()) {
     return <div className="editor-preview-empty">暂无可预览的 Markdown 内容</div>;
@@ -177,6 +185,66 @@ function clampPanePercent(value: number): number {
   return Math.min(MAX_LEFT_PANE_PERCENT, Math.max(MIN_LEFT_PANE_PERCENT, value));
 }
 
+/** 目录快照对齐 Monaco 的 CRLF/LF 模型换行，保留独立 CR 以维持 Markdown 行号语义。 */
+function normalizeLineEndingsForMonacoSnapshot(source: string, modelEol: string): string {
+  return source.replace(/\r\n|\n/g, modelEol);
+}
+
+/** 标题和同轮源码块按文档顺序一一映射，重复 slug 仍通过 blockId 区分。 */
+function createTocEntries(
+  source: string,
+  headings: MarkdownHeading[],
+  sourceBlocks: MarkdownSourceBlock[]
+): MarkdownEditorTocEntry[] {
+  const headingBlocks = sourceBlocks.filter((block) => block.kind === 'heading');
+  return headings.flatMap((heading, index) => {
+    const block = headingBlocks[index];
+    if (!block) {
+      return [];
+    }
+    return [{
+      blockId: block.blockId,
+      headingId: heading.id,
+      level: heading.level,
+      text: heading.text,
+      startLine: block.startLine,
+      source
+    }];
+  });
+}
+
+/** 返回给定源码行所属的最后一个标题，供光标与滚动位置更新目录状态。 */
+function findTocEntryAtLine(entries: MarkdownEditorTocEntry[], lineNumber: number): MarkdownEditorTocEntry | null {
+  let activeEntry: MarkdownEditorTocEntry | null = null;
+  for (const entry of entries) {
+    if (entry.startLine > lineNumber) {
+      break;
+    }
+    activeEntry = entry;
+  }
+  return activeEntry;
+}
+
+/** 从已缓存的预览标题位置二分定位，滚动时不重复读取标题 DOM 几何。 */
+function findTocEntryAtPreviewPosition(
+  positions: TocPreviewPosition[],
+  previewPosition: number
+): MarkdownEditorTocEntry | null {
+  let left = 0;
+  let right = positions.length - 1;
+  let activeIndex = -1;
+  while (left <= right) {
+    const middle = Math.floor((left + right) / 2);
+    if (positions[middle].previewTop <= previewPosition) {
+      activeIndex = middle;
+      left = middle + 1;
+    } else {
+      right = middle - 1;
+    }
+  }
+  return activeIndex >= 0 ? positions[activeIndex].entry : null;
+}
+
 /**
  * 统一承载 Markdown 编辑、预览与沉浸式工作区。
  * 全屏时仅改变既有编辑器的容器布局，避免 Monaco 因组件重建丢失光标和滚动位置。
@@ -194,6 +262,11 @@ export function MarkdownEditorPanel({
 }: MarkdownEditorPanelProps) {
   const [previewing, setPreviewing] = useState(false);
   const [metadataOpen, setMetadataOpen] = useState(false);
+  const [tocOpen, setTocOpen] = useState(false);
+  const [wideTocLayout, setWideTocLayout] = useState(() => window.matchMedia(WIDE_TOC_MEDIA_QUERY).matches);
+  const [tocEntries, setTocEntries] = useState<MarkdownEditorTocEntry[]>([]);
+  const [tocSource, setTocSource] = useState('');
+  const [activeTocBlockId, setActiveTocBlockId] = useState<string | null>(null);
   const [leftPanePercent, setLeftPanePercent] = useState(DEFAULT_LEFT_PANE_PERCENT);
   const [scrollSyncEnabled, setScrollSyncEnabled] = useState(true);
   const [monacoEditor, setMonacoEditor] = useState<MonacoEditor | null>(null);
@@ -201,18 +274,29 @@ export function MarkdownEditorPanel({
   const [previewRenderVersion, setPreviewRenderVersion] = useState(0);
   const [finePointer, setFinePointer] = useState(() => window.matchMedia('(pointer: fine)').matches);
   const workspaceRef = useRef<HTMLDivElement>(null);
+  const editorSurfaceRef = useRef<HTMLDivElement>(null);
+  const sourcePaneRef = useRef<HTMLDivElement>(null);
+  const tocRef = useRef<HTMLDivElement>(null);
   const metadataRef = useRef<HTMLElement>(null);
   const metadataButtonRef = useRef<HTMLButtonElement>(null);
+  const tocButtonRef = useRef<HTMLButtonElement>(null);
   const deferredValue = useDeferredValue(value);
   const previewBlocksRef = useRef<MarkdownSourceBlock[]>([]);
   const previewBlockCacheRef = useRef<PreviewBlockCache[]>([]);
   const previewSourceRef = useRef('');
+  const tocEntriesRef = useRef<MarkdownEditorTocEntry[]>([]);
+  const tocPreviewElementsRef = useRef(new Map<string, HTMLElement>());
+  const tocPreviewPositionsRef = useRef<TocPreviewPosition[]>([]);
+  const tocRestoreOpenRef = useRef(false);
+  const fullscreenSessionRef = useRef(false);
+  const pendingTocNavigationRef = useRef<MarkdownEditorPendingTocNavigation | null>(null);
   const scrollGeometryRef = useRef<ScrollSyncBlock[]>([]);
   const activeScrollSideRef = useRef<ScrollSyncSide>('source');
   const queuedScrollSideRef = useRef<ScrollSyncSide | null>(null);
   const scrollSyncFrameRef = useRef<number | null>(null);
   const geometryFrameRef = useRef<number | null>(null);
   const previewHighlightFrameRef = useRef<number | null>(null);
+  const tocGeometryFrameRef = useRef<number | null>(null);
   const sourcePointerRef = useRef<SourcePointerPosition | null>(null);
   const highlightedPreviewElementRef = useRef<HTMLElement | null>(null);
   const scrollSyncActiveRef = useRef(false);
@@ -221,6 +305,8 @@ export function MarkdownEditorPanel({
     source: null,
     preview: null
   });
+  const tocProgrammaticScrollUntilRef = useRef<Record<ScrollSyncSide, number>>({ source: 0, preview: 0 });
+  const tocProgrammaticCursorLineRef = useRef<number | null>(null);
   const [desktopSplit, setDesktopSplit] = useState(() => window.matchMedia(DESKTOP_SPLIT_MEDIA_QUERY).matches);
   const previewVisible = fullscreen || previewing;
   const previewMatchesSource = deferredValue === value && previewSourceRef.current === value;
@@ -230,7 +316,10 @@ export function MarkdownEditorPanel({
   scrollSyncActiveRef.current = scrollSyncActive;
   previewHoverActiveRef.current = previewHoverActive;
   const workspaceTitle = fullscreenTitle?.trim() || '未命名 Markdown 文档';
-  const metadataInactive = fullscreen && !metadataOpen;
+  const tocModal = fullscreen && tocOpen && !wideTocLayout;
+  const metadataInactive = fullscreen && (!metadataOpen || tocModal);
+  const tocUpdating = tocSource !== value || previewSourceRef.current !== value || deferredValue !== value;
+  tocEntriesRef.current = tocEntries;
 
   /** 预览内容替换或条件失效时，立即撤销旧节点上的高亮类。 */
   const clearPreviewHighlight = useCallback(() => {
@@ -239,10 +328,19 @@ export function MarkdownEditorPanel({
   }, []);
 
   /** 同一份 deferred Markdown 提交后，才允许其块映射驱动 Monaco 的当前源码。 */
-  const handlePreviewBlocksRendered = useCallback((source: string, sourceBlocks: MarkdownSourceBlock[]) => {
+  const handlePreviewBlocksRendered = useCallback((
+    source: string,
+    headings: MarkdownHeading[],
+    sourceBlocks: MarkdownSourceBlock[]
+  ) => {
     clearPreviewHighlight();
     previewSourceRef.current = source;
     previewBlocksRef.current = sourceBlocks;
+    const entries = createTocEntries(source, headings, sourceBlocks);
+    tocEntriesRef.current = entries;
+    setTocEntries(entries);
+    setTocSource(source);
+    setActiveTocBlockId((current) => entries.some((entry) => entry.blockId === current) ? current : entries[0]?.blockId ?? null);
     previewBlockCacheRef.current = [];
     scrollGeometryRef.current = [];
     setPreviewRenderVersion((current) => current + 1);
@@ -251,7 +349,18 @@ export function MarkdownEditorPanel({
   /** 关闭侧板后将焦点返回到触发按钮，避免键盘焦点停留在不可见表单中。 */
   const closeMetadata = useCallback(() => {
     setMetadataOpen(false);
+    setTocOpen(tocRestoreOpenRef.current);
     metadataButtonRef.current?.focus();
+  }, []);
+
+  /** 关闭目录时恢复工具栏入口焦点，避免焦点遗留在已隐藏的抽屉内。 */
+  const closeToc = useCallback(() => {
+    setTocOpen(false);
+    window.requestAnimationFrame(() => {
+      if (fullscreenSessionRef.current && tocButtonRef.current?.getClientRects().length) {
+        tocButtonRef.current.focus();
+      }
+    });
   }, []);
 
   useEffect(() => {
@@ -261,6 +370,34 @@ export function MarkdownEditorPanel({
     mediaQuery.addEventListener('change', updateDesktopSplit);
     return () => mediaQuery.removeEventListener('change', updateDesktopSplit);
   }, []);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(WIDE_TOC_MEDIA_QUERY);
+    const updateWideTocLayout = () => setWideTocLayout(mediaQuery.matches);
+    updateWideTocLayout();
+    mediaQuery.addEventListener('change', updateWideTocLayout);
+    return () => mediaQuery.removeEventListener('change', updateWideTocLayout);
+  }, []);
+
+  useEffect(() => {
+    if (fullscreen && !fullscreenSessionRef.current) {
+      // 每次进入全屏按首次视口决定初始状态，之后的断点变化不覆盖用户选择。
+      fullscreenSessionRef.current = true;
+      setTocOpen(window.matchMedia(WIDE_TOC_MEDIA_QUERY).matches);
+      return;
+    }
+    if (!fullscreen) {
+      fullscreenSessionRef.current = false;
+      pendingTocNavigationRef.current = null;
+      tocProgrammaticScrollUntilRef.current = { source: 0, preview: 0 };
+      tocProgrammaticCursorLineRef.current = null;
+      if (tocGeometryFrameRef.current !== null) {
+        window.cancelAnimationFrame(tocGeometryFrameRef.current);
+        tocGeometryFrameRef.current = null;
+      }
+      setTocOpen(false);
+    }
+  }, [fullscreen]);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(pointer: fine)');
@@ -427,6 +564,141 @@ export function MarkdownEditorPanel({
     });
   }, [clearPreviewHighlight, deferredValue, monacoEditor, value]);
 
+  /** 用已提交预览中的块节点建立目录当前位置缓存，不依赖同步滚动是否开启。 */
+  const rebuildTocPreviewElements = useCallback(() => {
+    const nextElements = new Map<string, HTMLElement>();
+    const nextPositions: TocPreviewPosition[] = [];
+    if (previewElement && previewSourceRef.current === tocSource) {
+      const previewBounds = previewElement.getBoundingClientRect();
+      previewElement.querySelectorAll<HTMLElement>('[data-md-block-id]').forEach((element) => {
+        const blockId = element.dataset.mdBlockId;
+        if (blockId) {
+          nextElements.set(blockId, element);
+        }
+      });
+      for (const entry of tocEntriesRef.current) {
+        const element = nextElements.get(entry.blockId);
+        if (element) {
+          nextPositions.push({
+            entry,
+            previewTop: element.getBoundingClientRect().top - previewBounds.top + previewElement.scrollTop
+          });
+        }
+      }
+    }
+    tocPreviewElementsRef.current = nextElements;
+    tocPreviewPositionsRef.current = nextPositions;
+  }, [previewElement, tocSource]);
+
+  /** 合并目录几何重建，滚动帧只读取已缓存的标题位置。 */
+  const requestTocGeometryRebuild = useCallback(() => {
+    if (tocGeometryFrameRef.current !== null) {
+      return;
+    }
+    tocGeometryFrameRef.current = window.requestAnimationFrame(() => {
+      tocGeometryFrameRef.current = null;
+      rebuildTocPreviewElements();
+    });
+  }, [rebuildTocPreviewElements]);
+
+  const updateActiveTocFromSourceLine = useCallback((lineNumber: number) => {
+    const entry = findTocEntryAtLine(tocEntriesRef.current, lineNumber);
+    setActiveTocBlockId(entry?.blockId ?? null);
+  }, []);
+
+  /** 预览顶部标题变化时更新当前章节；程序跳转期间不反向覆盖目录选择。 */
+  const updateActiveTocFromPreview = useCallback(() => {
+    if (
+      !previewElement ||
+      previewSourceRef.current !== value ||
+      previewElement.clientWidth === 0 ||
+      previewElement.clientHeight === 0
+    ) {
+      return;
+    }
+    const previewPosition = previewElement.scrollTop + 24;
+    const activeEntry = findTocEntryAtPreviewPosition(tocPreviewPositionsRef.current, previewPosition);
+    setActiveTocBlockId(activeEntry?.blockId ?? tocEntriesRef.current[0]?.blockId ?? null);
+  }, [previewElement, value]);
+
+  const isPaneVisible = useCallback((element: HTMLElement | null) => {
+    if (!element) {
+      return false;
+    }
+    const bounds = element.getBoundingClientRect();
+    return bounds.width > 0 && bounds.height > 0;
+  }, []);
+
+  /** 定位目录条目到同一源码快照中的 Monaco 行和预览块；隐藏栏恢复后会补做一次。 */
+  const performTocNavigation = useCallback((entry: MarkdownEditorTocEntry, queueWhenHidden: boolean) => {
+    const model = monacoEditor?.getModel();
+    if (
+      !monacoEditor ||
+      !model ||
+      entry.source !== value ||
+      entry.source !== deferredValue ||
+      entry.source !== previewSourceRef.current ||
+      model.getValue() !== normalizeLineEndingsForMonacoSnapshot(entry.source, model.getEOL())
+    ) {
+      return;
+    }
+
+    const sourceVisible = isPaneVisible(sourcePaneRef.current);
+    const previewVisibleNow = isPaneVisible(previewElement);
+    const previewTarget = tocPreviewElementsRef.current.get(entry.blockId);
+    if (!previewTarget) {
+      return;
+    }
+
+    const previousPendingNavigation = pendingTocNavigationRef.current;
+    const pendingSource = !sourceVisible && (queueWhenHidden || previousPendingNavigation?.pendingSource === true);
+    const pendingPreview = !previewVisibleNow && (queueWhenHidden || previousPendingNavigation?.pendingPreview === true);
+
+    if (sourceVisible && (queueWhenHidden || previousPendingNavigation?.pendingSource)) {
+      tocProgrammaticCursorLineRef.current = entry.startLine;
+      tocProgrammaticScrollUntilRef.current.source = performance.now() + 180;
+      if (!queueWhenHidden) {
+        // 源码栏刚从隐藏的 Tab 恢复时，先刷新 Monaco 尺寸再计算行定位。
+        monacoEditor.layout();
+      }
+      monacoEditor.setPosition({ lineNumber: entry.startLine, column: 1 });
+      monacoEditor.revealLineInCenter(entry.startLine);
+    }
+    if (previewElement && previewVisibleNow && (queueWhenHidden || previousPendingNavigation?.pendingPreview)) {
+      tocProgrammaticScrollUntilRef.current.preview = performance.now() + 180;
+      previewElement.scrollTop += previewTarget.getBoundingClientRect().top - previewElement.getBoundingClientRect().top - 24;
+    }
+    setActiveTocBlockId(entry.blockId);
+
+    if (pendingSource || pendingPreview) {
+      pendingTocNavigationRef.current = { entry, source: entry.source, pendingSource, pendingPreview };
+    } else {
+      pendingTocNavigationRef.current = null;
+    }
+  }, [deferredValue, isPaneVisible, monacoEditor, previewElement, value]);
+
+  /** 目录点击优先废弃自动同步队列，防止显式章节跳转被旧滚动任务立即覆盖。 */
+  const handleTocNavigate = useCallback((entry: MarkdownEditorTocEntry) => {
+    if (tocUpdating) {
+      return;
+    }
+    if (scrollSyncFrameRef.current !== null) {
+      window.cancelAnimationFrame(scrollSyncFrameRef.current);
+      scrollSyncFrameRef.current = null;
+    }
+    if (geometryFrameRef.current !== null) {
+      window.cancelAnimationFrame(geometryFrameRef.current);
+      geometryFrameRef.current = null;
+    }
+    queuedScrollSideRef.current = null;
+    programmaticScrollTargetsRef.current = { source: null, preview: null };
+    pendingTocNavigationRef.current = null;
+    performTocNavigation(entry, true);
+    if (tocModal) {
+      closeToc();
+    }
+  }, [closeToc, performTocNavigation, tocModal, tocUpdating]);
+
   /** 连续滚动事件只在动画帧末尾同步一次，避免滚轮滚动时重复读写布局。 */
   const queueScrollSync = useCallback((side: ScrollSyncSide) => {
     if (!scrollSyncActive) {
@@ -464,7 +736,13 @@ export function MarkdownEditorPanel({
         return;
       }
       rebuildScrollGeometry();
-      queueScrollSync(activeScrollSideRef.current);
+      const tocNavigationInProgress = performance.now() < Math.max(
+        tocProgrammaticScrollUntilRef.current.source,
+        tocProgrammaticScrollUntilRef.current.preview
+      );
+      if (!tocNavigationInProgress) {
+        queueScrollSync(activeScrollSideRef.current);
+      }
       queuePreviewHoverHighlight();
     });
   }, [queuePreviewHoverHighlight, queueScrollSync, rebuildScrollGeometry]);
@@ -478,6 +756,10 @@ export function MarkdownEditorPanel({
     }
     if (previewHighlightFrameRef.current !== null) {
       window.cancelAnimationFrame(previewHighlightFrameRef.current);
+    }
+    if (tocGeometryFrameRef.current !== null) {
+      window.cancelAnimationFrame(tocGeometryFrameRef.current);
+      tocGeometryFrameRef.current = null;
     }
     clearPreviewHighlight();
   }, [clearPreviewHighlight]);
@@ -527,38 +809,159 @@ export function MarkdownEditorPanel({
   }, [desktopSplit, fullscreen, monacoEditor, previewElement, previewRenderVersion, requestGeometryRebuild, scrollSyncActive]);
 
   useEffect(() => {
-    if (!scrollSyncActive || !monacoEditor || !previewElement) {
+    if (!fullscreen || !previewElement || previewSourceRef.current !== tocSource) {
+      return;
+    }
+    const observer = new ResizeObserver(requestTocGeometryRebuild);
+    const previewContent = previewElement.querySelector<HTMLElement>('.editor-preview-content');
+    observer.observe(previewElement);
+    if (previewContent) {
+      observer.observe(previewContent);
+    }
+    if (workspaceRef.current) {
+      observer.observe(workspaceRef.current);
+    }
+    window.addEventListener('resize', requestTocGeometryRebuild);
+    requestTocGeometryRebuild();
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', requestTocGeometryRebuild);
+    };
+  }, [
+    fullscreen,
+    previewElement,
+    previewRenderVersion,
+    previewing,
+    requestTocGeometryRebuild,
+    tocSource,
+    wideTocLayout
+  ]);
+
+  useEffect(() => {
+    if (!fullscreen || !monacoEditor || !previewElement || !previewMatchesSource) {
       return;
     }
 
-    const handleIncomingScroll = (side: ScrollSyncSide, scrollTop: number) => {
+    const handleIncomingScroll = (side: ScrollSyncSide, scrollTop: number): boolean => {
       const programmedTarget = programmaticScrollTargetsRef.current[side];
       if (programmedTarget !== null) {
         programmaticScrollTargetsRef.current[side] = null;
         if (Math.abs(scrollTop - programmedTarget) <= SCROLL_WRITE_TOLERANCE) {
-          return;
+          return true;
         }
       }
 
       activeScrollSideRef.current = side;
       queueScrollSync(side);
+      return false;
     };
     const sourceSubscription = monacoEditor.onDidScrollChange((event) => {
       if (event.scrollTopChanged) {
-        handleIncomingScroll('source', monacoEditor.getScrollTop());
+        const isProgrammaticTocScroll = performance.now() < tocProgrammaticScrollUntilRef.current.source;
+        const isProgrammaticSyncScroll = !isProgrammaticTocScroll && scrollSyncActive
+          ? handleIncomingScroll('source', monacoEditor.getScrollTop())
+          : false;
+        if (!isProgrammaticTocScroll && !isProgrammaticSyncScroll) {
+          pendingTocNavigationRef.current = null;
+          const sourceLine = monacoEditor.getVisibleRanges()[0]?.startLineNumber ?? monacoEditor.getPosition()?.lineNumber;
+          if (typeof sourceLine === 'number') {
+            updateActiveTocFromSourceLine(sourceLine);
+          }
+        }
         // 先排队预览跟随滚动，再按静止指针重新命中源码行。
         queuePreviewHoverHighlight();
       }
     });
-    const handlePreviewScroll = () => handleIncomingScroll('preview', previewElement.scrollTop);
+    const handlePreviewScroll = () => {
+      const isProgrammaticTocScroll = performance.now() < tocProgrammaticScrollUntilRef.current.preview;
+      const isProgrammaticSyncScroll = !isProgrammaticTocScroll && scrollSyncActive
+        ? handleIncomingScroll('preview', previewElement.scrollTop)
+        : false;
+      if (!isProgrammaticTocScroll && !isProgrammaticSyncScroll) {
+        pendingTocNavigationRef.current = null;
+        updateActiveTocFromPreview();
+      }
+    };
     previewElement.addEventListener('scroll', handlePreviewScroll, { passive: true });
-    requestGeometryRebuild();
+    if (scrollSyncActive) {
+      requestGeometryRebuild();
+    }
 
     return () => {
       sourceSubscription.dispose();
       previewElement.removeEventListener('scroll', handlePreviewScroll);
     };
-  }, [monacoEditor, previewElement, queuePreviewHoverHighlight, queueScrollSync, requestGeometryRebuild, scrollSyncActive]);
+  }, [
+    monacoEditor,
+    previewElement,
+    queuePreviewHoverHighlight,
+    queueScrollSync,
+    requestGeometryRebuild,
+    fullscreen,
+    previewMatchesSource,
+    scrollSyncActive,
+    updateActiveTocFromPreview,
+    updateActiveTocFromSourceLine
+  ]);
+
+  useEffect(() => {
+    if (!monacoEditor || !previewMatchesSource) {
+      return;
+    }
+    const cursorSubscription = monacoEditor.onDidChangeCursorPosition((event) => {
+      if (tocProgrammaticCursorLineRef.current === event.position.lineNumber) {
+        tocProgrammaticCursorLineRef.current = null;
+        return;
+      }
+      pendingTocNavigationRef.current = null;
+      updateActiveTocFromSourceLine(event.position.lineNumber);
+    });
+    if (!pendingTocNavigationRef.current) {
+      updateActiveTocFromSourceLine(monacoEditor.getPosition()?.lineNumber ?? 1);
+    }
+    return () => cursorSubscription.dispose();
+  }, [monacoEditor, previewMatchesSource, updateActiveTocFromSourceLine]);
+
+  useLayoutEffect(() => {
+    rebuildTocPreviewElements();
+    if (previewMatchesSource && !pendingTocNavigationRef.current) {
+      updateActiveTocFromPreview();
+    }
+  }, [previewMatchesSource, previewRenderVersion, rebuildTocPreviewElements, tocEntries, updateActiveTocFromPreview]);
+
+  useEffect(() => {
+    const pendingNavigation = pendingTocNavigationRef.current;
+    if (
+      !pendingNavigation ||
+      pendingNavigation.source !== value ||
+      pendingNavigation.source !== deferredValue ||
+      (!pendingNavigation.pendingSource || !isPaneVisible(sourcePaneRef.current)) &&
+      (!pendingNavigation.pendingPreview || !isPaneVisible(previewElement))
+    ) {
+      return;
+    }
+    const frame = window.requestAnimationFrame(() => {
+      const latestPendingNavigation = pendingTocNavigationRef.current;
+      if (
+        latestPendingNavigation &&
+        latestPendingNavigation.source === value &&
+        latestPendingNavigation.source === deferredValue
+      ) {
+        performTocNavigation(latestPendingNavigation.entry, false);
+      }
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [
+    deferredValue,
+    desktopSplit,
+    isPaneVisible,
+    performTocNavigation,
+    previewElement,
+    previewing,
+    previewRenderVersion,
+    value,
+    wideTocLayout
+  ]);
 
   useLayoutEffect(() => {
     if (!previewHoverActive) {
@@ -580,6 +983,14 @@ export function MarkdownEditorPanel({
       document.body.style.overflow = originalOverflow;
     };
   }, [fullscreen]);
+
+  useEffect(() => {
+    if (tocSource !== value) {
+      // blockId 仅在单份解析快照内有效，输入变化后不能保留旧目录的当前位置或待跳转请求。
+      pendingTocNavigationRef.current = null;
+      setActiveTocBlockId(null);
+    }
+  }, [tocSource, value]);
 
   useEffect(() => {
     if (!fullscreen) {
@@ -621,21 +1032,66 @@ export function MarkdownEditorPanel({
   }, [metadataInactive]);
 
   useEffect(() => {
+    const editorSurface = editorSurfaceRef.current;
+    if (editorSurface) {
+      editorSurface.inert = fullscreen && (tocModal || metadataOpen);
+    }
+  }, [fullscreen, metadataOpen, tocModal]);
+
+  useEffect(() => {
+    if (!tocModal) {
+      return;
+    }
+    tocRef.current?.querySelector<HTMLElement>('button:not(:disabled)')?.focus();
+  }, [tocModal]);
+
+  useEffect(() => {
     if (!fullscreen) {
       return;
     }
 
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || document.querySelector('.md-citation-popover')) {
+        return;
+      }
+
+      const targetDialog = event.target instanceof Element ? event.target.closest('[role="dialog"]') : null;
+      const activeModal = tocModal ? tocRef.current : metadataOpen ? metadataRef.current : null;
+      if (event.key === 'Tab' && activeModal && (!targetDialog || targetDialog === activeModal)) {
+        const focusableElements = Array.from(
+          activeModal.querySelectorAll<HTMLElement>(
+            'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])'
+          ) ?? []
+        );
+        if (focusableElements.length > 0) {
+          const firstElement = focusableElements[0];
+          const lastElement = focusableElements[focusableElements.length - 1];
+          if (!activeModal.contains(document.activeElement)) {
+            event.preventDefault();
+            (event.shiftKey ? lastElement : firstElement).focus();
+          } else if (event.shiftKey && document.activeElement === firstElement) {
+            event.preventDefault();
+            lastElement.focus();
+          } else if (!event.shiftKey && document.activeElement === lastElement) {
+            event.preventDefault();
+            firstElement.focus();
+          }
+        }
+        return;
+      }
+
       if (
         event.key !== 'Escape' ||
-        event.defaultPrevented ||
-        (event.target instanceof Element && event.target.closest('[role="dialog"]')) ||
-        document.querySelector('.md-citation-popover')
+        (targetDialog && targetDialog !== tocRef.current && targetDialog !== metadataRef.current)
       ) {
         return;
       }
 
       event.preventDefault();
+      if (tocOpen) {
+        closeToc();
+        return;
+      }
       if (metadataOpen) {
         closeMetadata();
         return;
@@ -645,7 +1101,7 @@ export function MarkdownEditorPanel({
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [closeMetadata, fullscreen, metadataOpen, onFullscreenChange]);
+  }, [closeMetadata, closeToc, fullscreen, metadataOpen, onFullscreenChange, tocModal, tocOpen]);
 
   useEffect(() => {
     if (!metadataOpen) {
@@ -719,6 +1175,26 @@ export function MarkdownEditorPanel({
         <div className="markdown-editor-toolbar-title" title={workspaceTitle}>{workspaceTitle}</div>
         <div className="markdown-editor-toolbar-actions">
           <Button
+            ref={tocButtonRef}
+            type="button"
+            variant="outline"
+            size="sm"
+            className="markdown-editor-toc-toggle"
+            aria-label="显示或收起目录"
+            title="显示或收起目录"
+            aria-expanded={tocOpen}
+            aria-controls="markdown-editor-toc"
+            onClick={() => {
+              if (metadataOpen) {
+                setMetadataOpen(false);
+              }
+              setTocOpen((current) => !current);
+            }}
+          >
+            <ListTree className="h-4 w-4" />
+            目录
+          </Button>
+          <Button
             type="button"
             variant="outline"
             size="sm"
@@ -738,9 +1214,18 @@ export function MarkdownEditorPanel({
               type="button"
               variant="outline"
               size="sm"
+              className="markdown-editor-metadata-toggle"
               aria-expanded={metadataOpen}
               aria-controls="markdown-editor-metadata"
-              onClick={() => setMetadataOpen((current) => !current)}
+              onClick={() => {
+                if (metadataOpen) {
+                  closeMetadata();
+                  return;
+                }
+                tocRestoreOpenRef.current = tocOpen;
+                setTocOpen(false);
+                setMetadataOpen(true);
+              }}
             >
               <PanelRightOpen className="h-4 w-4" />
               元数据
@@ -755,6 +1240,7 @@ export function MarkdownEditorPanel({
             type="button"
             variant="outline"
             size="sm"
+            className="markdown-editor-exit"
             aria-label="退出全屏双栏编辑"
             onClick={() => onFullscreenChange?.(false)}
           >
@@ -764,12 +1250,12 @@ export function MarkdownEditorPanel({
         </div>
       </div>
 
-      {metadata && fullscreen && metadataOpen ? (
+      {fullscreen && (metadataOpen || tocModal) ? (
         <button
           className="markdown-editor-metadata-backdrop"
           type="button"
-          aria-label="关闭元数据面板"
-          onClick={closeMetadata}
+          aria-label={metadataOpen ? '关闭元数据面板' : '关闭目录'}
+          onClick={metadataOpen ? closeMetadata : closeToc}
         />
       ) : null}
 
@@ -779,6 +1265,8 @@ export function MarkdownEditorPanel({
             ref={metadataRef}
             id="markdown-editor-metadata"
             className={`form-surface markdown-editor-metadata${metadataOpen ? ' is-open' : ''}`}
+            role={fullscreen ? 'dialog' : undefined}
+            aria-modal={fullscreen || undefined}
             aria-label="文档元数据"
             aria-hidden={metadataInactive}
           >
@@ -799,7 +1287,25 @@ export function MarkdownEditorPanel({
           </aside>
         ) : null}
 
-        <div className="editor-surface">
+        {fullscreen && tocOpen ? (
+          <div
+            ref={tocRef}
+            className={`markdown-editor-toc-shell${tocModal ? ' is-modal' : ''}`}
+            role={tocModal ? 'dialog' : undefined}
+            aria-modal={tocModal || undefined}
+            aria-labelledby={tocModal ? 'markdown-editor-toc-title' : undefined}
+          >
+            <MarkdownEditorToc
+              entries={tocEntries}
+              activeBlockId={activeTocBlockId}
+              isUpdating={tocUpdating}
+              onNavigate={handleTocNavigate}
+              onClose={closeToc}
+            />
+          </div>
+        ) : null}
+
+        <div ref={editorSurfaceRef} className="editor-surface">
           <div className="editor-head">
             <span>{title}</span>
             <div className="editor-head-actions">
@@ -849,6 +1355,7 @@ export function MarkdownEditorPanel({
             style={workspaceStyle}
           >
             <div
+              ref={sourcePaneRef}
               className={`editor-mode-panel markdown-editor-source-pane${!fullscreen && previewing ? ' is-hidden' : ''}`}
               onPointerMove={handleSourcePointerMove}
               onPointerLeave={handleSourcePointerLeave}

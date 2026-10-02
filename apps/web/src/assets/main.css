@@ -498,7 +498,8 @@
   .markdown-editor-fullscreen-toolbar,
   .markdown-editor-metadata-backdrop,
   .markdown-editor-metadata-head,
-  .markdown-editor-mobile-tabs {
+  .markdown-editor-mobile-tabs,
+  .markdown-editor-toc-shell {
     display: none;
   }
 
@@ -587,12 +588,110 @@
     @apply border-primary/40 bg-primary/10 text-primary hover:bg-primary/15;
   }
 
+  .markdown-editor-toc-toggle[aria-expanded='true'] {
+    @apply border-primary/40 bg-primary/10 text-primary hover:bg-primary/15;
+  }
+
   .markdown-editor-workspace.is-fullscreen .markdown-editor-workspace-body {
-    @apply block min-h-0;
+    @apply relative flex min-h-0 gap-0 overflow-hidden;
+  }
+
+  .markdown-editor-workspace.is-fullscreen .markdown-editor-toc-shell {
+    @apply z-[2] flex min-h-0 w-[248px] flex-none border-r bg-slate-50;
+  }
+
+  .markdown-editor-toc {
+    @apply flex min-h-0 flex-1 flex-col;
+  }
+
+  .markdown-editor-toc-head {
+    @apply flex h-12 flex-none items-center gap-2 border-b px-3;
+  }
+
+  .markdown-editor-toc-head h2 {
+    @apply text-[13px] font-extrabold text-slate-800;
+  }
+
+  .markdown-editor-toc-count {
+    @apply text-[11px] tabular-nums text-slate-400;
+  }
+
+  .markdown-editor-toc-head .editor-head-icon-button {
+    @apply ml-auto border-transparent bg-transparent;
+  }
+
+  .markdown-editor-toc-scroll {
+    @apply min-h-0 flex-1 overflow-y-auto px-2 py-3;
+    overscroll-behavior: contain;
+  }
+
+  .markdown-editor-toc-list {
+    @apply grid gap-0.5;
+  }
+
+  .markdown-editor-toc-link {
+    @apply relative flex min-h-[35px] w-full items-start gap-2 rounded px-2.5 py-2 text-left text-xs leading-5 text-slate-500 transition-colors hover:bg-slate-200/70 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-wait disabled:opacity-50;
+    overflow-wrap: anywhere;
+  }
+
+  .markdown-editor-toc-link.level-1 {
+    @apply mb-1 font-bold text-slate-700;
+  }
+
+  .markdown-editor-toc-link.level-3 {
+    @apply pl-6;
+  }
+
+  .markdown-editor-toc-link.level-4,
+  .markdown-editor-toc-link.level-5,
+  .markdown-editor-toc-link.level-6 {
+    @apply pl-10;
+  }
+
+  .markdown-editor-toc-marker {
+    @apply mt-1.5 h-1.5 w-1.5 flex-none rounded-full border border-slate-400;
+  }
+
+  .markdown-editor-toc-link.level-1 .markdown-editor-toc-marker {
+    @apply rounded-sm;
+  }
+
+  .markdown-editor-toc-link[aria-current='location'] {
+    @apply bg-primary/10 font-semibold text-primary;
+  }
+
+  .markdown-editor-toc-link[aria-current='location']::before {
+    content: '';
+    @apply absolute bottom-2 left-0 top-2 w-0.5 rounded-r bg-primary;
+  }
+
+  .markdown-editor-toc-link[aria-current='location'] .markdown-editor-toc-marker {
+    @apply border-primary bg-primary;
+  }
+
+  .markdown-editor-toc-state {
+    @apply grid place-items-center gap-2 px-4 py-9 text-center text-xs leading-5 text-slate-500;
+  }
+
+  .markdown-editor-toc-state strong {
+    @apply font-semibold text-slate-700;
+  }
+
+  .markdown-editor-toc-updating {
+    @apply mt-3 px-2 text-center text-xs text-slate-400;
+  }
+
+  .markdown-editor-toc-footer {
+    @apply flex flex-none flex-col gap-1 border-t px-4 py-3 text-[11px] text-slate-400;
+  }
+
+  .markdown-editor-toc-footer strong {
+    @apply line-clamp-2 font-medium text-slate-600;
+    overflow-wrap: anywhere;
   }
 
   .markdown-editor-workspace.is-fullscreen .editor-surface {
-    @apply h-full min-h-0 rounded-none border-0 shadow-none;
+    @apply h-full min-h-0 min-w-0 flex-1 rounded-none border-0 shadow-none;
   }
 
   .markdown-editor-workspace.is-fullscreen .editor-head {
@@ -624,11 +723,11 @@
   }
 
   .markdown-editor-workspace.is-fullscreen .markdown-editor-metadata-backdrop {
-    @apply absolute bottom-0 left-0 right-0 top-[52px] z-[1] block border-0 bg-slate-950/25 p-0;
+    @apply absolute inset-0 z-[1] block border-0 bg-slate-950/25 p-0;
   }
 
   .markdown-editor-workspace.is-fullscreen .markdown-editor-metadata {
-    @apply absolute bottom-0 right-0 top-[52px] z-[2] w-full max-w-[420px] overflow-y-auto rounded-none border-y-0 border-r-0 bg-white shadow-2xl transition-transform;
+    @apply absolute bottom-0 right-0 top-0 z-[3] w-full max-w-[420px] overflow-y-auto rounded-none border-y-0 border-r-0 bg-white shadow-2xl transition-transform;
     transform: translateX(100%);
   }
 
@@ -642,6 +741,13 @@
 
   .markdown-editor-workspace.is-fullscreen .markdown-editor-metadata-head strong {
     @apply text-sm font-extrabold text-slate-800;
+  }
+
+  @media (max-width: 1279px) {
+    .markdown-editor-workspace.is-fullscreen .markdown-editor-toc-shell {
+      @apply absolute bottom-0 left-0 top-0 z-[2] w-[280px] bg-white shadow-2xl;
+      max-width: calc(100% - 48px);
+    }
   }
 
   @media (min-width: 961px) and (pointer: fine) {
@@ -2030,6 +2136,17 @@
 
   .markdown-editor-workspace.is-fullscreen .markdown-editor-toolbar-actions button svg {
     @apply h-4 w-4;
+  }
+
+  .markdown-editor-workspace.is-fullscreen .markdown-editor-toc-toggle,
+  .markdown-editor-workspace.is-fullscreen .markdown-editor-metadata-toggle,
+  .markdown-editor-workspace.is-fullscreen .markdown-editor-exit {
+    @apply w-8 gap-0 px-0 text-[0px];
+  }
+
+  .markdown-editor-workspace.is-fullscreen .markdown-editor-toc-shell {
+    width: 296px;
+    max-width: calc(100% - 48px);
   }
 
   .markdown-editor-workspace.is-fullscreen .markdown-editor-mobile-tabs {
