@@ -83,8 +83,8 @@ function normalizeReferenceId(value: string): string {
   return value.trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
-/** 仅允许在来源卡片中打开的安全协议。 */
-function getSafeCitationUrl(rawUrl: string): string | null {
+/** 仅允许作为外部链接或图片资源使用的安全协议。 */
+function getSafeExternalUrl(rawUrl: string): string | null {
   try {
     const url = new URL(rawUrl);
     return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : null;
@@ -157,7 +157,7 @@ function extractReferenceDefinitions(source: string): ReferenceExtractionResult 
 
     const id = normalizeReferenceId(definition[1]);
     const rawUrl = definition[2] ?? definition[3] ?? '';
-    const safeUrl = getSafeCitationUrl(rawUrl);
+    const safeUrl = getSafeExternalUrl(rawUrl);
     if (id && safeUrl) {
       referenceDefinitions.set(id, {
         id: definition[1].trim(),
@@ -172,6 +172,11 @@ function extractReferenceDefinitions(source: string): ReferenceExtractionResult 
 
 function renderMarkdownLink(label: string, url: string): string {
   return `<a class="md-link" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a>`;
+}
+
+/** 渲染受协议白名单保护的 Markdown 图片，避免正文注入可执行资源地址。 */
+function renderMarkdownImage(alt: string, url: string): string {
+  return `<img class="md-image" src="${escapeHtml(url)}" alt="${escapeHtml(alt)}" loading="lazy" referrerpolicy="no-referrer">`;
 }
 
 function createCitationSource(
@@ -304,7 +309,7 @@ function renderReferenceLinks(
 }
 
 /**
- * 渲染行内语法：行内代码、粗体、链接、裸 URL 自动链接。
+ * 渲染行内语法：行内代码、图片、粗体、链接、裸 URL 自动链接。
  * 行内代码先以哨兵占位，避免其中的特殊字符被后续规则误处理。
  * 哨兵仅由字母、数字、下划线和 @ 组成，不受 HTML 转义影响，
  * 且几乎不可能与正文冲突。
@@ -320,6 +325,14 @@ function renderInline(text: string, context: MarkdownParseContext): string {
     createSlot(`<code class="md-inline-code">${escapeHtml(code)}</code>`)
   );
   result = renderReferenceLinks(result, context, createSlot);
+  result = result.replace(
+    /!\[([^\]]*)\]\(([^\s)]+)(?:\s+(?:"[^"]*"|'[^']*'|\([^)]*\)))?\)/g,
+    (match: string, alt: string, rawUrl: string) => {
+      const safeUrl = getSafeExternalUrl(rawUrl);
+      // 不安全地址整体作为文本占位，避免后续链接规则误将其局部解析为 <a>。
+      return safeUrl ? createSlot(renderMarkdownImage(alt, safeUrl)) : createSlot(escapeHtml(match));
+    }
+  );
   result = result.replace(
     /\[([^\]]+)\]\(([^)]+)\)/g,
     (_match, label: string, url: string) => createSlot(renderMarkdownLink(label, url))
