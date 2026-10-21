@@ -323,6 +323,25 @@ function renderReferenceLinks(
   return result + text.slice(cursor);
 }
 
+/** 在普通 reference link 处理前渲染参考式图片，避免图片被错误降级为带 ! 前缀的链接。 */
+function renderReferenceImages(
+  text: string,
+  context: MarkdownParseContext,
+  createSlot: (html: string) => string
+): string {
+  return text.replace(/!\[([^\]]*)\]\[([^\]]+)\]/g, (match: string, alt: string, referenceId: string) => {
+    const definition = context.referenceDefinitions.get(normalizeReferenceId(referenceId));
+    if (!definition) {
+      return match;
+    }
+
+    const allowedUrl = getAllowedMarkdownImageUrl(definition.url, context.allowedImageHosts);
+    return allowedUrl
+      ? createSlot(renderMarkdownImage(alt, allowedUrl))
+      : createSlot(renderBlockedMarkdownImage(alt));
+  });
+}
+
 /**
  * 渲染行内语法：行内代码、图片、粗体、链接、裸 URL 自动链接。
  * 行内代码先以哨兵占位，避免其中的特殊字符被后续规则误处理。
@@ -339,6 +358,7 @@ function renderInline(text: string, context: MarkdownParseContext): string {
   let result = text.replace(/`([^`]+)`/g, (_match, code: string) =>
     createSlot(`<code class="md-inline-code">${escapeHtml(code)}</code>`)
   );
+  result = renderReferenceImages(result, context, createSlot);
   result = renderReferenceLinks(result, context, createSlot);
   result = result.replace(
     /!\[([^\]]*)\]\(([^\s)]+)(?:\s+(?:"[^"]*"|'[^']*'|\([^)]*\)))?\)/g,
