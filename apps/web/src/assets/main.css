@@ -1584,6 +1584,10 @@
     @apply my-3 inline-block h-auto max-w-full rounded-lg border border-slate-200 bg-slate-50 align-middle;
   }
 
+  .md-surface .md-image-blocked {
+    @apply my-2 inline-flex rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1 text-sm font-medium text-amber-800;
+  }
+
   .md-surface .md-citation-chip {
     @apply mx-0.5 inline-flex h-6 max-w-[190px] translate-y-[-1px] items-center gap-1 rounded-full border border-indigo-200 bg-indigo-50 px-2 text-xs font-bold leading-none text-indigo-700 transition-colors hover:border-indigo-300 hover:bg-indigo-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
   }

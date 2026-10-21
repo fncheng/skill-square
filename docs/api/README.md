@@ -22,6 +22,7 @@
 - [UI 原型接口](./ui-prototypes.md)
 - [全局搜索接口](./search.md)
 - [Markdown 批注接口](./annotations.md)
+- [Markdown 外部图片白名单接口](./markdown-image-policy.md)
 - [数据结构](./schemas.md)
 
 ## 通用错误响应

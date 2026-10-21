@@ -8,6 +8,7 @@ import {
   Folder,
   House,
   Lightbulb,
+  Image,
   BookOpenText,
   LogIn,
   LogOut,
@@ -23,6 +24,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth';
 import { GlobalSearch } from './GlobalSearch';
+import { MarkdownImagePolicyProvider } from '../markdown/MarkdownImagePolicyProvider';
 
 type IconComponent = ComponentType<LucideProps>;
 
@@ -52,7 +54,8 @@ const primaryNav: PrimaryNavItem[] = [
 
 const manageNav: ManageNavItem[] = [
   { label: '分类管理', path: '/categories', icon: Folder },
-  { label: '标签管理', path: '/tags', icon: Tags }
+  { label: '标签管理', path: '/tags', icon: Tags },
+  { label: '图床白名单', path: '/markdown-image-policy', icon: Image }
 ];
 
 export function AppLayout() {
@@ -169,7 +172,9 @@ export function AppLayout() {
       </aside>
 
       <main className="app-main">
-        <Outlet />
+        <MarkdownImagePolicyProvider>
+          <Outlet />
+        </MarkdownImagePolicyProvider>
       </main>
 
       <Toaster />

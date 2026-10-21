@@ -9,6 +9,7 @@ import { ContentTagsModule } from './content-tags/content-tags.module';
 import { NotesModule } from './notes/notes.module';
 import { ModelResponsesModule } from './model-responses/model-responses.module';
 import { MiscellaniesModule } from './miscellanies/miscellanies.module';
+import { MarkdownImagePolicyModule } from './markdown-image-policy/markdown-image-policy.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { PromptsModule } from './prompts/prompts.module';
 import { SearchModule } from './search/search.module';
@@ -28,6 +29,7 @@ import { UiPrototypesModule } from './ui-prototypes/ui-prototypes.module';
     SolutionsModule,
     NotesModule,
     MiscellaniesModule,
+    MarkdownImagePolicyModule,
     ModelResponsesModule,
     AnnotationsModule,
     UiPrototypesModule,

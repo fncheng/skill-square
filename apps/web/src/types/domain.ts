@@ -14,6 +14,18 @@ export interface Tag {
   updatedAt: string;
 }
 
+/** Markdown 外部图片的公开渲染策略，空列表即禁止所有外部图片。 */
+export interface MarkdownImagePolicy {
+  allowedHosts: string[];
+  version: number;
+  updatedAt: string | null;
+}
+
+export interface UpdateMarkdownImagePolicyPayload {
+  allowedHosts: string[];
+  expectedVersion: number;
+}
+
 export interface Prompt {
   id: string;
   name: string;

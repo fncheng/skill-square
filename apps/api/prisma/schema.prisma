@@ -163,6 +163,15 @@ model UiPrototype {
   @@map("ui_prototypes")
 }
 
+model MarkdownImagePolicy {
+  id           String   @id @db.VarChar(32)
+  allowedHosts String[] @default([])
+  version      Int      @default(0)
+  updatedAt    DateTime @updatedAt
+
+  @@map("markdown_image_policies")
+}
+
 enum AnnotationResourceType {
   NOTE
   SOLUTION

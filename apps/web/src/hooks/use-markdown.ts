@@ -1,4 +1,6 @@
 import { useMemo } from 'react';
+import { useMarkdownImagePolicy } from '@/components/markdown/MarkdownImagePolicyProvider';
+import { getAllowedMarkdownImageUrl } from '@/utils/markdown-image-host';
 
 export interface MarkdownHeading {
   level: number;
@@ -46,6 +48,8 @@ export interface UseMarkdownReturn {
 export interface UseMarkdownOptions {
   /** 仅编辑器预览需要源码行号与 DOM 块标识，详情页保持既有 HTML。 */
   includeSourceBlocks?: boolean;
+  /** 纯解析入口可显式提供精确 Host 集合，未提供时由 hook 使用应用策略。 */
+  allowedImageHosts?: ReadonlySet<string>;
 }
 
 /** 转义 HTML 特殊字符，避免文档内容造成 XSS。 */
@@ -76,7 +80,12 @@ interface MarkdownReferenceDefinition {
 interface MarkdownParseContext {
   citationGroups: MarkdownCitationGroup[];
   referenceDefinitions: Map<string, MarkdownReferenceDefinition>;
+  /** 仅在 HTTPS 且 Host 精确匹配时允许输出图片资源地址。 */
+  allowedImageHosts: ReadonlySet<string>;
 }
+
+/** 独立调用纯解析入口时也默认拒绝所有外部图片。 */
+const emptyAllowedImageHosts = new Set<string>();
 
 /** 统一 Markdown reference 标识，兼容大小写与连续空白差异。 */
 function normalizeReferenceId(value: string): string {
@@ -174,9 +183,15 @@ function renderMarkdownLink(label: string, url: string): string {
   return `<a class="md-link" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a>`;
 }
 
-/** 渲染受协议白名单保护的 Markdown 图片，避免正文注入可执行资源地址。 */
+/** 渲染受 HTTPS 精确 Host 白名单保护的 Markdown 图片。 */
 function renderMarkdownImage(alt: string, url: string): string {
   return `<img class="md-image" src="${escapeHtml(url)}" alt="${escapeHtml(alt)}" loading="lazy" referrerpolicy="no-referrer">`;
+}
+
+/** 未获授权时不保留 src 或隐藏图片元素，防止浏览器发起外部请求。 */
+function renderBlockedMarkdownImage(alt: string): string {
+  const description = alt.trim() ? `：${escapeHtml(alt)}` : '';
+  return `<span class="md-image-blocked" role="note">图片来源未获授权${description}</span>`;
 }
 
 function createCitationSource(
@@ -328,9 +343,9 @@ function renderInline(text: string, context: MarkdownParseContext): string {
   result = result.replace(
     /!\[([^\]]*)\]\(([^\s)]+)(?:\s+(?:"[^"]*"|'[^']*'|\([^)]*\)))?\)/g,
     (match: string, alt: string, rawUrl: string) => {
-      const safeUrl = getSafeExternalUrl(rawUrl);
-      // 不安全地址整体作为文本占位，避免后续链接规则误将其局部解析为 <a>。
-      return safeUrl ? createSlot(renderMarkdownImage(alt, safeUrl)) : createSlot(escapeHtml(match));
+      const allowedUrl = getAllowedMarkdownImageUrl(rawUrl, context.allowedImageHosts);
+      // 图片策略未就绪、协议不安全或 Host 未授权时，绝不输出可请求外网的 <img>。
+      return allowedUrl ? createSlot(renderMarkdownImage(alt, allowedUrl)) : createSlot(renderBlockedMarkdownImage(alt));
     }
   );
   result = result.replace(
@@ -493,7 +508,8 @@ function parseMarkdownInternal(
   const extracted = inheritedContext ? null : extractReferenceDefinitions(source);
   const context: MarkdownParseContext = inheritedContext ?? {
     citationGroups: [],
-    referenceDefinitions: extracted?.referenceDefinitions ?? new Map()
+    referenceDefinitions: extracted?.referenceDefinitions ?? new Map(),
+    allowedImageHosts: options?.allowedImageHosts ?? emptyAllowedImageHosts
   };
   const lines = extracted?.lines ?? source.replace(/\r\n/g, '\n').split('\n');
   const sourceLineNumbers = extracted?.sourceLineNumbers ?? lines.map((_line, index) => index + 1);
@@ -753,8 +769,10 @@ export function parseMarkdown(source: string, options?: UseMarkdownOptions): Par
 /** 记忆化的 Markdown 渲染 hook，返回 HTML 与标题目录。 */
 export function useMarkdown(source: string, options?: UseMarkdownOptions): UseMarkdownReturn {
   const includeSourceBlocks = options?.includeSourceBlocks === true;
+  const { allowedHosts } = useMarkdownImagePolicy();
+  const allowedImageHosts = options?.allowedImageHosts ?? allowedHosts;
   return useMemo(
-    () => parseMarkdown(source || '', { includeSourceBlocks }),
-    [includeSourceBlocks, source]
+    () => parseMarkdown(source || '', { includeSourceBlocks, allowedImageHosts }),
+    [allowedImageHosts, includeSourceBlocks, source]
   );
 }
