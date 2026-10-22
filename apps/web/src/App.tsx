@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { RequireAdmin } from './components/auth/RequireAdmin';
 import { AppLayout } from './components/layout/AppLayout';
+import { MarkdownImagePolicyManage } from './views/MarkdownImagePolicyManage';
 import { CategoryManage } from './views/CategoryManage';
 import { NoteDetail } from './views/NoteDetail';
 import { NoteEditor } from './views/NoteEditor';
@@ -60,6 +61,7 @@ export default function App() {
           <Route path="/ui-prototypes/:id/edit" element={<UiPrototypeEditor />} />
           <Route path="/categories" element={<CategoryManage />} />
           <Route path="/tags" element={<TagManage />} />
+          <Route path="/markdown-image-policy" element={<MarkdownImagePolicyManage />} />
         </Route>
         <Route path="*" element={<Navigate to="/prompts" replace />} />
       </Route>

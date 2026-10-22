@@ -1,4 +1,6 @@
 import { useMemo } from 'react';
+import { useMarkdownImagePolicy } from '@/components/markdown/MarkdownImagePolicyProvider';
+import { getAllowedMarkdownImageUrl } from '@/utils/markdown-image-host';
 
 export interface MarkdownHeading {
   level: number;
@@ -46,6 +48,8 @@ export interface UseMarkdownReturn {
 export interface UseMarkdownOptions {
   /** 仅编辑器预览需要源码行号与 DOM 块标识，详情页保持既有 HTML。 */
   includeSourceBlocks?: boolean;
+  /** 纯解析入口可显式提供精确 Host 集合，未提供时由 hook 使用应用策略。 */
+  allowedImageHosts?: ReadonlySet<string>;
 }
 
 /** 转义 HTML 特殊字符，避免文档内容造成 XSS。 */
@@ -76,15 +80,20 @@ interface MarkdownReferenceDefinition {
 interface MarkdownParseContext {
   citationGroups: MarkdownCitationGroup[];
   referenceDefinitions: Map<string, MarkdownReferenceDefinition>;
+  /** 仅在 HTTPS 且 Host 精确匹配时允许输出图片资源地址。 */
+  allowedImageHosts: ReadonlySet<string>;
 }
+
+/** 独立调用纯解析入口时也默认拒绝所有外部图片。 */
+const emptyAllowedImageHosts = new Set<string>();
 
 /** 统一 Markdown reference 标识，兼容大小写与连续空白差异。 */
 function normalizeReferenceId(value: string): string {
   return value.trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
-/** 仅允许在来源卡片中打开的安全协议。 */
-function getSafeCitationUrl(rawUrl: string): string | null {
+/** 仅允许作为外部链接或图片资源使用的安全协议。 */
+function getSafeExternalUrl(rawUrl: string): string | null {
   try {
     const url = new URL(rawUrl);
     return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : null;
@@ -157,7 +166,7 @@ function extractReferenceDefinitions(source: string): ReferenceExtractionResult 
 
     const id = normalizeReferenceId(definition[1]);
     const rawUrl = definition[2] ?? definition[3] ?? '';
-    const safeUrl = getSafeCitationUrl(rawUrl);
+    const safeUrl = getSafeExternalUrl(rawUrl);
     if (id && safeUrl) {
       referenceDefinitions.set(id, {
         id: definition[1].trim(),
@@ -172,6 +181,17 @@ function extractReferenceDefinitions(source: string): ReferenceExtractionResult 
 
 function renderMarkdownLink(label: string, url: string): string {
   return `<a class="md-link" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a>`;
+}
+
+/** 渲染受 HTTPS 精确 Host 白名单保护的 Markdown 图片。 */
+function renderMarkdownImage(alt: string, url: string): string {
+  return `<img class="md-image" src="${escapeHtml(url)}" alt="${escapeHtml(alt)}" loading="lazy" referrerpolicy="no-referrer">`;
+}
+
+/** 未获授权时不保留 src 或隐藏图片元素，防止浏览器发起外部请求。 */
+function renderBlockedMarkdownImage(alt: string): string {
+  const description = alt.trim() ? `：${escapeHtml(alt)}` : '';
+  return `<span class="md-image-blocked" role="note">图片来源未获授权${description}</span>`;
 }
 
 function createCitationSource(
@@ -303,8 +323,130 @@ function renderReferenceLinks(
   return result + text.slice(cursor);
 }
 
+/** 在普通 reference link 处理前渲染参考式图片，避免图片被错误降级为带 ! 前缀的链接。 */
+function renderReferenceImages(
+  text: string,
+  context: MarkdownParseContext,
+  createSlot: (html: string) => string
+): string {
+  return text.replace(/!\[([^\]]*)\]\[([^\]]+)\]/g, (match: string, alt: string, referenceId: string) => {
+    const definition = context.referenceDefinitions.get(normalizeReferenceId(referenceId));
+    if (!definition) {
+      return match;
+    }
+
+    const allowedUrl = getAllowedMarkdownImageUrl(definition.url, context.allowedImageHosts);
+    return allowedUrl
+      ? createSlot(renderMarkdownImage(alt, allowedUrl))
+      : createSlot(renderBlockedMarkdownImage(alt));
+  });
+}
+
+interface InlineMarkdownImage {
+  alt: string;
+  rawUrl: string;
+  end: number;
+}
+
 /**
- * 渲染行内语法：行内代码、粗体、链接、裸 URL 自动链接。
+ * 解析行内图片目标地址。目标地址中的括号必须成对出现，避免将 URL 内的右括号误判为语法结束符。
+ */
+function parseInlineMarkdownImage(text: string, start: number): InlineMarkdownImage | null {
+  if (!text.startsWith('![', start)) {
+    return null;
+  }
+
+  const altEnd = text.indexOf(']', start + 2);
+  if (altEnd < 0 || text[altEnd + 1] !== '(') {
+    return null;
+  }
+
+  const destinationStart = altEnd + 2;
+  let cursor = destinationStart;
+  let parenthesisDepth = 0;
+
+  while (cursor < text.length) {
+    const character = text[cursor];
+    if (/\s/.test(character) && parenthesisDepth === 0) {
+      break;
+    }
+
+    if (character === '(') {
+      parenthesisDepth += 1;
+    } else if (character === ')') {
+      if (parenthesisDepth === 0) {
+        if (cursor === destinationStart) {
+          return null;
+        }
+        return { alt: text.slice(start + 2, altEnd), rawUrl: text.slice(destinationStart, cursor), end: cursor + 1 };
+      }
+      parenthesisDepth -= 1;
+    }
+    cursor += 1;
+  }
+
+  if (cursor === destinationStart || parenthesisDepth !== 0 || cursor === text.length) {
+    return null;
+  }
+
+  let titleStart = cursor;
+  while (/\s/.test(text[titleStart] ?? '')) {
+    titleStart += 1;
+  }
+
+  const openingTitleDelimiter = text[titleStart];
+  const closingTitleDelimiter = openingTitleDelimiter === '(' ? ')' : openingTitleDelimiter;
+  if (openingTitleDelimiter !== '"' && openingTitleDelimiter !== "'" && openingTitleDelimiter !== '(') {
+    return null;
+  }
+
+  const titleEnd = text.indexOf(closingTitleDelimiter, titleStart + 1);
+  if (titleEnd < 0 || text[titleEnd + 1] !== ')') {
+    return null;
+  }
+
+  return {
+    alt: text.slice(start + 2, altEnd),
+    rawUrl: text.slice(destinationStart, cursor),
+    end: titleEnd + 2
+  };
+}
+
+/** 渲染已验证目标地址的行内图片，并保留不完整 Markdown 原文。 */
+function renderInlineImages(
+  text: string,
+  context: MarkdownParseContext,
+  createSlot: (html: string) => string
+): string {
+  let result = '';
+  let cursor = 0;
+
+  while (cursor < text.length) {
+    const imageStart = text.indexOf('![', cursor);
+    if (imageStart < 0) {
+      return result + text.slice(cursor);
+    }
+
+    const image = parseInlineMarkdownImage(text, imageStart);
+    if (!image) {
+      // 未闭合或不合法的图片语法必须整体保持字面量，不能再由后续链接规则拆解为可点击链接。
+      return result + text.slice(cursor, imageStart) + createSlot(escapeHtml(text.slice(imageStart)));
+    }
+
+    const allowedUrl = getAllowedMarkdownImageUrl(image.rawUrl, context.allowedImageHosts);
+    // 图片策略未就绪、协议不安全或 Host 未授权时，绝不输出可请求外网的 <img>。
+    const renderedImage = allowedUrl
+      ? renderMarkdownImage(image.alt, allowedUrl)
+      : renderBlockedMarkdownImage(image.alt);
+    result += text.slice(cursor, imageStart) + createSlot(renderedImage);
+    cursor = image.end;
+  }
+
+  return result;
+}
+
+/**
+ * 渲染行内语法：行内代码、图片、粗体、链接、裸 URL 自动链接。
  * 行内代码先以哨兵占位，避免其中的特殊字符被后续规则误处理。
  * 哨兵仅由字母、数字、下划线和 @ 组成，不受 HTML 转义影响，
  * 且几乎不可能与正文冲突。
@@ -319,7 +461,9 @@ function renderInline(text: string, context: MarkdownParseContext): string {
   let result = text.replace(/`([^`]+)`/g, (_match, code: string) =>
     createSlot(`<code class="md-inline-code">${escapeHtml(code)}</code>`)
   );
+  result = renderReferenceImages(result, context, createSlot);
   result = renderReferenceLinks(result, context, createSlot);
+  result = renderInlineImages(result, context, createSlot);
   result = result.replace(
     /\[([^\]]+)\]\(([^)]+)\)/g,
     (_match, label: string, url: string) => createSlot(renderMarkdownLink(label, url))
@@ -480,7 +624,8 @@ function parseMarkdownInternal(
   const extracted = inheritedContext ? null : extractReferenceDefinitions(source);
   const context: MarkdownParseContext = inheritedContext ?? {
     citationGroups: [],
-    referenceDefinitions: extracted?.referenceDefinitions ?? new Map()
+    referenceDefinitions: extracted?.referenceDefinitions ?? new Map(),
+    allowedImageHosts: options?.allowedImageHosts ?? emptyAllowedImageHosts
   };
   const lines = extracted?.lines ?? source.replace(/\r\n/g, '\n').split('\n');
   const sourceLineNumbers = extracted?.sourceLineNumbers ?? lines.map((_line, index) => index + 1);
@@ -740,8 +885,10 @@ export function parseMarkdown(source: string, options?: UseMarkdownOptions): Par
 /** 记忆化的 Markdown 渲染 hook，返回 HTML 与标题目录。 */
 export function useMarkdown(source: string, options?: UseMarkdownOptions): UseMarkdownReturn {
   const includeSourceBlocks = options?.includeSourceBlocks === true;
+  const { allowedHosts } = useMarkdownImagePolicy();
+  const allowedImageHosts = options?.allowedImageHosts ?? allowedHosts;
   return useMemo(
-    () => parseMarkdown(source || '', { includeSourceBlocks }),
-    [includeSourceBlocks, source]
+    () => parseMarkdown(source || '', { includeSourceBlocks, allowedImageHosts }),
+    [allowedImageHosts, includeSourceBlocks, source]
   );
 }
