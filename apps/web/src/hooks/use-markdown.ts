@@ -342,6 +342,110 @@ function renderReferenceImages(
   });
 }
 
+interface InlineMarkdownImage {
+  alt: string;
+  rawUrl: string;
+  end: number;
+}
+
+/**
+ * 解析行内图片目标地址。目标地址中的括号必须成对出现，避免将 URL 内的右括号误判为语法结束符。
+ */
+function parseInlineMarkdownImage(text: string, start: number): InlineMarkdownImage | null {
+  if (!text.startsWith('![', start)) {
+    return null;
+  }
+
+  const altEnd = text.indexOf(']', start + 2);
+  if (altEnd < 0 || text[altEnd + 1] !== '(') {
+    return null;
+  }
+
+  const destinationStart = altEnd + 2;
+  let cursor = destinationStart;
+  let parenthesisDepth = 0;
+
+  while (cursor < text.length) {
+    const character = text[cursor];
+    if (/\s/.test(character) && parenthesisDepth === 0) {
+      break;
+    }
+
+    if (character === '(') {
+      parenthesisDepth += 1;
+    } else if (character === ')') {
+      if (parenthesisDepth === 0) {
+        if (cursor === destinationStart) {
+          return null;
+        }
+        return { alt: text.slice(start + 2, altEnd), rawUrl: text.slice(destinationStart, cursor), end: cursor + 1 };
+      }
+      parenthesisDepth -= 1;
+    }
+    cursor += 1;
+  }
+
+  if (cursor === destinationStart || parenthesisDepth !== 0 || cursor === text.length) {
+    return null;
+  }
+
+  let titleStart = cursor;
+  while (/\s/.test(text[titleStart] ?? '')) {
+    titleStart += 1;
+  }
+
+  const openingTitleDelimiter = text[titleStart];
+  const closingTitleDelimiter = openingTitleDelimiter === '(' ? ')' : openingTitleDelimiter;
+  if (openingTitleDelimiter !== '"' && openingTitleDelimiter !== "'" && openingTitleDelimiter !== '(') {
+    return null;
+  }
+
+  const titleEnd = text.indexOf(closingTitleDelimiter, titleStart + 1);
+  if (titleEnd < 0 || text[titleEnd + 1] !== ')') {
+    return null;
+  }
+
+  return {
+    alt: text.slice(start + 2, altEnd),
+    rawUrl: text.slice(destinationStart, cursor),
+    end: titleEnd + 2
+  };
+}
+
+/** 渲染已验证目标地址的行内图片，并保留不完整 Markdown 原文。 */
+function renderInlineImages(
+  text: string,
+  context: MarkdownParseContext,
+  createSlot: (html: string) => string
+): string {
+  let result = '';
+  let cursor = 0;
+
+  while (cursor < text.length) {
+    const imageStart = text.indexOf('![', cursor);
+    if (imageStart < 0) {
+      return result + text.slice(cursor);
+    }
+
+    const image = parseInlineMarkdownImage(text, imageStart);
+    if (!image) {
+      result += text.slice(cursor, imageStart + 2);
+      cursor = imageStart + 2;
+      continue;
+    }
+
+    const allowedUrl = getAllowedMarkdownImageUrl(image.rawUrl, context.allowedImageHosts);
+    // 图片策略未就绪、协议不安全或 Host 未授权时，绝不输出可请求外网的 <img>。
+    const renderedImage = allowedUrl
+      ? renderMarkdownImage(image.alt, allowedUrl)
+      : renderBlockedMarkdownImage(image.alt);
+    result += text.slice(cursor, imageStart) + createSlot(renderedImage);
+    cursor = image.end;
+  }
+
+  return result;
+}
+
 /**
  * 渲染行内语法：行内代码、图片、粗体、链接、裸 URL 自动链接。
  * 行内代码先以哨兵占位，避免其中的特殊字符被后续规则误处理。
@@ -360,14 +464,7 @@ function renderInline(text: string, context: MarkdownParseContext): string {
   );
   result = renderReferenceImages(result, context, createSlot);
   result = renderReferenceLinks(result, context, createSlot);
-  result = result.replace(
-    /!\[([^\]]*)\]\(([^\s)]+)(?:\s+(?:"[^"]*"|'[^']*'|\([^)]*\)))?\)/g,
-    (match: string, alt: string, rawUrl: string) => {
-      const allowedUrl = getAllowedMarkdownImageUrl(rawUrl, context.allowedImageHosts);
-      // 图片策略未就绪、协议不安全或 Host 未授权时，绝不输出可请求外网的 <img>。
-      return allowedUrl ? createSlot(renderMarkdownImage(alt, allowedUrl)) : createSlot(renderBlockedMarkdownImage(alt));
-    }
-  );
+  result = renderInlineImages(result, context, createSlot);
   result = result.replace(
     /\[([^\]]+)\]\(([^)]+)\)/g,
     (_match, label: string, url: string) => createSlot(renderMarkdownLink(label, url))
