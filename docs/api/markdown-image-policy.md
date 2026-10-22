@@ -26,7 +26,7 @@ Host 规则：
 
 - 仅允许精确公网 DNS Host，例如 `cdn.example.com`。
 - 不接受协议、端口、路径、查询参数、用户名、通配符或 IP 地址。
-- 不接受 `localhost`、`*.localhost`、`*.local` 和单标签内网名称。
+- 不接受 `localhost`、`*.localhost`、`*.local`、`home.arpa`、`*.home.arpa` 和单标签内网名称。
 - 图片 URL 在前端还必须同时满足默认端口的 `https:`、不含 `username/password`，并且其规范化后的 `hostname` 与列表精确相等；非默认端口或 URL 用户信息会被拒绝。
 
 ## 获取策略

@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type PropsWithChildren } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type PropsWithChildren } from 'react';
 import { getMarkdownImagePolicy } from '@/api/markdown-image-policy';
 import type { MarkdownImagePolicy } from '@/types/domain';
 
@@ -27,15 +27,23 @@ const MarkdownImagePolicyContext = createContext<MarkdownImagePolicyContextValue
 export function MarkdownImagePolicyProvider({ children }: PropsWithChildren) {
   const [status, setStatus] = useState<MarkdownImagePolicyStatus>('loading');
   const [policy, setPolicy] = useState<MarkdownImagePolicy | null>(null);
+  const refreshSequenceRef = useRef(0);
 
   const refresh = useCallback(async (): Promise<MarkdownImagePolicy | null> => {
+    const refreshSequence = ++refreshSequenceRef.current;
     setStatus('loading');
     try {
       const nextPolicy = await getMarkdownImagePolicy();
+      if (refreshSequence !== refreshSequenceRef.current) {
+        return null;
+      }
       setPolicy(nextPolicy);
       setStatus('ready');
       return nextPolicy;
     } catch {
+      if (refreshSequence !== refreshSequenceRef.current) {
+        return null;
+      }
       setPolicy(null);
       setStatus('failed');
       return null;

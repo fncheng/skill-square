@@ -17,6 +17,8 @@ export function normalizeMarkdownImageHost(rawHost: string): string | null {
       hostname === 'localhost' ||
       hostname.endsWith('.localhost') ||
       hostname.endsWith('.local') ||
+      hostname === 'home.arpa' ||
+      hostname.endsWith('.home.arpa') ||
       isIpv4Address(hostname)
     ) {
       return null;
