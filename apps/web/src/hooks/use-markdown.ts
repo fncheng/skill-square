@@ -429,9 +429,8 @@ function renderInlineImages(
 
     const image = parseInlineMarkdownImage(text, imageStart);
     if (!image) {
-      result += text.slice(cursor, imageStart + 2);
-      cursor = imageStart + 2;
-      continue;
+      // 未闭合或不合法的图片语法必须整体保持字面量，不能再由后续链接规则拆解为可点击链接。
+      return result + text.slice(cursor, imageStart) + createSlot(escapeHtml(text.slice(imageStart)));
     }
 
     const allowedUrl = getAllowedMarkdownImageUrl(image.rawUrl, context.allowedImageHosts);
