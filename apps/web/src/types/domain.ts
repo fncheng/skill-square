@@ -80,6 +80,15 @@ export interface PromptPage {
   pageSize: number;
 }
 
+/** 收藏总览使用的跨资源公共字段。 */
+export interface FavoriteItem {
+  id: string;
+  resource: 'prompts' | 'solutions' | 'notes' | 'miscellanies' | 'model-responses';
+  title: string;
+  summary: string;
+  updatedAt: string;
+}
+
 export interface Solution {
   id: string;
   title: string;

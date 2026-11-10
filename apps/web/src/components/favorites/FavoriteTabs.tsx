@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/stores/auth';
 
 const resources = [
+  { path: '/favorites', label: '全部' },
   { path: '/favorites/prompts', label: 'Prompt' },
   { path: '/favorites/solutions', label: '解决方案' },
   { path: '/favorites/notes', label: '学习笔记' },

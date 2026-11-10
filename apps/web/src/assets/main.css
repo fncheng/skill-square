@@ -397,7 +397,7 @@
   }
 
   .category-chip {
-    @apply h-9 min-w-14 rounded-full border bg-white px-4 font-bold text-slate-800 shadow-sm transition-colors hover:border-primary hover:bg-accent hover:text-primary;
+    @apply inline-flex h-9 min-w-14 items-center justify-center rounded-full border bg-white px-4 font-bold text-slate-800 shadow-sm transition-colors hover:border-primary hover:bg-accent hover:text-primary;
   }
 
   .category-chip.active {
