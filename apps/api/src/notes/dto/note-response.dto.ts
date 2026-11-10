@@ -20,6 +20,9 @@ export class NoteResponseDto {
   tags: string[];
 
   @ApiProperty()
+  isFavorite: boolean;
+
+  @ApiProperty()
   createdAt: Date;
 
   @ApiProperty()

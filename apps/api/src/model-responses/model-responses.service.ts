@@ -104,6 +104,13 @@ export class ModelResponsesService {
     return { ...record, annotationCount };
   }
 
+  /** 更新收藏状态，资源不存在时沿用详情接口的错误响应。 */
+  async markFavorite(id: string, isFavorite: boolean) {
+    await this.findOne(id);
+    await this.prisma.modelResponse.update({ where: { id }, data: { isFavorite } });
+    return this.findOne(id);
+  }
+
   async remove(id: string) {
     await this.findOne(id);
     await this.prisma.modelResponse.delete({ where: { id } });

@@ -1,3 +1,4 @@
+import { FavoriteButton } from '@/components/favorites/FavoriteButton';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -11,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { ModelResponse, ModelResponseFilters } from '@/types/domain';
 import { formatShortDate } from '@/utils/date';
 
-export function ModelResponseList() {
+export function ModelResponseList({ favoriteView = false }: { favoriteView?: boolean }) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { confirmDeletion } = useConfirm();
@@ -43,10 +44,11 @@ export function ModelResponseList() {
   const filteredResponses = useMemo(() => {
     const keyword = filters.search.trim().toLocaleLowerCase();
     return responses.filter((item) => {
+      if (favoriteView && !item.isFavorite) return false;
       const haystack = [item.title, item.summary, item.category, item.sourceProduct, item.modelName, item.originalPrompt, ...item.tags].join(' ').toLocaleLowerCase();
       return (!filters.category || item.category === filters.category) && (!keyword || haystack.includes(keyword));
     });
-  }, [filters, responses]);
+  }, [filters, responses, favoriteView]);
 
   const handleDelete = async (response: ModelResponse) => {
     const confirmed = await confirmDeletion({ title: '删除模型回答', description: `删除「${response.title}」后将同时删除其全部批注，该操作不可恢复。`, expectedText: response.title });
@@ -88,7 +90,7 @@ export function ModelResponseList() {
         {loading ? <div className="loading-panel">正在加载模型回答...</div> : null}
         {filteredResponses.map((item) => (
           <article key={item.id} className="model-response-card" role="link" tabIndex={0} onClick={() => navigate(`/model-responses/${item.id}`)} onKeyDown={(event) => { if (event.key === 'Enter') navigate(`/model-responses/${item.id}`); }}>
-            <header className="model-response-card-head"><span className="model-response-card-icon"><BotMessageSquare className="h-4 w-4" /></span><div className="min-w-0 flex-1"><h2 className="model-response-card-title">{item.title}</h2>{item.sourceProduct || item.modelName ? <p className="model-response-source">{[item.sourceProduct, item.modelName].filter(Boolean).join(' · ')}</p> : null}</div></header>
+            <header className="model-response-card-head"><span className="model-response-card-icon"><BotMessageSquare className="h-4 w-4" /></span><div className="min-w-0 flex-1"><h2 className="model-response-card-title">{item.title}</h2>{item.sourceProduct || item.modelName ? <p className="model-response-source">{[item.sourceProduct, item.modelName].filter(Boolean).join(' · ')}</p> : null}</div><FavoriteButton resource="model-responses" id={item.id} isFavorite={item.isFavorite} onChange={(isFavorite) => setResponses((current) => current.map((entry) => entry.id === item.id ? { ...entry, isFavorite } : entry))} /></header>
             <p className="model-response-card-desc">{item.summary || '暂无摘要'}</p>
             <div className="solution-card-tags">{item.category ? <span className="prompt-card-tag category">{item.category}</span> : null}{item.tags.slice(0, 3).map((tag) => <span key={tag} className="prompt-card-tag muted">{tag}</span>)}</div>
             <footer className="solution-card-meta"><span className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" />{formatShortDate(item.updatedAt)}</span><span className="model-response-annotation-total"><MessageSquareText className="h-3.5 w-3.5" />{item.annotationCount}</span><div className="solution-card-actions" aria-label="模型回答操作"><button type="button" title="编辑" className="card-icon-button" onClick={(event) => { event.stopPropagation(); navigate(`/model-responses/${item.id}/edit`); }}><Pencil className="h-4 w-4" /></button><button type="button" title="删除" className="card-icon-button" onClick={(event) => { event.stopPropagation(); void handleDelete(item); }}><Trash2 className="h-4 w-4" /></button></div></footer>

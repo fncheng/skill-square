@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type KeyboardEvent } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ChartPie, Copy, FileText, Plus, RotateCcw, Search, Star, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, type SelectOption } from '@/components/ui/select';
@@ -28,16 +28,14 @@ const pageSizeOptions: readonly SelectOption<number>[] = [
   { value: 48, label: '48 条' }
 ];
 
-export function PromptList() {
+export function PromptList({ favoriteView = false }: { favoriteView?: boolean }) {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { confirmDeletion } = useConfirm();
   const store = usePromptStore();
   const isAdmin = useAuthStore((state) => state.status === 'admin');
   const [selectedTagId, setSelectedTagId] = useState('');
 
-  const favoriteQuery = searchParams.get('favorite');
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(store.total / store.pageSize)),
     [store.total, store.pageSize]
@@ -52,14 +50,14 @@ export function PromptList() {
 
   useEffect(() => {
     store.setPageSize(8);
-    store.setFilters({ favorite: favoriteQuery === 'true' ? 'true' : '' });
+    store.setFilters({ favorite: favoriteView ? 'true' : '' });
     store.setPage(1);
     void store.fetchPrompts();
     void store.fetchCategories();
     void store.fetchTags();
-    // 仅在收藏筛选参数变化时重新加载列表
+    // 列表模式变化时重新加载
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [favoriteQuery]);
+  }, [favoriteView]);
 
   const handleSearch = async () => {
     store.setPage(1);
@@ -97,7 +95,7 @@ export function PromptList() {
     store.resetFilters();
     setSelectedTagId('');
     store.setPageSize(8);
-    if (favoriteQuery === 'true') {
+    if (favoriteView) {
       store.setFilters({ favorite: 'true' });
     } else {
       navigate('/prompts', { replace: true });
@@ -118,7 +116,7 @@ export function PromptList() {
 
   const handleFavorite = async (prompt: Prompt) => {
     await store.toggleFavorite(prompt);
-    if (favoriteQuery === 'true') {
+    if (favoriteView) {
       await store.fetchPrompts();
     }
   };
@@ -146,7 +144,7 @@ export function PromptList() {
 
   return (
     <section className="prompt-home">
-      {favoriteQuery === 'true' ? (
+      {favoriteView ? (
         <>
           <div className="page-head">
             <div>
@@ -450,7 +448,7 @@ export function PromptList() {
         </Button>
       </div>
 
-      {isAdmin && favoriteQuery !== 'true' ? (
+      {isAdmin && !favoriteView ? (
         <button type="button" className="prompt-fab" title="新建 Prompt" onClick={() => navigate('/prompts/new')}>
           <Plus className="h-7 w-7" />
         </button>

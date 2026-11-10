@@ -1,3 +1,4 @@
+import { FavoriteButton } from '@/components/favorites/FavoriteButton';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BookOpenText, Clock, Pencil, Plus, Search, Trash2, Upload, X } from 'lucide-react';
@@ -10,7 +11,7 @@ import { useAuthStore } from '@/stores/auth';
 import type { Miscellany, MiscellanyFilters } from '@/types/domain';
 import { formatShortDate } from '@/utils/date';
 
-export function MiscellanyList() {
+export function MiscellanyList({ favoriteView = false }: { favoriteView?: boolean }) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { confirmDeletion } = useConfirm();
@@ -33,11 +34,12 @@ export function MiscellanyList() {
   const filteredMiscellanies = useMemo(() => {
     const keyword = filters.search.trim().toLocaleLowerCase('zh-CN');
     return miscellanies.filter((item) => {
+      if (favoriteView && !item.isFavorite) return false;
       const matchesCategory = !filters.category || item.category === filters.category;
       const matchesKeyword = !keyword || item.title.toLocaleLowerCase('zh-CN').includes(keyword) || item.summary.toLocaleLowerCase('zh-CN').includes(keyword) || item.tags.some((tag) => tag.toLocaleLowerCase('zh-CN').includes(keyword));
       return matchesCategory && matchesKeyword;
     });
-  }, [filters, miscellanies]);
+  }, [filters, miscellanies, favoriteView]);
 
   const handleDelete = async (miscellany: Miscellany) => {
     const confirmed = await confirmDeletion({ title: '删除杂谈', description: `删除「${miscellany.title}」后将同时删除其全部批注，该操作不可恢复。`, expectedText: miscellany.title });
@@ -68,7 +70,7 @@ export function MiscellanyList() {
       <section className="solution-grid relative min-h-[200px]">
         {loading ? <div className="loading-panel">正在加载杂谈...</div> : null}
         {filteredMiscellanies.map((item) => <article key={item.id} className="solution-card" role="link" tabIndex={0} onClick={() => navigate(`/miscellanies/${item.id}`)} onKeyDown={(event) => { if (event.key === 'Enter') navigate(`/miscellanies/${item.id}`); }}>
-          <header className="solution-card-head"><span className="solution-card-icon"><BookOpenText className="h-4 w-4" /></span><h2 className="solution-card-title">{item.title}</h2></header>
+          <header className="solution-card-head"><span className="solution-card-icon"><BookOpenText className="h-4 w-4" /></span><h2 className="solution-card-title">{item.title}</h2>{isAdmin ? <FavoriteButton resource="miscellanies" id={item.id} isFavorite={item.isFavorite} onChange={(isFavorite) => setMiscellanies((current) => current.map((entry) => entry.id === item.id ? { ...entry, isFavorite } : entry))} /> : null}</header>
           <p className="solution-card-desc">{item.summary || '暂无摘要'}</p>
           <div className="solution-card-tags">{item.category ? <span className="prompt-card-tag category">{item.category}</span> : null}{item.tags.map((tag) => <span key={tag} className="prompt-card-tag muted">{tag}</span>)}</div>
           <footer className="solution-card-meta"><span className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" />{formatShortDate(item.updatedAt)}</span>

@@ -66,6 +66,21 @@ export class SolutionsController {
     return this.solutionsService.update(id, dto);
   }
 
+  @Post(':id/favorite')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '收藏解决方案' })
+  @ApiOkResponse({ type: SolutionResponseDto })
+  favorite(@Param('id', ParseUUIDPipe) id: string) {
+    return this.solutionsService.markFavorite(id, true);
+  }
+
+  @Delete(':id/favorite')
+  @ApiOperation({ summary: '取消收藏解决方案' })
+  @ApiOkResponse({ type: SolutionResponseDto })
+  unfavorite(@Param('id', ParseUUIDPipe) id: string) {
+    return this.solutionsService.markFavorite(id, false);
+  }
+
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: '删除解决方案' })

@@ -43,7 +43,7 @@ interface ManageNavItem {
 
 const primaryNav: PrimaryNavItem[] = [
   { key: 'prompts', label: 'Prompt 列表', to: '/prompts', icon: House },
-  { key: 'favorites', label: '我的收藏', to: '/prompts?favorite=true', icon: Star },
+  { key: 'favorites', label: '我的收藏', to: '/favorites', icon: Star },
   { key: 'solutions', label: '解决方案', to: '/solutions', icon: Lightbulb },
   { key: 'notes', label: '学习笔记', to: '/notes', icon: NotebookPen },
   { key: 'miscellanies', label: '杂谈', to: '/miscellanies', icon: BookOpenText },
@@ -61,17 +61,16 @@ const manageNav: ManageNavItem[] = [
 export function AppLayout() {
   const location = useLocation();
   const pathname = location.pathname;
-  const favorite = new URLSearchParams(location.search).get('favorite');
   const authStatus = useAuthStore((state) => state.status);
   const logout = useAuthStore((state) => state.logout);
   const isAdmin = authStatus === 'admin';
 
   const isPrimaryActive = (item: PrimaryNavItem) => {
     if (item.key === 'favorites') {
-      return pathname === '/prompts' && favorite === 'true';
+      return pathname === '/favorites' || pathname.startsWith('/favorites/');
     }
     if (item.key === 'prompts') {
-      return pathname.startsWith('/prompts') && favorite !== 'true';
+      return pathname.startsWith('/prompts');
     }
     if (item.key === 'solutions') {
       return pathname.startsWith('/solutions');

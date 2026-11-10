@@ -66,6 +66,21 @@ export class NotesController {
     return this.notesService.update(id, dto);
   }
 
+  @Post(':id/favorite')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '收藏学习笔记' })
+  @ApiOkResponse({ type: NoteResponseDto })
+  favorite(@Param('id', ParseUUIDPipe) id: string) {
+    return this.notesService.markFavorite(id, true);
+  }
+
+  @Delete(':id/favorite')
+  @ApiOperation({ summary: '取消收藏学习笔记' })
+  @ApiOkResponse({ type: NoteResponseDto })
+  unfavorite(@Param('id', ParseUUIDPipe) id: string) {
+    return this.notesService.markFavorite(id, false);
+  }
+
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: '删除学习笔记' })

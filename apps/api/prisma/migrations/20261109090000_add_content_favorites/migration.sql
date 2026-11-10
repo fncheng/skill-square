@@ -1,0 +1,4 @@
+ALTER TABLE "solutions" ADD COLUMN "isFavorite" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "notes" ADD COLUMN "isFavorite" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "miscellanies" ADD COLUMN "isFavorite" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "model_responses" ADD COLUMN "isFavorite" BOOLEAN NOT NULL DEFAULT false;

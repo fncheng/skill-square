@@ -122,6 +122,7 @@ interface Solution {
   content: string;
   category: string;
   tags: string[];
+  isFavorite: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -166,6 +167,7 @@ interface Note {
   content: string;
   category: string;
   tags: string[];
+  isFavorite: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -210,6 +212,7 @@ interface Miscellany {
   content: string;
   category: string;
   tags: string[];
+  isFavorite: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -247,6 +250,7 @@ interface ModelResponse {
   modelName: string;
   originalPrompt: string;
   annotationCount: number;
+  isFavorite: boolean;
   createdAt: string;
   updatedAt: string;
 }

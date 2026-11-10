@@ -42,6 +42,21 @@ export class MiscellaniesController {
   @ApiOkResponse({ type: MiscellanyResponseDto })
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateMiscellanyDto) { return this.miscellaniesService.update(id, dto); }
 
+  @Post(':id/favorite')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '收藏杂谈' })
+  @ApiOkResponse({ type: MiscellanyResponseDto })
+  favorite(@Param('id', ParseUUIDPipe) id: string) {
+    return this.miscellaniesService.markFavorite(id, true);
+  }
+
+  @Delete(':id/favorite')
+  @ApiOperation({ summary: '取消收藏杂谈' })
+  @ApiOkResponse({ type: MiscellanyResponseDto })
+  unfavorite(@Param('id', ParseUUIDPipe) id: string) {
+    return this.miscellaniesService.markFavorite(id, false);
+  }
+
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: '删除杂谈' })

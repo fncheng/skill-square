@@ -20,6 +20,9 @@ export class MiscellanyResponseDto {
   tags: string[];
 
   @ApiProperty()
+  isFavorite: boolean;
+
+  @ApiProperty()
   createdAt: Date;
 
   @ApiProperty()

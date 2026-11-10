@@ -893,7 +893,7 @@
   }
 
   .solution-card-title {
-    @apply m-0 line-clamp-2 text-base font-black leading-snug text-slate-950;
+    @apply m-0 line-clamp-2 min-w-0 flex-1 text-base font-black leading-snug text-slate-950;
   }
 
   .solution-card-desc {

@@ -59,6 +59,21 @@ export class ModelResponsesController {
     return this.service.update(id, dto);
   }
 
+  @Post(':id/favorite')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '收藏模型回答' })
+  @ApiOkResponse({ type: ModelResponseDto })
+  favorite(@Param('id', ParseUUIDPipe) id: string) {
+    return this.service.markFavorite(id, true);
+  }
+
+  @Delete(':id/favorite')
+  @ApiOperation({ summary: '取消收藏模型回答' })
+  @ApiOkResponse({ type: ModelResponseDto })
+  unfavorite(@Param('id', ParseUUIDPipe) id: string) {
+    return this.service.markFavorite(id, false);
+  }
+
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: '删除模型回答及其批注' })

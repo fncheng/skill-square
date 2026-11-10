@@ -1,3 +1,4 @@
+import { FavoriteButton } from '@/components/favorites/FavoriteButton';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Clock, NotebookPen, Pencil, Plus, Search, Trash2, Upload, X } from 'lucide-react';
@@ -10,7 +11,7 @@ import { useAuthStore } from '@/stores/auth';
 import type { Note, NoteFilters } from '@/types/domain';
 import { formatShortDate } from '@/utils/date';
 
-export function NoteList() {
+export function NoteList({ favoriteView = false }: { favoriteView?: boolean }) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { confirmDeletion } = useConfirm();
@@ -49,6 +50,7 @@ export function NoteList() {
     const keyword = filters.search.trim().toLowerCase();
 
     return notes.filter((item) => {
+      if (favoriteView && !item.isFavorite) return false;
       const matchCategory = !filters.category || item.category === filters.category;
       const matchKeyword =
         !keyword ||
@@ -58,7 +60,7 @@ export function NoteList() {
 
       return matchCategory && matchKeyword;
     });
-  }, [notes, filters]);
+  }, [notes, filters, favoriteView]);
 
   const handleDelete = async (note: Note) => {
     const confirmed = await confirmDeletion({
@@ -166,6 +168,7 @@ export function NoteList() {
                 <NotebookPen className="h-4 w-4" />
               </span>
               <h2 className="solution-card-title">{item.title}</h2>
+              {isAdmin ? <FavoriteButton resource="notes" id={item.id} isFavorite={item.isFavorite} onChange={(isFavorite) => setNotes((current) => current.map((entry) => entry.id === item.id ? { ...entry, isFavorite } : entry))} /> : null}
             </header>
 
             <p className="solution-card-desc">{item.summary || '暂无摘要'}</p>

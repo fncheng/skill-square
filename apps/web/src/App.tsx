@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { RequireAdmin } from './components/auth/RequireAdmin';
 import { AppLayout } from './components/layout/AppLayout';
+import { Favorites } from './views/Favorites';
 import { MarkdownImagePolicyManage } from './views/MarkdownImagePolicyManage';
 import { CategoryManage } from './views/CategoryManage';
 import { NoteDetail } from './views/NoteDetail';
@@ -40,6 +41,16 @@ export default function App() {
         <Route path="/notes/:id" element={<NoteDetail />} />
         <Route path="/miscellanies" element={<MiscellanyList />} />
         <Route path="/miscellanies/:id" element={<MiscellanyDetail />} />
+        <Route path="/favorites" element={<Favorites />}>
+          <Route index element={<Navigate to="prompts" replace />} />
+          <Route path="prompts" element={<PromptList favoriteView />} />
+          <Route path="solutions" element={<SolutionList favoriteView />} />
+          <Route path="notes" element={<NoteList favoriteView />} />
+          <Route path="miscellanies" element={<MiscellanyList favoriteView />} />
+          <Route element={<RequireAdmin />}>
+            <Route path="model-responses" element={<ModelResponseList favoriteView />} />
+          </Route>
+        </Route>
         <Route path="/tag-cloud" element={<TagCloud />} />
         <Route path="/tag-articles" element={<TagArticleList />} />
         <Route path="/ui-prototypes" element={<UiPrototypeList />} />

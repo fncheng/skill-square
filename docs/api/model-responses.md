@@ -25,3 +25,7 @@
 ## DELETE /api/model-responses/:id
 
 删除模型回答及其所有 Markdown 批注，返回 `204 No Content`。
+
+## POST /api/model-responses/:id/favorite 与 DELETE /api/model-responses/:id/favorite
+
+分别收藏和取消收藏指定资源。`id` 为资源 UUID；需要管理员会话。成功时返回包含 `isFavorite` 的完整资源对象，资源不存在时返回 `404`。新建或导入的资源默认未收藏；迁移文件不包含收藏状态。

@@ -87,6 +87,7 @@ export interface Solution {
   content: string;
   category: string;
   tags: string[];
+  isFavorite: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -111,6 +112,7 @@ export interface Note {
   content: string;
   category: string;
   tags: string[];
+  isFavorite: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -135,6 +137,7 @@ export interface Miscellany {
   content: string;
   category: string;
   tags: string[];
+  isFavorite: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -163,6 +166,7 @@ export interface ModelResponse {
   modelName: string;
   originalPrompt: string;
   annotationCount: number;
+  isFavorite: boolean;
   createdAt: string;
   updatedAt: string;
 }

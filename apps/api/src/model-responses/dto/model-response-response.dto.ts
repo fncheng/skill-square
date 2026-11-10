@@ -32,6 +32,9 @@ export class ModelResponseDto {
   annotationCount: number;
 
   @ApiProperty()
+  isFavorite: boolean;
+
+  @ApiProperty()
   createdAt: Date;
 
   @ApiProperty()

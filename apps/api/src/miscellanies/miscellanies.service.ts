@@ -138,6 +138,12 @@ export class MiscellaniesService {
     });
   }
 
+  /** 更新收藏状态，资源不存在时沿用详情接口的错误响应。 */
+  async markFavorite(id: string, isFavorite: boolean) {
+    await this.findOne(id);
+    return this.prisma.miscellany.update({ where: { id }, data: { isFavorite } });
+  }
+
   async remove(id: string) {
     await this.findOne(id);
     await this.prisma.miscellany.delete({ where: { id } });

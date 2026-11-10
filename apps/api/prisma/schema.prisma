@@ -87,6 +87,7 @@ model Solution {
   content     String       @db.Text
   category    String       @default("") @db.VarChar(80)
   tags        String[]     @default([])
+  isFavorite   Boolean      @default(false)
   annotations Annotation[]
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @default(now()) @updatedAt
@@ -103,6 +104,7 @@ model Note {
   content     String       @db.Text
   category    String       @default("") @db.VarChar(80)
   tags        String[]     @default([])
+  isFavorite   Boolean      @default(false)
   annotations Annotation[]
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @default(now()) @updatedAt
@@ -119,6 +121,7 @@ model Miscellany {
   content     String       @db.Text
   category    String       @default("") @db.VarChar(80)
   tags        String[]     @default([])
+  isFavorite   Boolean      @default(false)
   annotations Annotation[]
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @default(now()) @updatedAt
@@ -138,6 +141,7 @@ model ModelResponse {
   sourceProduct String       @default("") @db.VarChar(120)
   modelName     String       @default("") @db.VarChar(120)
   originalPrompt String      @default("") @db.Text
+  isFavorite   Boolean      @default(false)
   annotations   Annotation[]
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @default(now()) @updatedAt
