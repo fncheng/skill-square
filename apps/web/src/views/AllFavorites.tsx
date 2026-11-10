@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Clock, Star } from 'lucide-react';
+import { Clock, Search, Star, X } from 'lucide-react';
 import { getAllFavorites } from '@/api/favorites';
 import { FavoriteButton } from '@/components/favorites/FavoriteButton';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,7 @@ export function AllFavorites() {
   const [loading, setLoading] = useState(true);
   const [hasErrors, setHasErrors] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -40,7 +41,11 @@ export function AllFavorites() {
   }, [status, attempt]);
 
   // 登出后立即隐藏私有数据，不等待下一次请求完成。
-  const visibleItems = status === 'admin' ? items : items.filter((item) => item.resource !== 'model-responses');
+  const keyword = search.trim().toLocaleLowerCase();
+  const visibleItems = items.filter((item) => {
+    if (status !== 'admin' && item.resource === 'model-responses') return false;
+    return !keyword || item.title.toLocaleLowerCase().includes(keyword) || item.summary.toLocaleLowerCase().includes(keyword);
+  });
 
   return (
     <section>
@@ -49,6 +54,18 @@ export function AllFavorites() {
           <h1 className="page-title">我的收藏</h1>
           <p className="page-subtitle">查看所有已收藏的内容。</p>
         </div>
+      </div>
+      <div className="solution-toolbar">
+        <label className="solution-search">
+          <Search className="h-4 w-4 text-slate-400" />
+          <input value={search} type="text" aria-label="搜索收藏" placeholder="搜索标题或摘要..."
+            onChange={(event) => setSearch(event.target.value)} />
+          {search ? (
+            <button type="button" className="solution-search-clear" aria-label="清空搜索" onClick={() => setSearch('')}>
+              <X className="h-4 w-4" />
+            </button>
+          ) : null}
+        </label>
       </div>
       {hasErrors ? (
         <div className="mb-4 flex flex-wrap items-center gap-3 text-sm text-destructive" role="alert">
@@ -80,7 +97,8 @@ export function AllFavorites() {
         )) : null}
         {!loading && status !== 'loading' && !hasErrors && visibleItems.length === 0 ? (
           <div className="solution-empty"><div className="grid place-items-center gap-2 py-8 text-center text-muted-foreground">
-            <Star className="h-8 w-8" /><p className="font-semibold">暂无收藏内容</p>
+            {keyword ? <Search className="h-8 w-8" /> : <Star className="h-8 w-8" />}
+            <p className="font-semibold">{keyword ? '暂无匹配的收藏内容' : '暂无收藏内容'}</p>
           </div></div>
         ) : null}
       </div>
