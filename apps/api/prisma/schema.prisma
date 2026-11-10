@@ -211,3 +211,48 @@ model Annotation {
   @@index([resourceType, createdAt])
   @@map("annotations")
 }
+
+// SKILL 版本是完整快照，原包与文件列表跟随资源级联删除。
+model Skill {
+  id        String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  versions  SkillVersion[]
+
+  @@map("skills")
+}
+
+model SkillVersion {
+  id             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  skillId        String      @db.Uuid
+  skill          Skill       @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  number         Int
+  name           String      @db.VarChar(200)
+  description    String      @db.VarChar(500)
+  note           String      @db.VarChar(500)
+  format         String      @db.VarChar(8)
+  originalName   String      @db.VarChar(255)
+  contentHash    String      @db.VarChar(64)
+  artifactHash   String      @db.VarChar(64)
+  artifact       Bytes
+  requestId      String      @unique @db.Uuid
+  createdAt      DateTime    @default(now())
+  files          SkillFile[]
+
+  @@unique([skillId, number])
+  @@unique([skillId, requestId])
+  @@map("skill_versions")
+}
+
+model SkillFile {
+  id        String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  versionId String       @db.Uuid
+  version   SkillVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  path      String       @db.Text
+  size      Int
+  hash      String       @db.VarChar(64)
+  text      String?      @db.Text
+
+  @@unique([versionId, path])
+  @@map("skill_files")
+}

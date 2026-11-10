@@ -25,6 +25,7 @@ related: []
 
 | Feature | 状态 | 说明 |
 | --- | --- | --- |
+| [SKILL center](./features/skill-center/README.md) | `active` | 管理仅管理员可见的 SKILL 目录包与不可变版本。 |
 | [Prompt 资源库](./features/prompt-library/README.md) | `active` | 管理 Prompt、分类、标签、收藏状态与版本历史。 |
 | [Markdown 知识库](./features/markdown-knowledge-base/README.md) | `active` | 管理解决方案、学习笔记、杂谈、文件导入导出与 Markdown 批注。 |
 | [内容发现](./features/content-discovery/README.md) | `active` | 提供跨资源全局搜索，以及公开知识内容的标签词云浏览。 |

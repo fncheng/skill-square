@@ -25,9 +25,11 @@
     "class-validator": "^0.14.1",
     "cookie-parser": "^1.4.7",
     "express": "^4.22.1",
+    "js-yaml": "^5.5.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "swagger-ui-express": "^5.0.1"
+    "swagger-ui-express": "^5.0.1",
+    "yauzl": "^3.4.0"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.4.8",
@@ -35,7 +37,9 @@
     "@nestjs/testing": "^10.4.15",
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.0",
+    "@types/js-yaml": "^4.0.9",
     "@types/node": "^22.10.2",
+    "@types/yauzl": "^3.4.0",
     "prisma": "^5.22.0",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",

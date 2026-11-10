@@ -12,6 +12,7 @@ import { MiscellaniesModule } from './miscellanies/miscellanies.module';
 import { MarkdownImagePolicyModule } from './markdown-image-policy/markdown-image-policy.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { PromptsModule } from './prompts/prompts.module';
+import { SkillsModule } from './skills/skills.module';
 import { SearchModule } from './search/search.module';
 import { SolutionsModule } from './solutions/solutions.module';
 import { TagsModule } from './tags/tags.module';
@@ -33,7 +34,8 @@ import { UiPrototypesModule } from './ui-prototypes/ui-prototypes.module';
     ModelResponsesModule,
     AnnotationsModule,
     UiPrototypesModule,
-    SearchModule
+    SearchModule,
+    SkillsModule
   ],
   providers: [
     {
