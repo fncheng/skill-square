@@ -18,4 +18,5 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @prompt-skill-manager/api prisma:generate
       - run: pnpm --filter @prompt-skill-manager/api test
