@@ -4,11 +4,13 @@ import { ArrowLeft, ArrowLeftRight, Download, Plus, Trash2, Upload, X } from 'lu
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { skillsApi } from '@/api/skills';
+import { MarkdownContent } from '@/components/markdown/MarkdownContent';
 import { PromptMonacoEditor } from '@/components/prompt/PromptMonacoEditor';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { useConfirm } from '@/hooks/use-confirm';
+import { useMarkdown } from '@/hooks/use-markdown';
 import { useToast } from '@/hooks/use-toast';
 import type { Skill, SkillCandidate, SkillFile, SkillVersion } from '@/types/skill';
 
@@ -277,6 +279,20 @@ function VersionSelect({
   );
 }
 
+/** 渲染正文时跳过开头的 frontmatter，源码视图仍显示完整文件。 */
+function SkillMarkdownPreview({ source, isEntry }: { source: string; isEntry: boolean }) {
+  const body = isEntry ? source.replace(/^\uFEFF?---[ \t]*\r?\n(?:[\s\S]*?\r?\n)?---[ \t]*(?:\r?\n|$)/, '') : source;
+  const { html, citationGroups } = useMarkdown(body);
+
+  if (!body.trim()) return <div className="editor-preview-empty">暂无可预览的 Markdown 内容</div>;
+
+  return (
+    <div className="editor-preview-scroll">
+      <MarkdownContent html={html} citationGroups={citationGroups} className="editor-preview-content break-words" />
+    </div>
+  );
+}
+
 export function SkillCenter() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -305,6 +321,7 @@ export function SkillCenter() {
   const [left, setLeft] = useState('');
   const [right, setRight] = useState('');
   const [path, setPath] = useState('SKILL.md');
+  const [previewMode, setPreviewMode] = useState<'text' | 'markdown'>('text');
   const load = useCallback(async (options?: { openUpload?: boolean }) => {
     const run = ++generation.current;
     setLoading(true);
@@ -420,6 +437,8 @@ export function SkillCenter() {
     }
   }, [id, skill, tab, chosenFile, oldFile, newFile, selected, left, right, texts, textErrors]);
   const fileText = (file?: SkillFile) => (file?.id ? texts[file.id] : undefined);
+  const chosenFileText = fileText(chosenFile);
+  const isMarkdownFile = /\.(?:md|markdown)$/i.test(chosenFile?.path ?? '');
   const retry = (files: Array<SkillFile | undefined>) =>
     setTextErrors((state) => {
       const next = { ...state };
@@ -430,7 +449,7 @@ export function SkillCenter() {
     });
   const loadError = (file?: SkillFile) => Boolean(file?.id && textErrors[file.id]);
   return (
-    <div className="mx-auto max-w-[1440px] space-y-5 p-6">
+    <div className="space-y-5">
       {loading ? (
         <p className="text-sm text-slate-500">正在加载…</p>
       ) : failed ? (
@@ -628,9 +647,27 @@ export function SkillCenter() {
                   ))}
                 </aside>
                 <div className="min-w-0">
-                  <div className="flex justify-between border-b p-3 text-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b p-3 text-sm">
                     <strong className="break-all">{chosenFile?.path}</strong>
-                    <span className="text-slate-500">{chosenFile && bytes(chosenFile.size)} · 只读</span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {isMarkdownFile && typeof chosenFileText === 'string' && (
+                        <div role="group" aria-label="文件预览模式" className="flex gap-1 rounded-md bg-slate-50 p-1">
+                          {(['text', 'markdown'] as const).map((mode) => (
+                            <Button
+                              key={mode}
+                              type="button"
+                              size="sm"
+                              variant={previewMode === mode ? 'outline' : 'ghost'}
+                              aria-pressed={previewMode === mode}
+                              onClick={() => setPreviewMode(mode)}
+                            >
+                              {mode === 'text' ? '纯文本' : 'Markdown'}
+                            </Button>
+                          ))}
+                        </div>
+                      )}
+                      <span className="text-slate-500">{chosenFile && bytes(chosenFile.size)} · 只读</span>
+                    </div>
                   </div>
                   {loadError(chosenFile) ? (
                     <div className="p-8 text-sm">
@@ -639,15 +676,23 @@ export function SkillCenter() {
                         重试
                       </Button>
                     </div>
-                  ) : fileText(chosenFile) === undefined ? (
+                  ) : chosenFileText === undefined ? (
                     <p className="p-8 text-sm text-slate-500">正在加载文件…</p>
-                  ) : fileText(chosenFile) !== null ? (
+                  ) : chosenFileText !== null ? (
                     <div className="flex h-[450px] flex-col">
-                      <PromptMonacoEditor
-                        value={fileText(chosenFile) ?? ''}
-                        readOnly
-                        language={chosenFile?.path.endsWith('.md') ? 'markdown' : 'plaintext'}
-                      />
+                      {isMarkdownFile && previewMode === 'markdown' ? (
+                        <SkillMarkdownPreview
+                          key={chosenFile?.id}
+                          source={chosenFileText}
+                          isEntry={chosenFile?.path === 'SKILL.md'}
+                        />
+                      ) : (
+                        <PromptMonacoEditor
+                          value={chosenFileText}
+                          readOnly
+                          language={isMarkdownFile ? 'markdown' : 'plaintext'}
+                        />
+                      )}
                     </div>
                   ) : (
                     <p className="p-8 text-sm text-slate-500">二进制或超过 1 MiB 的文件无法在线预览，请下载完整包。</p>
