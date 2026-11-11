@@ -38,6 +38,12 @@ function updateCrc32(crc: number, data: Buffer): number {
   return crc;
 }
 const sha = (data: Buffer | string) => createHash('sha256').update(data).digest('hex');
+/** 以固定路径顺序计算清单摘要，也兼容历史版本的文件清单。 */
+export function skillContentHash(files: Array<Pick<PackageFile, 'path' | 'size' | 'hash'>>): string {
+  const ordered = files.map(({ path, size, hash }) => ({ path, size, hash }));
+  ordered.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+  return sha(JSON.stringify(ordered));
+}
 const invalid = (message: string): never => {
   throw new BadRequestException(message);
 };
@@ -197,7 +203,7 @@ export async function parseSkillPackage(filename: string, data: Buffer): Promise
   if (prefix && raw.some((file) => !file.path.startsWith(prefix))) return invalid('ZIP 必须仅包含一个包裹目录。');
   raw = raw
     .map((file) => ({ ...file, path: file.path.slice(prefix.length) }))
-    .sort((a, b) => a.path.localeCompare(b.path));
+    .sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
   const entry = preview(raw.find((file) => file.path === 'SKILL.md')!.data);
   if (entry === null) return invalid('SKILL.md 必须是 1 MiB 以内的 UTF-8 文本。');
   const match = entry.match(/^\uFEFF?---\s*\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
@@ -229,7 +235,7 @@ export async function parseSkillPackage(filename: string, data: Buffer): Promise
     files,
     name: fields.name.trim(),
     description: fields.description.trim(),
-    contentHash: sha(JSON.stringify(files.map(({ path, size, hash }) => ({ path, size, hash })))),
+    contentHash: skillContentHash(files),
     artifactHash: sha(data)
   };
 }

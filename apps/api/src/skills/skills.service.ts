@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SaveSkillDto } from './dto/skill.dto';
-import { parseSkillPackage } from './skill-package';
+import { parseSkillPackage, skillContentHash } from './skill-package';
 
 export interface UploadedSkillFile {
   originalname: string;
@@ -113,6 +113,7 @@ export class SkillsService {
               id: true,
               number: true,
               contentHash: true,
+              files: { select: { path: true, size: true, hash: true } },
               name: true,
               description: true,
               format: true
@@ -121,7 +122,7 @@ export class SkillsService {
           if (!dto.expectedVersionId || latest.id !== dto.expectedVersionId)
             throw new ConflictException('当前版本已变化，请重新打开上传窗口。');
           if (
-            latest.contentHash === parsed.contentHash &&
+            (latest.contentHash === parsed.contentHash || skillContentHash(latest.files) === parsed.contentHash) &&
             latest.name === name &&
             latest.description === description &&
             latest.format === parsed.format

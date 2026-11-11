@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
 import { deflateRawSync } from 'node:zlib';
 import { test } from 'node:test';
-import { parseSkillPackage } from '../src/skills/skill-package.ts';
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
+const { parseSkillPackage, skillContentHash } = require('../src/skills/skill-package.ts');
+require('reflect-metadata');
+const { SkillsService } = require('../src/skills/skills.service.ts');
 
 const entry = Buffer.from('---\nname: example\ndescription: example skill\n---\n# Example\n');
 function crc32(data) {
@@ -74,10 +79,40 @@ test('ZIP strips one wrapper and hashes file content independent of compression'
   const b = await parseSkillPackage('b.zip', zip(entries, { compress: true }));
   assert.deepEqual(
     a.files.map((file) => file.path),
-    ['scripts/run.sh', 'SKILL.md']
+    ['SKILL.md', 'scripts/run.sh']
   );
   assert.equal(a.contentHash, b.contentHash);
   assert.notEqual(a.artifactHash, b.artifactHash);
+});
+test('content hash uses stable path ordering and supports historical file order', async () => {
+  const entries = [['SKILL.md', entry], ['ä.txt', Buffer.from('a')], ['z.txt', Buffer.from('z')]];
+  const first = await parseSkillPackage('x.zip', zip(entries));
+  const second = await parseSkillPackage('x.zip', zip([...entries].reverse()));
+  assert.deepEqual(first.files.map((file) => file.path), ['SKILL.md', 'z.txt', 'ä.txt']);
+  assert.equal(first.contentHash, second.contentHash);
+  assert.equal(first.contentHash, skillContentHash([...first.files].reverse()));
+});
+test('unchanged version detection accepts historical locale-dependent hashes', async () => {
+  const archive = zip([['SKILL.md', entry], ['ä.txt', Buffer.from('a')], ['z.txt', Buffer.from('z')]]);
+  const parsed = await parseSkillPackage('x.zip', archive);
+  const latest = {
+    id: 'version-1', number: 1, contentHash: 'old-locale-hash', name: 'example',
+    description: 'example skill', format: 'ZIP', files: [...parsed.files].reverse()
+  };
+  const tx = {
+    $queryRaw: async () => [{ id: 'skill-1' }],
+    skillVersion: { findUnique: async () => null, findFirstOrThrow: async () => latest }
+  };
+  const prisma = { skillVersion: { findUnique: async () => null }, $transaction: async (callback) => callback(tx) };
+  const service = new SkillsService(prisma);
+  await assert.rejects(
+    service.save(
+      { originalname: 'x.zip', buffer: archive, size: archive.length },
+      { name: 'example', description: 'example skill', note: 'update', requestId: 'request', expectedVersionId: 'version-1' },
+      'skill-1'
+    ),
+    /文件内容及元信息没有变化/
+  );
 });
 test('checks CRC across multiple decompression chunks', async () => {
   const content = Buffer.alloc(512 * 1024);

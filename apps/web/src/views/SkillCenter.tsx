@@ -13,6 +13,7 @@ import { useConfirm } from '@/hooks/use-confirm';
 import { useMarkdown } from '@/hooks/use-markdown';
 import { useToast } from '@/hooks/use-toast';
 import type { Skill, SkillCandidate, SkillFile, SkillVersion } from '@/types/skill';
+import { skillRequestId } from './skill-request-id';
 
 // getRandomValues 在 HTTP 局域网环境也可用，用于为一次保存生成 UUID。
 function requestUuid() {
@@ -49,7 +50,8 @@ function UploadDialog({
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const epoch = useRef(0);
-  const requestId = useRef(requestUuid());
+  // 相同保存内容复用请求标识；修改内容后使用新标识，避免与已提交的请求冲突。
+  const lastRequest = useRef<{ payload: string; id: string }>();
   // 请求发出前同步上锁，避免按钮禁用生效前再次提交或重选文件。
   const savingRef = useRef(false);
   const [file, setFile] = useState<File>();
@@ -107,13 +109,22 @@ function UploadDialog({
     try {
       const upload = manual ? new File([source], 'SKILL.md', { type: 'text/markdown' }) : file;
       if (!upload) return setError('请选择文件。');
+      const payload = JSON.stringify([
+        manual ? source : candidate?.artifactHash,
+        name.trim(),
+        description.trim(),
+        note.trim(),
+        target?.id,
+        target?.versions[0].id
+      ]);
+      lastRequest.current = skillRequestId(lastRequest.current, payload, requestUuid);
       const version = await skillsApi.save(
         {
           file: upload,
           name,
           description,
           note,
-          requestId: requestId.current,
+          requestId: lastRequest.current.id,
           expectedVersionId: target?.versions[0].id
         },
         target?.id
