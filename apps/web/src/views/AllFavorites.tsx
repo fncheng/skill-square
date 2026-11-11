@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Clock, Search, Star, X } from 'lucide-react';
 import { getAllFavorites } from '@/api/favorites';
 import { FavoriteButton } from '@/components/favorites/FavoriteButton';
@@ -18,6 +18,7 @@ const resourceLabels: Record<FavoriteItem['resource'], string> = {
 
 /** 汇总所有可访问的收藏，身份变化时丢弃上一轮请求结果。 */
 export function AllFavorites() {
+  const navigate = useNavigate();
   const status = useAuthStore((state) => state.status);
   const [items, setItems] = useState<FavoriteItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -76,11 +77,13 @@ export function AllFavorites() {
       <div className="solution-grid relative min-h-[200px]">
         {loading || status === 'loading' ? <div className="loading-panel">正在加载收藏...</div> : null}
         {!loading && status !== 'loading' ? visibleItems.map((item) => (
-          <article key={`${item.resource}:${item.id}`} className="solution-card">
+          <article key={`${item.resource}:${item.id}`} className="solution-card" role="link" tabIndex={0}
+            onClick={() => navigate(`/${item.resource}/${item.id}`)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') navigate(`/${item.resource}/${item.id}`);
+            }}>
             <header className="solution-card-head">
-              <Link className="solution-card-title hover:text-primary" to={`/${item.resource}/${item.id}`}>
-                {item.title}
-              </Link>
+              <h2 className="solution-card-title">{item.title}</h2>
               {status === 'admin' ? (
                 <FavoriteButton resource={item.resource} id={item.id} isFavorite
                   onChange={(isFavorite) => {

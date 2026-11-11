@@ -639,6 +639,8 @@ function parseMarkdownInternal(
   let listItems: string[] = [];
   let listType: 'ul' | 'ol' | null = null;
   let listStartLine: number | null = null;
+  // 独立有序列表需要保留首项序号，包括空行拆分出的列表。
+  let orderedListStart = '1';
   let inFence = false;
   let fenceStartLine: number | null = null;
   let fenceLang = '';
@@ -694,7 +696,8 @@ function parseMarkdownInternal(
       return;
     }
     const items = listItems.map((item) => `<li>${renderInline(item, context)}</li>`).join('');
-    pushBlock(`<${listType} class="md-list">${items}</${listType}>`, listStartLine, endLineIndex, 'other');
+    const start = listType === 'ol' && orderedListStart !== '1' ? ` start="${orderedListStart}"` : '';
+    pushBlock(`<${listType} class="md-list"${start}>${items}</${listType}>`, listStartLine, endLineIndex, 'other');
     listType = null;
     listItems = [];
     listStartLine = null;
@@ -855,13 +858,16 @@ function parseMarkdownInternal(
       continue;
     }
 
-    const olMatch = line.match(/^\s*\d+\.\s+(.*)$/);
+    const olMatch = line.match(/^\s*(\d+)\.\s+(.*)$/);
     if (olMatch) {
       flushParagraph(lineIndex - 1);
       if (listType && listType !== 'ol') flushList(lineIndex - 1);
-      if (!listType) listStartLine = lineIndex;
+      if (!listType) {
+        listStartLine = lineIndex;
+        orderedListStart = olMatch[1].replace(/^0+(?=\d)/, '');
+      }
       listType = 'ol';
-      listItems.push(olMatch[1]);
+      listItems.push(olMatch[2]);
       continue;
     }
 
