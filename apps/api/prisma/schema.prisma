@@ -240,7 +240,6 @@ model SkillVersion {
   files          SkillFile[]
 
   @@unique([skillId, number])
-  @@unique([skillId, requestId])
   @@map("skill_versions")
 }
 

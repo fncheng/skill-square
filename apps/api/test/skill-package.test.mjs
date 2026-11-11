@@ -79,6 +79,17 @@ test('ZIP strips one wrapper and hashes file content independent of compression'
   assert.equal(a.contentHash, b.contentHash);
   assert.notEqual(a.artifactHash, b.artifactHash);
 });
+test('checks CRC across multiple decompression chunks', async () => {
+  const content = Buffer.alloc(512 * 1024);
+  for (let i = 0; i < content.length; i++) content[i] = (i * 31 + (i >>> 8)) & 0xff;
+  const entries = [['large.bin', content], ['SKILL.md', entry]];
+  const result = await parseSkillPackage('x.zip', zip(entries, { compress: true }));
+  assert.equal(result.files.find((file) => file.path === 'large.bin').size, content.length);
+  await assert.rejects(
+    parseSkillPackage('x.zip', zip(entries, { compress: true, badCrc: true })),
+    /文件校验失败：large\.bin/
+  );
+});
 test('rejects unsafe paths, case conflicts, file directory conflicts and ambiguous entrypoints', async () => {
   const cases = [
     [
@@ -114,6 +125,21 @@ test('rejects unsafe paths, case conflicts, file directory conflicts and ambiguo
     ]
   ];
   for (const candidate of cases) await assert.rejects(parseSkillPackage('x.zip', zip(candidate)));
+});
+test('bounds normalized UTF-8 paths before persistence', async () => {
+  const accepted = 'a'.repeat(1024);
+  const normalized = 'e\u0301'.repeat(512);
+  for (const path of [accepted, normalized]) {
+    const result = await parseSkillPackage('x.zip', zip([['SKILL.md', entry], [path, Buffer.from('x')]]));
+    assert.ok(result.files.some((file) => file.path === path.normalize('NFC')));
+  }
+  for (const path of ['a'.repeat(1025), '界'.repeat(342)]) {
+    await assert.rejects(parseSkillPackage('x.zip', zip([['SKILL.md', entry], [path, Buffer.from('x')]])), (error) => {
+      assert.equal(error.getStatus(), 400);
+      assert.match(error.message, /文件路径超过 1024 UTF-8 字节/);
+      return true;
+    });
+  }
 });
 test('rejects corrupt CRC, encrypted archives and limits', async () => {
   await assert.rejects(parseSkillPackage('x.zip', zip([['SKILL.md', entry]], { badCrc: true })));

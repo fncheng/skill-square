@@ -8,6 +8,8 @@ export const SKILL_UPLOAD_LIMIT = 10 * 1024 * 1024;
 const TOTAL_LIMIT = 50 * 1024 * 1024;
 const TEXT_LIMIT = 1024 * 1024;
 const FILE_LIMIT = 500;
+// 为 PostgreSQL 复合 B-tree 索引保留空间，按规范化后的 UTF-8 字节计数。
+const PATH_BYTE_LIMIT = 1024;
 
 export interface PackageFile {
   path: string;
@@ -23,14 +25,17 @@ export interface SkillPackage {
   contentHash: string;
   artifactHash: string;
 }
-// ZIP CRC32 用于检测压缩数据损坏，内容摘要用于版本比较。
-function crc32(data: Buffer): number {
-  let crc = 0xffffffff;
-  for (const byte of data) {
-    crc ^= byte;
-    for (let i = 0; i < 8; i++) crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0);
-  }
-  return (crc ^ 0xffffffff) >>> 0;
+// ZIP 使用 IEEE CRC32；预先生成查找表，避免每个字节重复逐位计算。
+const CRC32_TABLE = Uint32Array.from({ length: 256 }, (_, value) => {
+  let crc = value;
+  for (let i = 0; i < 8; i++) crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0);
+  return crc >>> 0;
+});
+
+/** 增量校验解压数据，避免文件结束时同步扫描整个文件。 */
+function updateCrc32(crc: number, data: Buffer): number {
+  for (const byte of data) crc = (crc >>> 8) ^ CRC32_TABLE[(crc ^ byte) & 0xff];
+  return crc;
 }
 const sha = (data: Buffer | string) => createHash('sha256').update(data).digest('hex');
 const invalid = (message: string): never => {
@@ -70,7 +75,10 @@ function safePath(value: string): string {
     )
   )
     return invalid(`非法文件路径：${value}`);
-  return parts.join('/').normalize('NFC');
+  const normalized = parts.join('/').normalize('NFC');
+  if (Buffer.byteLength(normalized, 'utf8') > PATH_BYTE_LIMIT)
+    return invalid(`文件路径超过 ${PATH_BYTE_LIMIT} UTF-8 字节。`);
+  return normalized;
 }
 
 /** ZIP 顺序读取，每个数据流都计数；永不写入磁盘或执行包内文件。 */
@@ -141,20 +149,24 @@ async function readZip(data: Buffer): Promise<Array<{ path: string; data: Buffer
             activeStream = stream;
             const chunks: Buffer[] = [];
             let size = 0;
+            let crc = 0xffffffff;
             stream.on('data', (chunk: Buffer) => {
               size += chunk.length;
               total += chunk.length;
               if (size > entry.uncompressedSize || total > TOTAL_LIMIT) {
                 stream.destroy();
                 fail('解压大小超限。');
-              } else chunks.push(chunk);
+              } else {
+                crc = updateCrc32(crc, chunk);
+                chunks.push(chunk);
+              }
             });
             stream.on('error', () => fail(`无法解压文件：${path}`));
             stream.on('end', () => {
               if (finished) return;
               activeStream = undefined;
               const content = Buffer.concat(chunks);
-              if (crc32(content) !== entry.crc32) return fail(`文件校验失败：${path}`);
+              if (((crc ^ 0xffffffff) >>> 0) !== entry.crc32) return fail(`文件校验失败：${path}`);
               files.push({ path, data: content });
               archive.readEntry();
             });
