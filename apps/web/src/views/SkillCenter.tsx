@@ -296,7 +296,7 @@ function SkillMarkdownPreview({ source, isEntry }: { source: string; isEntry: bo
 export function SkillCenter() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { confirm } = useConfirm();
+  const { confirmDeletion } = useConfirm();
   const { toast } = useToast();
   const [list, setList] = useState<Skill[]>([]);
   const [skill, setSkill] = useState<Skill>();
@@ -360,11 +360,10 @@ export function SkillCenter() {
   }, [load]);
   const remove = async (item: Skill) => {
     if (
-      !(await confirm({
+      !(await confirmDeletion({
         title: '删除 SKILL',
         description: `确认删除 ${item.versions[0].name} 及其全部 ${item._count?.versions ?? item.versions.length} 个版本？删除后无法从界面恢复。`,
-        confirmText: '确认删除',
-        destructive: true
+        expectedText: item.versions[0].name
       }))
     )
       return;
