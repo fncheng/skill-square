@@ -459,7 +459,7 @@ export function SkillCenter() {
     });
   const loadError = (file?: SkillFile) => Boolean(file?.id && textErrors[file.id]);
   return (
-    <div className="space-y-5">
+    <div className={id && skill && version ? 'flex min-h-[calc(100dvh-128px)] flex-col gap-5' : 'space-y-5'}>
       {loading ? (
         <p className="text-sm text-slate-500">正在加载…</p>
       ) : failed ? (
@@ -629,7 +629,7 @@ export function SkillCenter() {
             ))}
           </nav>
           {tab === 'files' && (
-            <div className="overflow-hidden rounded-lg border bg-white">
+            <div className="flex flex-1 flex-col overflow-hidden rounded-lg border bg-white">
               <div className="flex items-center justify-between border-b p-4">
                 <div className="flex items-center gap-3">
                   <strong>版本文件</strong>
@@ -644,8 +644,8 @@ export function SkillCenter() {
                 </div>
                 <span className="text-sm text-slate-500">{version.files.length} 个文件</span>
               </div>
-              <div className="grid min-h-[450px] grid-cols-1 md:grid-cols-[240px_minmax(0,1fr)]">
-                <aside className="max-h-[600px] overflow-auto border-b bg-slate-50 p-2 md:border-b-0 md:border-r">
+              <div className="grid min-h-[450px] flex-1 grid-cols-1 bg-slate-50 md:grid-cols-[240px_minmax(0,1fr)]">
+                <aside className="max-h-[600px] overflow-auto border-b p-2 md:border-b-0">
                   {version.files.map((file) => (
                     <button
                       key={file.path}
@@ -656,7 +656,7 @@ export function SkillCenter() {
                     </button>
                   ))}
                 </aside>
-                <div className="min-w-0">
+                <div className="flex min-w-0 flex-col bg-white md:border-l">
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b p-3 text-sm">
                     <strong className="break-all">{chosenFile?.path}</strong>
                     <div className="flex flex-wrap items-center gap-2">
@@ -689,7 +689,7 @@ export function SkillCenter() {
                   ) : chosenFileText === undefined ? (
                     <p className="p-8 text-sm text-slate-500">正在加载文件…</p>
                   ) : chosenFileText !== null ? (
-                    <div className="flex h-[450px] flex-col">
+                    <div className="flex min-h-[450px] flex-1 flex-col">
                       {isMarkdownFile && previewMode === 'markdown' ? (
                         <SkillMarkdownPreview
                           key={chosenFile?.id}
@@ -827,8 +827,8 @@ export function SkillCenter() {
                   所选版本相同，请选择不同版本。
                 </div>
               ) : (
-                <div className="grid min-h-[500px] grid-cols-1 md:grid-cols-[240px_minmax(0,1fr)] overflow-hidden rounded-lg border bg-white">
-                  <aside className="max-h-[600px] overflow-auto border-b bg-slate-50 p-2 md:border-b-0 md:border-r">
+                <div className="grid min-h-[500px] flex-1 grid-cols-1 overflow-hidden rounded-lg border bg-slate-50 md:grid-cols-[240px_minmax(0,1fr)]">
+                  <aside className="max-h-[600px] overflow-auto border-b p-2 md:border-b-0">
                     {paths.map((p) => {
                       const state = change(
                         old.files.find((f) => f.path === p),
@@ -846,7 +846,7 @@ export function SkillCenter() {
                       );
                     })}
                   </aside>
-                  <div className="min-w-0">
+                  <div className="flex min-w-0 flex-col bg-white md:border-l">
                     <div className="border-b p-3 text-sm font-medium">
                       {comparePath} · {change(oldFile, newFile)}
                     </div>
@@ -872,7 +872,7 @@ export function SkillCenter() {
                         </p>
                       </div>
                     ) : (
-                      <div className="h-[500px]">
+                      <div className="min-h-[500px] flex-1">
                         <DiffEditor
                           original={fileText(oldFile) ?? ''}
                           modified={fileText(newFile) ?? ''}
@@ -894,9 +894,6 @@ export function SkillCenter() {
               )}
             </>
           )}
-          <p className="text-xs text-slate-500">
-            下载保留所选版本的原始文件；在其他设备使用前请自行备份并替换本地目录。
-          </p>
         </>
       ) : null}
       {dialog && (
