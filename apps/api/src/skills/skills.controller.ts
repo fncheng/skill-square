@@ -40,6 +40,7 @@ import {
   SkillVersionDto
 } from './dto/skill.dto';
 import { SkillsService, UploadedSkillFile } from './skills.service';
+import { SKILL_UPLOAD_LIMIT } from './skill-package';
 
 @Injectable()
 class PrivateCacheInterceptor implements NestInterceptor {
@@ -50,7 +51,8 @@ class PrivateCacheInterceptor implements NestInterceptor {
 }
 
 const upload = FileInterceptor('file', {
-  limits: { fileSize: 10 * 1024 * 1024, files: 1, fields: 6 }
+  // Busboy 达到阈值即拒绝，包解析器负责校验含等号的文件上限。
+  limits: { fileSize: SKILL_UPLOAD_LIMIT + 1, files: 1, fields: 6 }
 });
 @ApiTags('Skills')
 @ApiCookieAuth(AUTH_COOKIE_NAME)

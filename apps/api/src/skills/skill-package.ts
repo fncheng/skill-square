@@ -4,7 +4,7 @@ import { Readable } from 'stream';
 import { load } from 'js-yaml';
 import * as yauzl from 'yauzl';
 
-const UPLOAD_LIMIT = 10 * 1024 * 1024;
+export const SKILL_UPLOAD_LIMIT = 10 * 1024 * 1024;
 const TOTAL_LIMIT = 50 * 1024 * 1024;
 const TEXT_LIMIT = 1024 * 1024;
 const FILE_LIMIT = 500;
@@ -174,7 +174,7 @@ async function readZip(data: Buffer): Promise<Array<{ path: string; data: Buffer
 }
 
 export async function parseSkillPackage(filename: string, data: Buffer): Promise<SkillPackage> {
-  if (!data.length || data.length > UPLOAD_LIMIT) return invalid('上传文件必须小于等于 10 MiB 且不能为空。');
+  if (!data.length || data.length > SKILL_UPLOAD_LIMIT) return invalid('上传文件必须小于等于 10 MiB 且不能为空。');
   const format =
     filename === 'SKILL.md' ? 'MD' : /\.zip$/i.test(filename) ? 'ZIP' : invalid('请选择 SKILL.md 或 ZIP 文件。');
   let raw = format === 'MD' ? [{ path: 'SKILL.md', data }] : await readZip(data);

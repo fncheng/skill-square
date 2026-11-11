@@ -13,4 +13,4 @@
 | `GET /skills/:id/versions/:versionId/download` | 下载该版本原始文件字节 |
 | `DELETE /skills/:id` | 删除资源及全部版本和文件，成功返回 204 |
 
-上传上限 10 MiB、解压总量 50 MiB、500 文件，单文本在线预览上限 1 MiB；完整校验规则见 [SKILL center](../features/skill-center/README.md)。原包始终保存在数据库，删除不会清除已有备份。Schema 变更需要部署前执行 `prisma migrate deploy` 并重新生成 Prisma Client；这些步骤不会由请求自动执行。
+上传文件上限为 10 MiB（含），解压总量上限为 50 MiB，最多 500 个文件，单文本在线预览上限为 1 MiB。Docker Web 镜像对 SKILL 路由的请求体上限为 11 MiB，为 multipart 字段和边界预留空间。完整校验规则见 [SKILL center](../features/skill-center/README.md)。原包始终保存在数据库，删除不会清除已有备份。Schema 变更需要部署前执行 `prisma migrate deploy` 并重新生成 Prisma Client；这些步骤不会由请求自动执行。
