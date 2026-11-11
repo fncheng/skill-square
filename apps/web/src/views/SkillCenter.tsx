@@ -84,6 +84,7 @@ function UploadDialog({
       setCandidate(parsed);
       if (!target) {
         setName(parsed.name);
+        setDuplicateAccepted(false);
         setDescription(parsed.description);
       }
     } catch (err) {
@@ -183,7 +184,11 @@ function UploadDialog({
                   className="mt-1"
                   value={name}
                   maxLength={200}
-                  onChange={(event) => setName(event.target.value)}
+                  onChange={(event) => {
+                    const nextName = event.target.value;
+                    if (nextName.trim() !== name.trim()) setDuplicateAccepted(false);
+                    setName(nextName);
+                  }}
                 />
               </label>
               <label className="block text-sm font-medium">
