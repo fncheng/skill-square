@@ -300,7 +300,7 @@ export function SkillCenter() {
   const [left, setLeft] = useState('');
   const [right, setRight] = useState('');
   const [path, setPath] = useState('SKILL.md');
-  const load = useCallback(async () => {
+  const load = useCallback(async (options?: { openUpload?: boolean }) => {
     const run = ++generation.current;
     setLoading(true);
     setFailed(false);
@@ -316,6 +316,8 @@ export function SkillCenter() {
         setLeft(result.versions[1]?.id ?? result.versions[0].id);
         setRight(result.versions[0].id);
         setPath('SKILL.md');
+        // 详情刷新成功后再打开弹窗，避免用缓存的版本作为提交基线。
+        if (options?.openUpload) setDialog('upload');
       } else {
         const result = await skillsApi.list();
         if (run !== generation.current) return;
@@ -557,7 +559,7 @@ export function SkillCenter() {
               >
                 <Trash2 className="h-4 w-4 text-red-600" />
               </Button>
-              <Button variant="outline" onClick={() => setDialog('upload')}>
+              <Button variant="outline" onClick={() => void load({ openUpload: true })}>
                 <Upload className="mr-2 h-4 w-4" />
                 上传新版本
               </Button>
