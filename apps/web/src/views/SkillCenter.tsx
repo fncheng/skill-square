@@ -7,6 +7,7 @@ import { skillsApi } from '@/api/skills';
 import { PromptMonacoEditor } from '@/components/prompt/PromptMonacoEditor';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { useConfirm } from '@/hooks/use-confirm';
 import { useToast } from '@/hooks/use-toast';
 import type { Skill, SkillCandidate, SkillFile, SkillVersion } from '@/types/skill';
@@ -20,7 +21,6 @@ function requestUuid() {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 const starter = '---\nname: my-skill\ndescription: 描述这个 SKILL 的用途\n---\n\n# My Skill\n';
-const selectClass = 'h-9 rounded-md border border-slate-200 bg-white px-3 text-sm';
 const date = (value: string) => new Date(value).toLocaleString();
 const bytes = (value: number) => (value < 1024 ? `${value} B` : `${(value / 1024).toFixed(1)} KiB`);
 const errorMessage = (error: unknown) => {
@@ -199,7 +199,7 @@ function UploadDialog({
               {manual && (
                 <div>
                   <span className="text-sm font-medium">SKILL.md 内容</span>
-                  <div className="mt-1 h-64 overflow-hidden rounded-md border">
+                  <div className="mt-1 flex h-64 flex-col overflow-hidden rounded-md border">
                     <PromptMonacoEditor value={source} onChange={setSource} />
                   </div>
                 </div>
@@ -251,19 +251,16 @@ function VersionSelect({
   change: (value: string) => void;
 }) {
   return (
-    <select
-      aria-label="选择版本"
-      className={selectClass}
+    <Select
+      ariaLabel="选择版本"
+      className="w-32"
       value={value}
-      onChange={(event) => change(event.target.value)}
-    >
-      {versions.map((version, index) => (
-        <option key={version.id} value={version.id}>
-          v{version.number}
-          {index === 0 ? ' · 当前' : ''}
-        </option>
-      ))}
-    </select>
+      onValueChange={change}
+      options={versions.map((version, index) => ({
+        value: version.id,
+        label: `v${version.number}${index === 0 ? ' · 当前' : ''}`
+      }))}
+    />
   );
 }
 
@@ -455,16 +452,17 @@ export function SkillCenter() {
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
-            <select
-              aria-label="筛选格式"
-              className={selectClass}
+            <Select
+              ariaLabel="筛选格式"
+              className="w-32"
               value={format}
-              onChange={(event) => setFormat(event.target.value)}
-            >
-              <option value="ALL">全部格式</option>
-              <option value="MD">单文件</option>
-              <option value="ZIP">目录包</option>
-            </select>
+              onValueChange={setFormat}
+              options={[
+                { value: 'ALL', label: '全部格式' },
+                { value: 'MD', label: '单文件' },
+                { value: 'ZIP', label: '目录包' }
+              ]}
+            />
           </div>
           <div className="overflow-x-auto rounded-lg border bg-white">
             <table className="w-full min-w-[760px] text-left text-sm">
@@ -629,7 +627,7 @@ export function SkillCenter() {
                   ) : fileText(chosenFile) === undefined ? (
                     <p className="p-8 text-sm text-slate-500">正在加载文件…</p>
                   ) : fileText(chosenFile) !== null ? (
-                    <div className="h-[450px]">
+                    <div className="flex h-[450px] flex-col">
                       <PromptMonacoEditor
                         value={fileText(chosenFile) ?? ''}
                         readOnly
