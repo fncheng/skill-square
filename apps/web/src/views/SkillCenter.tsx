@@ -48,6 +48,8 @@ function UploadDialog({
   const dialog = useRef<HTMLDialogElement>(null);
   const epoch = useRef(0);
   const requestId = useRef(requestUuid());
+  // 请求发出前同步上锁，避免按钮禁用生效前再次提交或重选文件。
+  const savingRef = useRef(false);
   const [file, setFile] = useState<File>();
   const [candidate, setCandidate] = useState<SkillCandidate>();
   const [source, setSource] = useState(starter);
@@ -57,7 +59,9 @@ function UploadDialog({
   const duplicate = !target && existing.some((item) => item.versions[0].name.trim() === name.trim());
   const [note, setNote] = useState(target ? '' : '首次上传');
   const [accepted, setAccepted] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [inspecting, setInspecting] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const busy = inspecting || saving;
   const [error, setError] = useState('');
   useEffect(() => {
     if (!dialog.current?.open) dialog.current?.showModal();
@@ -66,13 +70,14 @@ function UploadDialog({
     };
   }, []);
   const choose = async (next?: File) => {
+    if (savingRef.current) return;
     const current = ++epoch.current;
     setFile(next);
     setCandidate(undefined);
     setError('');
     setAccepted(false);
+    setInspecting(Boolean(next));
     if (!next) return;
-    setBusy(true);
     try {
       const parsed = await skillsApi.inspect(next);
       if (current !== epoch.current) return;
@@ -84,16 +89,18 @@ function UploadDialog({
     } catch (err) {
       if (current === epoch.current) setError(errorMessage(err));
     } finally {
-      if (current === epoch.current) setBusy(false);
+      if (current === epoch.current) setInspecting(false);
     }
   };
   const replacing = target?.versions[0].format === 'ZIP' && candidate?.format === 'MD';
   const submit = async () => {
+    if (savingRef.current || inspecting || (!manual && !candidate)) return;
     setError('');
     if (!name.trim() || !note.trim()) return setError('请填写展示名称和变更说明。');
     if (duplicate && !duplicateAccepted) return setError('已有同名 SKILL，请确认另建，或前往已有资源上传新版本。');
     if (replacing && !accepted) return setError('请确认单文件替换目录包的影响。');
-    setBusy(true);
+    savingRef.current = true;
+    setSaving(true);
     try {
       const upload = manual ? new File([source], 'SKILL.md', { type: 'text/markdown' }) : file;
       if (!upload) return setError('请选择文件。');
@@ -112,7 +119,8 @@ function UploadDialog({
     } catch (err) {
       setError(errorMessage(err));
     } finally {
-      setBusy(false);
+      savingRef.current = false;
+      setSaving(false);
     }
   };
   return (
@@ -145,7 +153,7 @@ function UploadDialog({
               : '将本地 SKILL 保存到个人仓库。'}
           </p>
         </header>
-        <div className="space-y-4 overflow-auto px-6 py-5">
+        <fieldset disabled={saving} className="min-w-0 space-y-4 overflow-auto px-6 py-5">
           {!manual && (
             <label className="block rounded-lg border border-dashed border-slate-300 p-5 text-sm">
               <span className="mb-2 block font-medium">选择 SKILL.md 或 ZIP 完整目录包</span>
@@ -200,7 +208,7 @@ function UploadDialog({
                 <div>
                   <span className="text-sm font-medium">SKILL.md 内容</span>
                   <div className="mt-1 flex h-64 flex-col overflow-hidden rounded-md border">
-                    <PromptMonacoEditor value={source} onChange={setSource} />
+                    <PromptMonacoEditor value={source} onChange={setSource} readOnly={saving} />
                   </div>
                 </div>
               )}
@@ -227,7 +235,7 @@ function UploadDialog({
               {error}
             </p>
           )}
-        </div>
+        </fieldset>
         <footer className="flex justify-end gap-2 border-t px-6 py-4">
           <Button variant="outline" disabled={busy} onClick={close}>
             取消
