@@ -123,3 +123,7 @@ Prompt Skill Manager 用于管理 AI Prompt、Agent Workflow、Skill、Cursor Ru
 - `Miscellany`：公开杂谈的 Markdown 正文、分类、标签与创建更新时间。
 - `UiPrototype`：UI 原型名称、描述、单文件 HTML、分类、标签和外部资源策略。
 - `ModelResponse`：私有模型回答、Markdown 正文、分类、标签、来源产品、模型名称和原始 Prompt。
+
+## SKILL center 存储边界
+
+SKILL 独立于 Prompt，使用 PostgreSQL 保存不可变版本、文件清单和有界原始文件包。资源删除通过数据库级联删除所有版本；指定版本下载读取数据库内原始字节。所有读取与写入均要求管理员会话，详情按需读取文件正文。版本追加通过事务行锁检查预期版本并分配版本号，避免并发静默覆盖。数据量增长会增加数据库、WAL 与备份容量。

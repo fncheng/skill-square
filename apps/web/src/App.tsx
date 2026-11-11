@@ -14,6 +14,7 @@ import { MiscellanyList } from './views/MiscellanyList';
 import { ModelResponseDetail } from './views/ModelResponseDetail';
 import { ModelResponseEditor } from './views/ModelResponseEditor';
 import { ModelResponseList } from './views/ModelResponseList';
+import { SkillCenter } from './views/SkillCenter';
 import { Login } from './views/Login';
 import { PromptDetail } from './views/PromptDetail';
 import { PromptEditor } from './views/PromptEditor';
@@ -57,6 +58,8 @@ export default function App() {
         <Route path="/ui-prototypes" element={<UiPrototypeList />} />
         <Route path="/ui-prototypes/:id" element={<UiPrototypeDetail />} />
         <Route element={<RequireAdmin />}>
+          <Route path="/skills" element={<SkillCenter />} />
+          <Route path="/skills/:id" element={<SkillCenter />} />
           <Route path="/model-responses" element={<ModelResponseList />} />
           <Route path="/model-responses/new" element={<ModelResponseEditor />} />
           <Route path="/model-responses/:id" element={<ModelResponseDetail />} />

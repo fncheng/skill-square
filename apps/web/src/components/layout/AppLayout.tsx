@@ -29,7 +29,7 @@ import { MarkdownImagePolicyProvider } from '../markdown/MarkdownImagePolicyProv
 type IconComponent = ComponentType<LucideProps>;
 
 interface PrimaryNavItem {
-  key: 'prompts' | 'favorites' | 'solutions' | 'notes' | 'miscellanies' | 'tagCloud' | 'uiPrototypes' | 'modelResponses';
+  key: 'prompts' | 'skills' | 'favorites' | 'solutions' | 'notes' | 'miscellanies' | 'tagCloud' | 'uiPrototypes' | 'modelResponses';
   label: string;
   to: string;
   icon: IconComponent;
@@ -43,6 +43,7 @@ interface ManageNavItem {
 
 const primaryNav: PrimaryNavItem[] = [
   { key: 'prompts', label: 'Prompt 列表', to: '/prompts', icon: House },
+  { key: 'skills', label: 'SKILL center', to: '/skills', icon: Boxes },
   { key: 'favorites', label: '我的收藏', to: '/favorites', icon: Star },
   { key: 'solutions', label: '解决方案', to: '/solutions', icon: Lightbulb },
   { key: 'notes', label: '学习笔记', to: '/notes', icon: NotebookPen },
@@ -66,6 +67,7 @@ export function AppLayout() {
   const isAdmin = authStatus === 'admin';
 
   const isPrimaryActive = (item: PrimaryNavItem) => {
+    if (item.key === 'skills') return pathname.startsWith('/skills');
     if (item.key === 'favorites') {
       return pathname === '/favorites' || pathname.startsWith('/favorites/');
     }
@@ -133,7 +135,7 @@ export function AppLayout() {
 
       <aside className="app-sidebar">
         <nav className="nav-section">
-          {primaryNav.filter((item) => item.key !== 'modelResponses' || isAdmin).map((item) => {
+          {primaryNav.filter((item) => !['modelResponses', 'skills'].includes(item.key) || isAdmin).map((item) => {
             const Icon = item.icon;
             return (
               <Link

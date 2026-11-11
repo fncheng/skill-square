@@ -10,6 +10,7 @@
 
 ## 文档索引
 
+- [SKILL center API](./skills.md)（管理员私有）
 - [Prompt 接口](./prompts.md)
 - [管理员认证接口](./auth.md)
 - [分类接口](./categories.md)
@@ -72,7 +73,7 @@
 
 ## 认证与权限
 
-- 访客可以调用公开资源的读取接口；模型回答及其导出、相关批注查询均要求管理员会话。
+- 访客可以调用公开资源的读取接口；模型回答及其导出、相关批注查询与 SKILL center 的全部接口均要求管理员会话。
 - 业务接口的 `POST`、`PUT`、`PATCH`、`DELETE` 需要先通过 `/api/auth/login` 登录管理员。
 - 管理员会话由浏览器自动携带，前端不应读取或持久化 Cookie 中的 JWT。
 - Swagger 保持公开，但执行写接口时仍需管理员 Cookie。
