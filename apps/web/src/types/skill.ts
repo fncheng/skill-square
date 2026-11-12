@@ -9,6 +9,7 @@ export interface SkillFile extends SkillCandidateFile {
 export interface SkillVersion {
   id: string;
   skillId: string;
+  variantId: string;
   number: number;
   name: string;
   description: string;
@@ -20,12 +21,30 @@ export interface SkillVersion {
   createdAt: string;
   files: SkillFile[];
 }
-export interface Skill {
+export type SkillTool = 'codex' | 'claude-code' | 'unspecified';
+export interface SkillVersionSummary extends Omit<SkillVersion, 'files'> {
+  _count: { files: number };
+}
+export interface SkillVariant {
   id: string;
+  skillId: string;
+  toolKey: SkillTool;
+  versions: SkillVersion[];
+}
+export interface SkillVariantSummary extends Omit<SkillVariant, 'versions'> {
+  versions: SkillVersionSummary[];
+  _count: { versions: number };
+}
+export interface SkillSummary {
+  id: string;
+  name: string;
+  description: string;
+  variants: SkillVariantSummary[];
   createdAt: string;
   updatedAt: string;
+}
+export interface Skill extends SkillSummary {
   versions: SkillVersion[];
-  _count?: { versions: number };
 }
 export interface SkillCandidate {
   format: 'MD' | 'ZIP';
@@ -42,4 +61,6 @@ export interface SkillSave {
   note: string;
   requestId: string;
   expectedVersionId?: string;
+  variantId?: string;
+  toolKey?: SkillTool;
 }

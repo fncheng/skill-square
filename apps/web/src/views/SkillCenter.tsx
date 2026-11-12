@@ -2,7 +2,7 @@ import axios from 'axios';
 import { DiffEditor } from '@monaco-editor/react';
 import { ArrowLeft, ArrowLeftRight, Download, Plus, Trash2, Upload, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { skillsApi } from '@/api/skills';
 import { MarkdownContent } from '@/components/markdown/MarkdownContent';
 import { PromptMonacoEditor } from '@/components/prompt/PromptMonacoEditor';
@@ -12,7 +12,7 @@ import { Select } from '@/components/ui/select';
 import { useConfirm } from '@/hooks/use-confirm';
 import { useMarkdown } from '@/hooks/use-markdown';
 import { useToast } from '@/hooks/use-toast';
-import type { Skill, SkillCandidate, SkillFile, SkillVersion } from '@/types/skill';
+import type { Skill, SkillCandidate, SkillFile, SkillVersion, SkillTool, SkillVariant, SkillSummary, SkillVersionSummary } from '@/types/skill';
 import { skillRequestId } from './skill-request-id';
 
 // getRandomValues 在 HTTP 局域网环境也可用，用于为一次保存生成 UUID。
@@ -23,6 +23,8 @@ function requestUuid() {
   const hex = Array.from(value, (byte) => byte.toString(16).padStart(2, '0')).join('');
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
+const toolLabel = (tool: SkillTool) => ({ codex: 'Codex', 'claude-code': 'Claude Code', unspecified: '未指定工具' })[tool];
+const tools: SkillTool[] = ['codex', 'claude-code', 'unspecified'];
 const starter = '---\nname: my-skill\ndescription: 描述这个 SKILL 的用途\n---\n\n# My Skill\n';
 const date = (value: string) => new Date(value).toLocaleString();
 const bytes = (value: number) => (value < 1024 ? `${value} B` : `${(value / 1024).toFixed(1)} KiB`);
@@ -38,15 +40,19 @@ const errorMessage = (error: unknown) => {
 function UploadDialog({
   target,
   existing,
+  activeVariantId,
+  newVariant,
   manual,
   close,
   saved
 }: {
   target?: Skill;
-  existing: Skill[];
+  existing: SkillSummary[];
+  activeVariantId?: string;
+  newVariant: boolean;
   manual: boolean;
   close: () => void;
-  saved: (version: SkillVersion) => void;
+  saved: (version: SkillVersion, tool: SkillTool) => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const epoch = useRef(0);
@@ -54,13 +60,17 @@ function UploadDialog({
   const lastRequest = useRef<{ payload: string; id: string }>();
   // 请求发出前同步上锁，避免按钮禁用生效前再次提交或重选文件。
   const savingRef = useRef(false);
+  const [baseline, setBaseline] = useState(target?.versions[0]);
+  const [toolKey, setToolKey] = useState<SkillTool>(
+    newVariant ? tools.find((tool) => !target?.variants.some((item) => item.toolKey === tool)) ?? 'unspecified' : 'unspecified'
+  );
   const [file, setFile] = useState<File>();
   const [candidate, setCandidate] = useState<SkillCandidate>();
   const [source, setSource] = useState(starter);
-  const [name, setName] = useState(target?.versions[0].name ?? '');
-  const [description, setDescription] = useState(target?.versions[0].description ?? '');
+  const [name, setName] = useState(newVariant ? '' : target?.versions[0].name ?? '');
+  const [description, setDescription] = useState(newVariant ? '' : target?.versions[0].description ?? '');
   const [duplicateAccepted, setDuplicateAccepted] = useState(false);
-  const duplicate = !target && existing.some((item) => item.versions[0].name.trim() === name.trim());
+  const duplicate = !target && existing.some((item) => item.name.trim() === name.trim());
   const [note, setNote] = useState(target ? '' : '首次上传');
   const [accepted, setAccepted] = useState(false);
   const [inspecting, setInspecting] = useState(false);
@@ -86,7 +96,7 @@ function UploadDialog({
       const parsed = await skillsApi.inspect(next);
       if (current !== epoch.current) return;
       setCandidate(parsed);
-      if (!target) {
+      if (!target || newVariant) {
         setName(parsed.name);
         setDuplicateAccepted(false);
         setDescription(parsed.description);
@@ -97,14 +107,16 @@ function UploadDialog({
       if (current === epoch.current) setInspecting(false);
     }
   };
-  const replacing = target?.versions[0].format === 'ZIP' && candidate?.format === 'MD';
+  const targetTool = target?.variants.find((item) => item.id === activeVariantId)?.toolKey ?? 'unspecified';
+  const replacing = !newVariant && baseline?.format === 'ZIP' && candidate?.format === 'MD';
   const submit = async () => {
-    if (savingRef.current || inspecting || (!manual && !candidate)) return;
+    if (savingRef.current || inspecting || (!manual && !candidate) || (target && !newVariant && !baseline)) return;
     setError('');
     if (!name.trim() || !note.trim()) return setError('请填写展示名称和变更说明。');
     if (duplicate && !duplicateAccepted) return setError('已有同名 SKILL，请确认另建，或前往已有资源上传新版本。');
     if (replacing && !accepted) return setError('请确认单文件替换目录包的影响。');
     savingRef.current = true;
+    const saveEpoch = epoch.current;
     setSaving(true);
     try {
       const upload = manual ? new File([source], 'SKILL.md', { type: 'text/markdown' }) : file;
@@ -115,7 +127,10 @@ function UploadDialog({
         description.trim(),
         note.trim(),
         target?.id,
-        target?.versions[0].id
+        !target || newVariant ? toolKey : activeVariantId,
+        target ? (newVariant ? 'variant' : 'append') : 'create',
+        manual ? 'SKILL.md' : file?.name,
+        newVariant ? null : baseline?.id
       ]);
       lastRequest.current = skillRequestId(lastRequest.current, payload, requestUuid);
       const version = await skillsApi.save(
@@ -125,16 +140,32 @@ function UploadDialog({
           description,
           note,
           requestId: lastRequest.current.id,
-          expectedVersionId: target?.versions[0].id
+          expectedVersionId: newVariant ? undefined : baseline?.id,
+          variantId: target && !newVariant ? activeVariantId : undefined,
+          toolKey: !target || newVariant ? toolKey : undefined
         },
-        target?.id
+        target?.id,
+        newVariant
       );
-      saved(version);
+      if (saveEpoch !== epoch.current) return;
+      saved(version, target && !newVariant ? target.variants.find((item) => item.id === activeVariantId)?.toolKey ?? 'unspecified' : toolKey);
     } catch (err) {
-      setError(errorMessage(err));
+      if (saveEpoch !== epoch.current) return;
+      if (axios.isAxiosError(err) && err.response?.status === 409 && target && !newVariant && activeVariantId) {
+        try {
+          const refreshed = await skillsApi.variant(target.id, activeVariantId);
+          if (saveEpoch !== epoch.current) return;
+          setBaseline(refreshed.versions[0]);
+          setError(`${errorMessage(err)} 当前基线已刷新为 v${refreshed.versions[0].number}，请检查后再次提交。`);
+        } catch {
+          if (saveEpoch !== epoch.current) return;
+          setBaseline(undefined);
+          setError('刷新当前版本失败，请关闭窗口后重试。');
+        }
+      } else setError(errorMessage(err));
     } finally {
       savingRef.current = false;
-      setSaving(false);
+      if (saveEpoch === epoch.current) setSaving(false);
     }
   };
   return (
@@ -148,7 +179,7 @@ function UploadDialog({
       className="w-[min(680px,calc(100vw-32px))] rounded-xl border border-slate-200 p-0 shadow-xl backdrop:bg-slate-950/40"
     >
       <div className="flex max-h-[85vh] flex-col">
-        <header className="relative border-b px-6 py-5">
+        <header className="relative shrink-0 border-b px-6 py-5">
           <button
             type="button"
             aria-label="关闭"
@@ -159,106 +190,124 @@ function UploadDialog({
             <X className="h-4 w-4" />
           </button>
           <h2 id="skill-dialog-title" className="text-lg font-semibold">
-            {target ? '上传新版本' : manual ? '新增 SKILL' : '上传 SKILL'}
+            {newVariant ? '新增工具适配' : target ? '上传新版本' : manual ? '新增 SKILL' : '上传 SKILL'}
           </h2>
           <p className="mt-1 text-sm text-slate-500">
             {target
-              ? `更新 ${target.versions[0].name} · 当前 v${target.versions[0].number}`
+              ? `${target.name} · ${newVariant ? '新增适配' : `${toolLabel(targetTool)} · 当前 v${baseline?.number}`}`
               : '将本地 SKILL 保存到个人仓库。'}
           </p>
         </header>
-        <fieldset disabled={saving} className="min-w-0 space-y-4 overflow-auto px-6 py-5">
-          {!manual && (
-            <label className="block rounded-lg border border-dashed border-slate-300 p-5 text-sm">
-              <span className="mb-2 block font-medium">选择 SKILL.md 或 ZIP 完整目录包</span>
-              <input type="file" accept=".md,.zip" onChange={(event) => void choose(event.target.files?.[0])} />
-              <span className="mt-2 block text-slate-500">上传不超过 10 MiB，解压不超过 50 MiB，最多 500 个文件。</span>
-            </label>
-          )}
-          {candidate && (
-            <div className="rounded-md bg-slate-50 p-3 text-sm">
-              <strong>
-                {file?.name} · {candidate.files.length} 个文件
-              </strong>
-              <div className="mt-2 max-h-28 space-y-1 overflow-auto text-slate-600">
-                {candidate.files.map((item) => (
-                  <div key={item.path} className="break-all">
-                    {item.path} · {bytes(item.size)}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          {(manual || candidate) && (
-            <>
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <fieldset disabled={saving} className="min-w-0 space-y-4 px-6 py-5">
+            {(!target || newVariant) && (
               <label className="block text-sm font-medium">
-                展示名称
-                <Input
-                  className="mt-1"
-                  value={name}
-                  maxLength={200}
-                  onChange={(event) => {
-                    const nextName = event.target.value;
-                    if (nextName.trim() !== name.trim()) setDuplicateAccepted(false);
-                    setName(nextName);
-                  }}
+                工具
+                <Select
+                  ariaLabel="选择工具"
+                  className="ml-3 w-40 max-w-[calc(100%-3rem)]"
+                  value={toolKey}
+                  onValueChange={setToolKey}
+                  options={tools.map((tool) => ({
+                    value: tool,
+                    label: toolLabel(tool),
+                    disabled: newVariant && Boolean(target?.variants.some((item) => item.toolKey === tool))
+                  }))}
                 />
               </label>
-              <label className="block text-sm font-medium">
-                简介
-                <Input
-                  className="mt-1"
-                  value={description}
-                  maxLength={500}
-                  onChange={(event) => setDescription(event.target.value)}
-                />
+            )}
+            {!manual && (
+              <label className="block rounded-lg border border-dashed border-slate-300 p-5 text-sm">
+                <span className="mb-2 block font-medium">选择 SKILL.md 或 ZIP 完整目录包</span>
+                <input type="file" accept=".md,.zip" onChange={(event) => void choose(event.target.files?.[0])} />
+                <span className="mt-2 block text-slate-500">上传不超过 10 MiB，解压不超过 50 MiB，最多 500 个文件。</span>
               </label>
-              <label className="block text-sm font-medium">
-                变更说明
-                <Input
-                  className="mt-1"
-                  value={note}
-                  maxLength={500}
-                  onChange={(event) => setNote(event.target.value)}
-                />
-              </label>
-              {manual && (
-                <div>
-                  <span className="text-sm font-medium">SKILL.md 内容</span>
-                  <div className="mt-1 flex h-64 flex-col overflow-hidden rounded-md border">
-                    <PromptMonacoEditor value={source} onChange={setSource} readOnly={saving} />
-                  </div>
+            )}
+            {candidate && (
+              <div className="rounded-md bg-slate-50 p-3 text-sm">
+                <strong>
+                  {file?.name} · {candidate.files.length} 个文件
+                </strong>
+                <div className="mt-2 max-h-28 space-y-1 overflow-auto text-slate-600">
+                  {candidate.files.map((item) => (
+                    <div key={item.path} className="break-all">
+                      {item.path} · {bytes(item.size)}
+                    </div>
+                  ))}
                 </div>
-              )}
-              {duplicate && (
-                <label className="flex gap-2 rounded-md bg-amber-50 p-3 text-sm text-amber-900">
-                  <input
-                    type="checkbox"
-                    checked={duplicateAccepted}
-                    onChange={(event) => setDuplicateAccepted(event.target.checked)}
+              </div>
+            )}
+            {(manual || candidate) && (
+              <>
+                <label className="block text-sm font-medium">
+                  版本展示名称
+                  <Input
+                    className="mt-1"
+                    value={name}
+                    maxLength={200}
+                    onChange={(event) => {
+                      const nextName = event.target.value;
+                      if (nextName.trim() !== name.trim()) setDuplicateAccepted(false);
+                      setName(nextName);
+                    }}
                   />
-                  已有同名 SKILL，我确认另建资源。
                 </label>
-              )}
-              {replacing && (
-                <label className="flex gap-2 rounded-md bg-amber-50 p-3 text-sm text-amber-900">
-                  <input type="checkbox" checked={accepted} onChange={(event) => setAccepted(event.target.checked)} />
-                  单文件将替换目录包，新版本不再包含其他文件，历史版本仍保留。
+                <label className="block text-sm font-medium">
+                  版本简介
+                  <Input
+                    className="mt-1"
+                    value={description}
+                    maxLength={500}
+                    onChange={(event) => setDescription(event.target.value)}
+                  />
                 </label>
-              )}
-            </>
-          )}
-          {error && (
-            <p role="alert" className="text-sm text-red-700">
-              {error}
-            </p>
-          )}
-        </fieldset>
-        <footer className="flex justify-end gap-2 border-t px-6 py-4">
+                <label className="block text-sm font-medium">
+                  变更说明
+                  <Input
+                    className="mt-1"
+                    value={note}
+                    maxLength={500}
+                    onChange={(event) => setNote(event.target.value)}
+                  />
+                </label>
+                {manual && (
+                  <div>
+                    <span className="text-sm font-medium">SKILL.md 内容</span>
+                    <div className="mt-1 flex h-64 flex-col overflow-hidden rounded-md border">
+                      <PromptMonacoEditor value={source} onChange={setSource} readOnly={saving} />
+                    </div>
+                  </div>
+                )}
+                {duplicate && (
+                  <label className="flex gap-2 rounded-md bg-amber-50 p-3 text-sm text-amber-900">
+                    <input
+                      type="checkbox"
+                      checked={duplicateAccepted}
+                      onChange={(event) => setDuplicateAccepted(event.target.checked)}
+                    />
+                    已有同名 SKILL，我确认另建资源。
+                  </label>
+                )}
+                {replacing && (
+                  <label className="flex gap-2 rounded-md bg-amber-50 p-3 text-sm text-amber-900">
+                    <input type="checkbox" checked={accepted} onChange={(event) => setAccepted(event.target.checked)} />
+                    单文件将替换目录包，新版本不再包含其他文件，历史版本仍保留。
+                  </label>
+                )}
+              </>
+            )}
+            {error && (
+              <p role="alert" className="text-sm text-red-700">
+                {error}
+              </p>
+            )}
+          </fieldset>
+        </div>
+        <footer className="flex shrink-0 justify-end gap-2 border-t px-6 py-4">
           <Button variant="outline" disabled={busy} onClick={close}>
             取消
           </Button>
-          <Button disabled={busy || (!manual && !candidate)} onClick={() => void submit()}>
+          <Button disabled={busy || (!manual && !candidate) || Boolean(target && !newVariant && !baseline)} onClick={() => void submit()}>
             {busy ? '处理中…' : '保存'}
           </Button>
         </footer>
@@ -304,18 +353,66 @@ function SkillMarkdownPreview({ source, isEntry }: { source: string; isEntry: bo
   );
 }
 
+/** 使用原生模态框，避免下载选项被表格滚动容器裁切。 */
+function DownloadChoice({
+  item,
+  download
+}: {
+  item: SkillSummary;
+  download: (item: SkillSummary, version: SkillVersionSummary) => void;
+}) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  return (
+    <>
+      <Button variant="outline" onClick={() => dialog.current?.showModal()}>
+        下载…
+      </Button>
+      <dialog
+        ref={dialog}
+        aria-label={`下载 ${item.name}`}
+        className="w-[min(420px,calc(100vw-32px))] rounded-xl border border-slate-200 p-0 shadow-xl backdrop:bg-slate-950/40"
+      >
+        <div className="space-y-3 p-5">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="font-semibold">选择工具适配</h2>
+            <Button variant="ghost" size="icon" aria-label="关闭" onClick={() => dialog.current?.close()}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          {item.variants.map((variant) => (
+            <Button
+              key={variant.id}
+              variant="outline"
+              className="w-full justify-start"
+              onClick={() => {
+                download(item, variant.versions[0]);
+                dialog.current?.close();
+              }}
+            >
+              {toolLabel(variant.toolKey)} · v{variant.versions[0].number} · {variant.versions[0].format}
+            </Button>
+          ))}
+        </div>
+      </dialog>
+    </>
+  );
+}
+
 export function SkillCenter() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [params, setParams] = useSearchParams();
+  const activeVariantId = params.get('variant') ?? undefined;
   const { confirmDeletion } = useConfirm();
   const { toast } = useToast();
-  const [list, setList] = useState<Skill[]>([]);
+  const [list, setList] = useState<SkillSummary[]>([]);
   const [skill, setSkill] = useState<Skill>();
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [search, setSearch] = useState('');
   const [format, setFormat] = useState('ALL');
-  const [dialog, setDialog] = useState<'upload' | 'manual' | null>(null);
+  const [toolFilter, setToolFilter] = useState('ALL');
+  const [dialog, setDialog] = useState<'upload' | 'manual' | 'variant' | 'variant-manual' | null>(null);
   const [texts, setTexts] = useState<Record<string, string | null>>({});
   const [textErrors, setTextErrors] = useState<Record<string, boolean>>({});
   const pending = useRef(new Set<string>());
@@ -331,18 +428,29 @@ export function SkillCenter() {
   const [selected, setSelected] = useState('');
   const [left, setLeft] = useState('');
   const [right, setRight] = useState('');
+  const compareGeneration = useRef(0);
+  const [compareVariant, setCompareVariant] = useState<SkillVariant>();
+  const [compareLeft, setCompareLeft] = useState<SkillVariant>();
+  const [crossCompare, setCrossCompare] = useState(false);
+  const [compareLoading, setCompareLoading] = useState(false);
   const [path, setPath] = useState('SKILL.md');
   const [previewMode, setPreviewMode] = useState<'text' | 'markdown'>('text');
-  const load = useCallback(async (options?: { openUpload?: boolean }) => {
+  const load = useCallback(async (options?: { openDialog?: 'upload' | 'variant' | 'variant-manual' }) => {
     const run = ++generation.current;
+    setDialog(null);
     setLoading(true);
     setFailed(false);
+    compareGeneration.current++;
+    setCompareVariant(undefined);
+    setCompareLeft(undefined);
+    setCrossCompare(false);
+    setCompareLoading(false);
     setTexts({});
     setTextErrors({});
     pending.current.clear();
     try {
       if (id) {
-        const result = await skillsApi.detail(id);
+        const result = await skillsApi.detail(id, activeVariantId);
         if (run !== generation.current) return;
         setSkill(result);
         setSelected(result.versions[0].id);
@@ -350,7 +458,13 @@ export function SkillCenter() {
         setRight(result.versions[0].id);
         setPath('SKILL.md');
         // 详情刷新成功后再打开弹窗，避免用缓存的版本作为提交基线。
-        if (options?.openUpload) setDialog('upload');
+        if (options?.openDialog) {
+          if (options.openDialog !== 'upload' && result.variants.length >= tools.length) {
+            toast({ title: '所有工具适配均已存在。', variant: 'destructive' });
+          } else {
+            setDialog(options.openDialog);
+          }
+        }
       } else {
         const result = await skillsApi.list();
         if (run !== generation.current) return;
@@ -362,19 +476,20 @@ export function SkillCenter() {
     } finally {
       if (run === generation.current) setLoading(false);
     }
-  }, [id]);
+  }, [id, activeVariantId, toast]);
   useEffect(() => {
     void load();
     return () => {
       generation.current++;
     };
   }, [load]);
-  const remove = async (item: Skill) => {
+  const remove = async (item: SkillSummary) => {
+    const versionCount = item.variants.reduce((sum, variant) => sum + variant._count.versions, 0);
     if (
       !(await confirmDeletion({
         title: '删除 SKILL',
-        description: `确认删除 ${item.versions[0].name} 及其全部 ${item._count?.versions ?? item.versions.length} 个版本？删除后无法从界面恢复。`,
-        expectedText: item.versions[0].name
+        description: `确认删除 ${item.name}、${item.variants.length} 个工具适配及其 ${versionCount} 个版本？删除后无法从界面恢复。`,
+        expectedText: item.name
       }))
     )
       return;
@@ -387,24 +502,40 @@ export function SkillCenter() {
       /* 全局错误提示 */
     }
   };
-  const download = (item: Skill, version: SkillVersion) => {
-    void skillsApi.download(item.id, version).catch(() => undefined);
+  const download = (item: SkillSummary, version: SkillVersion | SkillVersionSummary) => {
+    const tool = item.variants.find((entry) => entry.id === version.variantId)?.toolKey ?? 'unspecified';
+    void skillsApi.download(item.id, version, item.name, tool).catch(() => undefined);
   };
-  const filtered = list.filter(
-    (item) =>
-      `${item.versions[0]?.name} ${item.versions[0]?.description}`.toLowerCase().includes(search.toLowerCase()) &&
-      (format === 'ALL' || item.versions[0]?.format === format)
-  );
+  const filtered = list.filter((item) => {
+    const searchable = [
+      item.name,
+      item.description,
+      ...item.variants.flatMap((entry) => [entry.versions[0]?.name ?? '', entry.versions[0]?.description ?? ''])
+    ];
+    const matchesSearch = searchable.some((value) => value.toLowerCase().includes(search.toLowerCase()));
+    const matchesVariant = item.variants.some(
+      (entry) =>
+        (toolFilter === 'ALL' || entry.toolKey === toolFilter) &&
+        (format === 'ALL' || entry.versions[0]?.format === format)
+    );
+    return matchesSearch && matchesVariant;
+  });
   const version = skill?.versions.find((item) => item.id === selected);
-  const old = skill?.versions.find((item) => item.id === left);
-  const current = skill?.versions.find((item) => item.id === right);
+  const old = (crossCompare ? compareLeft?.versions : skill?.versions)?.find((item) => item.id === left);
+  const current = (crossCompare ? compareVariant?.versions : skill?.versions)?.find((item) => item.id === right);
   const paths = Array.from(
     new Set([...(old?.files ?? []).map((file) => file.path), ...(current?.files ?? []).map((file) => file.path)])
   ).sort();
   const comparePath = paths.includes(path) ? path : paths[0];
   const oldFile = old?.files.find((file) => file.path === comparePath);
   const newFile = current?.files.find((file) => file.path === comparePath);
-  const change = (a?: SkillFile, b?: SkillFile) => (!a ? '新增' : !b ? '删除' : a.hash === b.hash ? '未变' : '修改');
+  const change = (a?: SkillFile, b?: SkillFile): '新增' | '删除' | '未变' | '修改' =>
+    !a ? '新增' : !b ? '删除' : a.hash === b.hash ? '未变' : '修改';
+  const changeLabel = (a?: SkillFile, b?: SkillFile) => {
+    const state = change(a, b);
+    const crossLabels = { 新增: '仅右侧', 删除: '仅左侧', 未变: '相同', 修改: '内容不同' };
+    return crossCompare ? crossLabels[state] : state;
+  };
   const chosenFile = version?.files.find((file) => file.path === path) ?? version?.files[0];
   useEffect(() => {
     if (!id || !skill) return;
@@ -458,6 +589,48 @@ export function SkillCenter() {
       return next;
     });
   const loadError = (file?: SkillFile) => Boolean(file?.id && textErrors[file.id]);
+  // 以代次丢弃已切换资源或目标后的旧对比请求。
+  const loadCompareVariant = async (variantId: string, side: 'left' | 'right' | 'initial') => {
+    if (!skill || !version) return;
+    const run = ++compareGeneration.current;
+    setCompareLoading(true);
+    try {
+      const result = await skillsApi.variant(skill.id, variantId);
+      if (run !== compareGeneration.current) return;
+      if (side === 'initial') {
+        const active = skill.variants.find((entry) => entry.id === version.variantId);
+        if (!active) throw new Error('当前工具适配不存在。');
+        setCompareLeft({ ...active, versions: skill.versions });
+        setCompareVariant(result);
+        setCrossCompare(true);
+        setLeft(skill.versions[0].id);
+        setRight(result.versions[0].id);
+      } else if (side === 'left') {
+        setCompareLeft(result);
+        setLeft(result.versions[0].id);
+      } else {
+        setCompareVariant(result);
+        setRight(result.versions[0].id);
+      }
+    } catch (err) {
+      if (run === compareGeneration.current) toast({ title: errorMessage(err), variant: 'destructive' });
+    } finally {
+      if (run === compareGeneration.current) setCompareLoading(false);
+    }
+  };
+  const changeCompareScope = (scope: string) => {
+    if (!skill || !version) return;
+    if (scope === 'history') {
+      compareGeneration.current++;
+      setCompareLoading(false);
+      setCrossCompare(false);
+      setLeft(skill.versions[1]?.id ?? skill.versions[0].id);
+      setRight(skill.versions[0].id);
+      return;
+    }
+    const other = skill.variants.find((entry) => entry.id !== version.variantId);
+    if (other) void loadCompareVariant(other.id, 'initial');
+  };
   return (
     <div className={id && skill && version ? 'flex min-h-[calc(100dvh-128px)] flex-col gap-5' : 'space-y-5'}>
       {loading ? (
@@ -497,6 +670,13 @@ export function SkillCenter() {
               onChange={(event) => setSearch(event.target.value)}
             />
             <Select
+              ariaLabel="筛选工具"
+              className="w-40"
+              value={toolFilter}
+              onValueChange={setToolFilter}
+              options={[{ value: 'ALL', label: '全部工具' }, ...tools.map((tool) => ({ value: tool, label: toolLabel(tool) }))]}
+            />
+            <Select
               ariaLabel="筛选格式"
               className="w-32"
               value={format}
@@ -512,7 +692,7 @@ export function SkillCenter() {
             <table className="w-full min-w-[760px] text-left text-sm">
               <thead className="bg-slate-50 text-slate-500">
                 <tr>
-                  {['名称', '格式', '当前版本', '文件', '更新时间', '操作'].map((label) => (
+                  {['名称', '工具适配', '更新时间', '操作'].map((label) => (
                     <th key={label} className="px-4 py-3 font-medium">
                       {label}
                     </th>
@@ -521,30 +701,31 @@ export function SkillCenter() {
               </thead>
               <tbody>
                 {filtered.map((item) => {
-                  const v = item.versions[0];
                   return (
                     <tr key={item.id} className="border-t">
                       <td className="px-4 py-4">
                         <Link className="font-medium text-indigo-700 hover:underline" to={`/skills/${item.id}`}>
-                          {v.name}
+                          {item.name}
                         </Link>
-                        <p className="mt-1 max-w-md truncate text-slate-500">{v.description}</p>
+                        <p className="mt-1 max-w-md truncate text-slate-500">{item.description}</p>
                       </td>
-                      <td className="px-4">{v.format === 'MD' ? '单文件' : '目录包'}</td>
-                      <td className="px-4">v{v.number}</td>
-                      <td className="px-4">{v.files.length}</td>
+                      <td className="px-4">
+                        <div className="flex flex-wrap gap-2">
+                          {item.variants.map((variant) => (
+                            <Link
+                              key={variant.id}
+                              className="text-indigo-700 hover:underline"
+                              to={`/skills/${item.id}?variant=${variant.id}`}
+                            >
+                              {toolLabel(variant.toolKey)} · v{variant.versions[0].number} · {variant.versions[0].format}
+                            </Link>
+                          ))}
+                        </div>
+                      </td>
                       <td className="px-4 text-slate-500">{date(item.updatedAt)}</td>
                       <td className="px-4">
                         <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            title="下载当前版本"
-                            aria-label="下载当前版本"
-                            onClick={() => download(item, v)}
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
+                          <DownloadChoice item={item} download={download} />
                           <Button
                             variant="ghost"
                             size="icon"
@@ -576,8 +757,8 @@ export function SkillCenter() {
           </Link>
           <header className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-semibold">{version.name}</h1>
-              <p className="mt-1 text-sm text-slate-500">{version.description}</p>
+              <h1 className="text-2xl font-semibold">{skill.name}</h1>
+              <p className="mt-1 text-sm text-slate-500">{skill.description}</p>
               <p className="mt-2 text-xs text-slate-500">
                 {version.format === 'MD' ? '单文件' : '完整目录包'} · v{version.number} · {date(version.createdAt)} ·
                 仅管理员可见
@@ -593,7 +774,7 @@ export function SkillCenter() {
               >
                 <Trash2 className="h-4 w-4 text-red-600" />
               </Button>
-              <Button variant="outline" onClick={() => void load({ openUpload: true })}>
+              <Button variant="outline" onClick={() => void load({ openDialog: 'upload' })}>
                 <Upload className="mr-2 h-4 w-4" />
                 上传新版本
               </Button>
@@ -603,6 +784,44 @@ export function SkillCenter() {
               </Button>
             </div>
           </header>
+          <div className="flex flex-wrap gap-2">
+            <Select
+              ariaLabel="当前工具适配"
+              value={version.variantId}
+              onValueChange={(value) => setParams({ variant: value })}
+              options={skill.variants.map((entry) => ({ value: entry.id, label: toolLabel(entry.toolKey) }))}
+            />
+            <Button
+              variant="outline"
+              disabled={skill.variants.length >= tools.length}
+              onClick={() => void load({ openDialog: 'variant' })}
+            >
+              上传工具适配
+            </Button>
+            <Button
+              variant="outline"
+              disabled={skill.variants.length >= tools.length}
+              onClick={() => void load({ openDialog: 'variant-manual' })}
+            >
+              手动新增适配
+            </Button>
+            {skill.variants.find((entry) => entry.id === version.variantId)?.toolKey === 'unspecified' &&
+              tools
+                .filter((tool) => tool !== 'unspecified' && !skill.variants.some((entry) => entry.toolKey === tool))
+                .map((tool) => (
+                  <Button
+                    key={tool}
+                    variant="outline"
+                    onClick={() =>
+                      void skillsApi.classify(skill.id, version.variantId, tool)
+                        .then(() => load())
+                        .catch((err) => toast({ title: errorMessage(err), variant: 'destructive' }))
+                    }
+                  >
+                    归类为 {toolLabel(tool)}
+                  </Button>
+                ))}
+          </div>
           {version.id !== skill.versions[0].id && (
             <div className="flex items-center justify-between rounded-md bg-indigo-50 p-3 text-sm text-indigo-800">
               正在查看历史版本 v{version.number}，当前最新为 v{skill.versions[0].number}。
@@ -776,6 +995,7 @@ export function SkillCenter() {
                               variant="outline"
                               disabled={!previous}
                               onClick={() => {
+                                changeCompareScope('history');
                                 setLeft(previous.id);
                                 setRight(v.id);
                                 setPath('SKILL.md');
@@ -787,8 +1007,8 @@ export function SkillCenter() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              title={`下载 v${v.number}`}
-                              aria-label={`下载 v${v.number}`}
+                              title={`下载 ${toolLabel(skill.variants.find((item) => item.id === v.variantId)?.toolKey ?? 'unspecified')} v${v.number}`}
+                              aria-label={`下载 ${toolLabel(skill.variants.find((item) => item.id === v.variantId)?.toolKey ?? 'unspecified')} v${v.number}`}
                               onClick={() => download(skill, v)}
                             >
                               <Download className="h-4 w-4" />
@@ -805,24 +1025,68 @@ export function SkillCenter() {
           {tab === 'compare' && old && current && (
             <>
               <div className="flex flex-wrap items-center gap-3">
-                <span className="text-sm">旧版</span>
-                <VersionSelect versions={skill.versions} value={left} change={setLeft} />
+                <Select
+                  ariaLabel="对比范围"
+                  value={crossCompare ? 'cross' : 'history'}
+                  onValueChange={changeCompareScope}
+                  options={[
+                    { value: 'history', label: '历史版本对比' },
+                    { value: 'cross', label: '跨工具对比', disabled: skill.variants.length < 2 }
+                  ]}
+                />
+                <span className="text-sm">左侧</span>
+                {crossCompare && (
+                  <Select
+                    ariaLabel="左侧工具"
+                    value={compareLeft?.id ?? ''}
+                    disabled={compareLoading}
+                    onValueChange={(value) => void loadCompareVariant(value, 'left')}
+                    options={skill.variants
+                      .filter((entry) => entry.id !== compareVariant?.id)
+                      .map((entry) => ({ value: entry.id, label: toolLabel(entry.toolKey) }))}
+                  />
+                )}
+                <VersionSelect
+                  versions={crossCompare ? compareLeft?.versions ?? [] : skill.versions}
+                  value={left}
+                  change={setLeft}
+                />
                 <Button
                   variant="outline"
                   size="icon"
+                  disabled={compareLoading}
                   title="交换对比方向"
                   aria-label="交换对比方向"
                   onClick={() => {
                     setLeft(right);
                     setRight(left);
+                    if (crossCompare) {
+                      setCompareLeft(compareVariant);
+                      setCompareVariant(compareLeft);
+                    }
                   }}
                 >
                   <ArrowLeftRight className="h-4 w-4" />
                 </Button>
-                <span className="text-sm">新版</span>
-                <VersionSelect versions={skill.versions} value={right} change={setRight} />
+                <span className="text-sm">右侧</span>
+                {crossCompare && (
+                  <Select
+                    ariaLabel="右侧工具"
+                    value={compareVariant?.id ?? ''}
+                    disabled={compareLoading}
+                    onValueChange={(value) => void loadCompareVariant(value, 'right')}
+                    options={skill.variants
+                      .filter((entry) => entry.id !== compareLeft?.id)
+                      .map((entry) => ({ value: entry.id, label: toolLabel(entry.toolKey) }))}
+                  />
+                )}
+                <VersionSelect
+                  versions={crossCompare ? compareVariant?.versions ?? [] : skill.versions}
+                  value={right}
+                  change={setRight}
+                />
               </div>
-              {left === right ? (
+              {compareLoading ? <p className="text-sm text-slate-500">正在加载比较目标…</p> : left === right ? (
                 <div className="rounded-lg border bg-white p-12 text-center text-sm text-slate-500">
                   所选版本相同，请选择不同版本。
                 </div>
@@ -830,7 +1094,7 @@ export function SkillCenter() {
                 <div className="grid min-h-[500px] flex-1 grid-cols-1 overflow-hidden rounded-lg border bg-slate-50 md:grid-cols-[240px_minmax(0,1fr)]">
                   <aside className="max-h-[600px] overflow-auto border-b p-2 md:border-b-0">
                     {paths.map((p) => {
-                      const state = change(
+                      const state = changeLabel(
                         old.files.find((f) => f.path === p),
                         current.files.find((f) => f.path === p)
                       );
@@ -840,7 +1104,9 @@ export function SkillCenter() {
                           onClick={() => setPath(p)}
                           className={`flex w-full gap-2 rounded px-3 py-2 text-left text-sm ${comparePath === p ? 'bg-indigo-100' : 'hover:bg-slate-100'}`}
                         >
-                          <span className="shrink-0 text-slate-500">{state}</span>
+                          <span className="shrink-0 text-slate-500">
+                            {state}
+                          </span>
                           <span className="break-all">{p}</span>
                         </button>
                       );
@@ -848,7 +1114,7 @@ export function SkillCenter() {
                   </aside>
                   <div className="flex min-w-0 flex-col bg-white md:border-l">
                     <div className="border-b p-3 text-sm font-medium">
-                      {comparePath} · {change(oldFile, newFile)}
+                      {comparePath} · {changeLabel(oldFile, newFile)}
                     </div>
                     {loadError(oldFile) || loadError(newFile) ? (
                       <div className="p-8 text-sm">
@@ -863,11 +1129,11 @@ export function SkillCenter() {
                       <div className="space-y-2 p-8 text-sm text-slate-500">
                         <p>二进制或过大文件无法在线对比，请下载对应版本。</p>
                         <p>
-                          旧版：
+                          左侧：
                           {oldFile ? `${bytes(oldFile.size)} · ${oldFile.hash}` : '不存在'}
                         </p>
                         <p>
-                          新版：
+                          右侧：
                           {newFile ? `${bytes(newFile.size)} · ${newFile.hash}` : '不存在'}
                         </p>
                       </div>
@@ -900,13 +1166,15 @@ export function SkillCenter() {
         <UploadDialog
           target={id ? skill : undefined}
           existing={list}
-          manual={dialog === 'manual'}
+          activeVariantId={skill?.versions[0]?.variantId}
+          newVariant={dialog === 'variant' || dialog === 'variant-manual'}
+          manual={dialog === 'manual' || dialog === 'variant-manual'}
           close={() => setDialog(null)}
-          saved={(v) => {
+          saved={(v, savedTool) => {
             setDialog(null);
-            toast({ title: `已保存 v${v.number}`, variant: 'success' });
-            if (id) void load();
-            else navigate(`/skills/${v.skillId}`);
+            toast({ title: `已保存 ${toolLabel(savedTool)} v${v.number}`, variant: 'success' });
+            if (id) { if (activeVariantId === v.variantId || (!activeVariantId && v.variantId === skill?.versions[0]?.variantId)) void load(); else setParams({ variant: v.variantId }); }
+            else navigate(`/skills/${v.skillId}?variant=${v.variantId}`);
           }}
         />
       )}

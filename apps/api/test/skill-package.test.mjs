@@ -101,6 +101,7 @@ test('unchanged version detection accepts historical locale-dependent hashes', a
   };
   const tx = {
     $queryRaw: async () => [{ id: 'skill-1' }],
+    skillVariant: { findMany: async () => [{ id: 'variant-1' }] },
     skillVersion: { findUnique: async () => null, findFirstOrThrow: async () => latest }
   };
   const prisma = { skillVersion: { findUnique: async () => null }, $transaction: async (callback) => callback(tx) };
