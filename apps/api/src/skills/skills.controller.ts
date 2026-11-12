@@ -7,6 +7,7 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Patch,
   Res,
   UploadedFile,
   UseGuards,
@@ -33,11 +34,14 @@ import { AUTH_COOKIE_NAME } from '../auth/auth.constants';
 import { AdminSessionGuard } from '../auth/guards/admin-session.guard';
 import {
   SaveSkillDto,
+  ClassifySkillVariantDto,
   SkillCandidateDto,
   SkillDetailDto,
   SkillListDto,
   SkillTextDto,
-  SkillVersionDto
+  SkillVersionDto,
+  SkillVariantDto,
+  SkillVariantIdentityDto
 } from './dto/skill.dto';
 import { SkillsService, UploadedSkillFile } from './skills.service';
 import { SKILL_UPLOAD_LIMIT } from './skill-package';
@@ -98,7 +102,8 @@ export class SkillsController {
         name: { type: 'string' },
         description: { type: 'string' },
         note: { type: 'string' },
-        requestId: { type: 'string', format: 'uuid' }
+        requestId: { type: 'string', format: 'uuid' },
+        toolKey: { type: 'string', enum: ['codex', 'claude-code', 'unspecified'] }
       },
       required: ['file', 'name', 'description', 'note', 'requestId']
     }
@@ -120,7 +125,8 @@ export class SkillsController {
         description: { type: 'string' },
         note: { type: 'string' },
         requestId: { type: 'string', format: 'uuid' },
-        expectedVersionId: { type: 'string', format: 'uuid' }
+        expectedVersionId: { type: 'string', format: 'uuid' },
+        variantId: { type: 'string', format: 'uuid' }
       },
       required: ['file', 'name', 'description', 'note', 'requestId', 'expectedVersionId']
     }
@@ -129,9 +135,43 @@ export class SkillsController {
   append(@Param('id', ParseUUIDPipe) id: string, @UploadedFile() file: UploadedSkillFile, @Body() dto: SaveSkillDto) {
     return this.service.save(file, dto, id);
   }
+  @Post(':id/variants')
+  @ApiCreatedResponse({ type: SkillVersionDto })
+  @UseInterceptors(upload)
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        name: { type: 'string' },
+        description: { type: 'string' },
+        note: { type: 'string' },
+        requestId: { type: 'string', format: 'uuid' },
+        toolKey: { type: 'string', enum: ['codex', 'claude-code', 'unspecified'] }
+      },
+      required: ['file', 'name', 'description', 'note', 'requestId', 'toolKey']
+    }
+  })
+  @ApiOperation({ summary: '创建工具适配及首版' })
+  createVariant(@Param('id', ParseUUIDPipe) id: string, @UploadedFile() file: UploadedSkillFile, @Body() dto: SaveSkillDto) {
+    return this.service.save(file, dto, id, 'variant');
+  }
+  @Get(':id/variants/:variantId')
+  @ApiOkResponse({ type: SkillVariantDto })
+  @ApiOperation({ summary: '获取工具适配历史和文件清单' })
+  variant(@Param('id', ParseUUIDPipe) id: string, @Param('variantId', ParseUUIDPipe) variantId: string) {
+    return this.service.variant(id, variantId);
+  }
+  @Patch(':id/variants/:variantId')
+  @ApiOkResponse({ type: SkillVariantIdentityDto })
+  @ApiOperation({ summary: '归类未指定工具的适配' })
+  classify(@Param('id', ParseUUIDPipe) id: string, @Param('variantId', ParseUUIDPipe) variantId: string, @Body() dto: ClassifySkillVariantDto) {
+    return this.service.classify(id, variantId, dto);
+  }
   @Get(':id')
   @ApiOkResponse({ type: SkillDetailDto })
-  @ApiOperation({ summary: '获取 SKILL 全部版本与文件清单' })
+  @ApiOperation({ summary: '获取 SKILL 共同资料及工具适配摘要' })
   detail(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.detail(id);
   }
@@ -157,7 +197,7 @@ export class SkillsController {
     const filename =
       version.format === 'MD'
         ? 'SKILL.md'
-        : `${version.name.replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 100) || 'skill'}-v${version.number}.zip`;
+        : `${version.skill.name.replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 100) || 'skill'}-${version.variant.toolKey}-v${version.number}.zip`;
     response
       .set({
         'Cache-Control': 'private, no-store',

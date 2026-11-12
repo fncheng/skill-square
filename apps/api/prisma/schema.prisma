@@ -214,32 +214,52 @@ model Annotation {
 
 // SKILL 版本是完整快照，原包与文件列表跟随资源级联删除。
 model Skill {
-  id        String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
-  versions  SkillVersion[]
+  id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  name        String         @db.VarChar(200)
+  description String         @db.VarChar(500)
+  versions    SkillVersion[]
+  variants    SkillVariant[]
 
   @@map("skills")
 }
 
-model SkillVersion {
-  id             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  skillId        String      @db.Uuid
-  skill          Skill       @relation(fields: [skillId], references: [id], onDelete: Cascade)
-  number         Int
-  name           String      @db.VarChar(200)
-  description    String      @db.VarChar(500)
-  note           String      @db.VarChar(500)
-  format         String      @db.VarChar(8)
-  originalName   String      @db.VarChar(255)
-  contentHash    String      @db.VarChar(64)
-  artifactHash   String      @db.VarChar(64)
-  artifact       Bytes
-  requestId      String      @unique @db.Uuid
-  createdAt      DateTime    @default(now())
-  files          SkillFile[]
+model SkillVariant {
+  id        String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  skillId   String         @db.Uuid
+  skill     Skill          @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  toolKey   String         @db.VarChar(32)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  versions  SkillVersion[]
 
-  @@unique([skillId, number])
+  @@unique([skillId, toolKey])
+  @@unique([id, skillId])
+  @@map("skill_variants")
+}
+
+model SkillVersion {
+  id                 String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  skillId            String       @db.Uuid
+  skill              Skill        @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  variantId          String       @db.Uuid
+  variant            SkillVariant @relation(fields: [variantId, skillId], references: [id, skillId], onDelete: Cascade)
+  number             Int
+  name               String       @db.VarChar(200)
+  description        String       @db.VarChar(500)
+  note               String       @db.VarChar(500)
+  format             String       @db.VarChar(8)
+  originalName       String       @db.VarChar(255)
+  contentHash        String       @db.VarChar(64)
+  artifactHash       String       @db.VarChar(64)
+  artifact           Bytes
+  requestId          String       @unique @db.Uuid
+  requestFingerprint String?      @db.VarChar(64)
+  createdAt          DateTime     @default(now())
+  files              SkillFile[]
+
+  @@unique([variantId, number])
   @@map("skill_versions")
 }
 

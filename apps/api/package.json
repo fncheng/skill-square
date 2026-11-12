@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "test": "node -r ts-node/register/transpile-only --test test/skill-package.test.mjs && TS_NODE_TRANSPILE_ONLY=true TS_NODE_COMPILER_OPTIONS='{\"module\":\"esnext\"}' node --loader ts-node/esm --test test/skill-request-id.test.mjs",
+    "test": "node -r ts-node/register/transpile-only --test test/skill-package.test.mjs test/skill-variants.test.mjs && TS_NODE_TRANSPILE_ONLY=true TS_NODE_COMPILER_OPTIONS='{\"module\":\"esnext\"}' node --loader ts-node/esm --test test/skill-request-id.test.mjs",
     "build": "nest build",
     "start": "nest start",
     "start:dev": "nest start --watch",
