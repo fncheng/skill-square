@@ -179,7 +179,7 @@ function UploadDialog({
       className="w-[min(680px,calc(100vw-32px))] rounded-xl border border-slate-200 p-0 shadow-xl backdrop:bg-slate-950/40"
     >
       <div className="flex max-h-[85vh] flex-col">
-        <header className="relative border-b px-6 py-5">
+        <header className="relative shrink-0 border-b px-6 py-5">
           <button
             type="button"
             aria-label="关闭"
@@ -198,109 +198,112 @@ function UploadDialog({
               : '将本地 SKILL 保存到个人仓库。'}
           </p>
         </header>
-        <fieldset disabled={saving} className="min-w-0 space-y-4 overflow-auto px-6 py-5">
-          {(!target || newVariant) && (
-            <label className="block text-sm font-medium">
-              工具
-              <Select
-                ariaLabel="选择工具"
-                value={toolKey}
-                onValueChange={setToolKey}
-                options={tools.map((tool) => ({
-                  value: tool,
-                  label: toolLabel(tool),
-                  disabled: newVariant && Boolean(target?.variants.some((item) => item.toolKey === tool))
-                }))}
-              />
-            </label>
-          )}
-          {!manual && (
-            <label className="block rounded-lg border border-dashed border-slate-300 p-5 text-sm">
-              <span className="mb-2 block font-medium">选择 SKILL.md 或 ZIP 完整目录包</span>
-              <input type="file" accept=".md,.zip" onChange={(event) => void choose(event.target.files?.[0])} />
-              <span className="mt-2 block text-slate-500">上传不超过 10 MiB，解压不超过 50 MiB，最多 500 个文件。</span>
-            </label>
-          )}
-          {candidate && (
-            <div className="rounded-md bg-slate-50 p-3 text-sm">
-              <strong>
-                {file?.name} · {candidate.files.length} 个文件
-              </strong>
-              <div className="mt-2 max-h-28 space-y-1 overflow-auto text-slate-600">
-                {candidate.files.map((item) => (
-                  <div key={item.path} className="break-all">
-                    {item.path} · {bytes(item.size)}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          {(manual || candidate) && (
-            <>
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <fieldset disabled={saving} className="min-w-0 space-y-4 px-6 py-5">
+            {(!target || newVariant) && (
               <label className="block text-sm font-medium">
-                版本展示名称
-                <Input
-                  className="mt-1"
-                  value={name}
-                  maxLength={200}
-                  onChange={(event) => {
-                    const nextName = event.target.value;
-                    if (nextName.trim() !== name.trim()) setDuplicateAccepted(false);
-                    setName(nextName);
-                  }}
+                工具
+                <Select
+                  ariaLabel="选择工具"
+                  className="ml-3 w-40 max-w-[calc(100%-3rem)]"
+                  value={toolKey}
+                  onValueChange={setToolKey}
+                  options={tools.map((tool) => ({
+                    value: tool,
+                    label: toolLabel(tool),
+                    disabled: newVariant && Boolean(target?.variants.some((item) => item.toolKey === tool))
+                  }))}
                 />
               </label>
-              <label className="block text-sm font-medium">
-                版本简介
-                <Input
-                  className="mt-1"
-                  value={description}
-                  maxLength={500}
-                  onChange={(event) => setDescription(event.target.value)}
-                />
+            )}
+            {!manual && (
+              <label className="block rounded-lg border border-dashed border-slate-300 p-5 text-sm">
+                <span className="mb-2 block font-medium">选择 SKILL.md 或 ZIP 完整目录包</span>
+                <input type="file" accept=".md,.zip" onChange={(event) => void choose(event.target.files?.[0])} />
+                <span className="mt-2 block text-slate-500">上传不超过 10 MiB，解压不超过 50 MiB，最多 500 个文件。</span>
               </label>
-              <label className="block text-sm font-medium">
-                变更说明
-                <Input
-                  className="mt-1"
-                  value={note}
-                  maxLength={500}
-                  onChange={(event) => setNote(event.target.value)}
-                />
-              </label>
-              {manual && (
-                <div>
-                  <span className="text-sm font-medium">SKILL.md 内容</span>
-                  <div className="mt-1 flex h-64 flex-col overflow-hidden rounded-md border">
-                    <PromptMonacoEditor value={source} onChange={setSource} readOnly={saving} />
-                  </div>
+            )}
+            {candidate && (
+              <div className="rounded-md bg-slate-50 p-3 text-sm">
+                <strong>
+                  {file?.name} · {candidate.files.length} 个文件
+                </strong>
+                <div className="mt-2 max-h-28 space-y-1 overflow-auto text-slate-600">
+                  {candidate.files.map((item) => (
+                    <div key={item.path} className="break-all">
+                      {item.path} · {bytes(item.size)}
+                    </div>
+                  ))}
                 </div>
-              )}
-              {duplicate && (
-                <label className="flex gap-2 rounded-md bg-amber-50 p-3 text-sm text-amber-900">
-                  <input
-                    type="checkbox"
-                    checked={duplicateAccepted}
-                    onChange={(event) => setDuplicateAccepted(event.target.checked)}
+              </div>
+            )}
+            {(manual || candidate) && (
+              <>
+                <label className="block text-sm font-medium">
+                  版本展示名称
+                  <Input
+                    className="mt-1"
+                    value={name}
+                    maxLength={200}
+                    onChange={(event) => {
+                      const nextName = event.target.value;
+                      if (nextName.trim() !== name.trim()) setDuplicateAccepted(false);
+                      setName(nextName);
+                    }}
                   />
-                  已有同名 SKILL，我确认另建资源。
                 </label>
-              )}
-              {replacing && (
-                <label className="flex gap-2 rounded-md bg-amber-50 p-3 text-sm text-amber-900">
-                  <input type="checkbox" checked={accepted} onChange={(event) => setAccepted(event.target.checked)} />
-                  单文件将替换目录包，新版本不再包含其他文件，历史版本仍保留。
+                <label className="block text-sm font-medium">
+                  版本简介
+                  <Input
+                    className="mt-1"
+                    value={description}
+                    maxLength={500}
+                    onChange={(event) => setDescription(event.target.value)}
+                  />
                 </label>
-              )}
-            </>
-          )}
-          {error && (
-            <p role="alert" className="text-sm text-red-700">
-              {error}
-            </p>
-          )}
-        </fieldset>
-        <footer className="flex justify-end gap-2 border-t px-6 py-4">
+                <label className="block text-sm font-medium">
+                  变更说明
+                  <Input
+                    className="mt-1"
+                    value={note}
+                    maxLength={500}
+                    onChange={(event) => setNote(event.target.value)}
+                  />
+                </label>
+                {manual && (
+                  <div>
+                    <span className="text-sm font-medium">SKILL.md 内容</span>
+                    <div className="mt-1 flex h-64 flex-col overflow-hidden rounded-md border">
+                      <PromptMonacoEditor value={source} onChange={setSource} readOnly={saving} />
+                    </div>
+                  </div>
+                )}
+                {duplicate && (
+                  <label className="flex gap-2 rounded-md bg-amber-50 p-3 text-sm text-amber-900">
+                    <input
+                      type="checkbox"
+                      checked={duplicateAccepted}
+                      onChange={(event) => setDuplicateAccepted(event.target.checked)}
+                    />
+                    已有同名 SKILL，我确认另建资源。
+                  </label>
+                )}
+                {replacing && (
+                  <label className="flex gap-2 rounded-md bg-amber-50 p-3 text-sm text-amber-900">
+                    <input type="checkbox" checked={accepted} onChange={(event) => setAccepted(event.target.checked)} />
+                    单文件将替换目录包，新版本不再包含其他文件，历史版本仍保留。
+                  </label>
+                )}
+              </>
+            )}
+            {error && (
+              <p role="alert" className="text-sm text-red-700">
+                {error}
+              </p>
+            )}
+          </fieldset>
+        </div>
+        <footer className="flex shrink-0 justify-end gap-2 border-t px-6 py-4">
           <Button variant="outline" disabled={busy} onClick={close}>
             取消
           </Button>
@@ -668,6 +671,7 @@ export function SkillCenter() {
             />
             <Select
               ariaLabel="筛选工具"
+              className="w-40"
               value={toolFilter}
               onValueChange={setToolFilter}
               options={[{ value: 'ALL', label: '全部工具' }, ...tools.map((tool) => ({ value: tool, label: toolLabel(tool) }))]}
