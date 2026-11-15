@@ -1,3 +1,4 @@
+import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Check, Maximize2 } from 'lucide-react';
@@ -26,6 +27,7 @@ export function ModelResponseEditor() {
   const [loadedId, setLoadedId] = useState(id);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>(() => !isEdit || Boolean(createdDraft) ? 'ready' : 'loading');
+  const { markSaved } = useUnsavedChanges([form, tagsText], loadState === 'ready' && id === loadedId);
   useEffect(() => {
     let active = true;
     void getModelResponses().then((list) => {
@@ -54,10 +56,12 @@ export function ModelResponseEditor() {
     if (!form.content.trim()) { toast({ title: '请粘贴模型回答正文', variant: 'destructive' }); return; }
     const tags = parseTags(tagsText);
     if (!tags.length) { toast({ title: '请至少添加一个标签', variant: 'destructive' }); return; }
+    const savedSnapshot = [form, tagsText];
     setSaving(true);
     try {
       const payload: ModelResponsePayload = { ...form, title: form.title.trim(), summary: form.summary.trim(), category: form.category.trim(), tags, sourceProduct: form.sourceProduct.trim(), modelName: form.modelName.trim(), originalPrompt: form.originalPrompt.trim() };
       const record = isEdit && id ? await updateModelResponse(id, payload) : await createModelResponse(payload);
+      markSaved(savedSnapshot);
       toast({ title: '模型回答已保存', variant: 'success' });
       if (keepFullscreen) {
         setFullscreen(true);

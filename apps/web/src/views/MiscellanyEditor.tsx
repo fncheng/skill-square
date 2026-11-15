@@ -1,3 +1,4 @@
+import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Check, Maximize2 } from 'lucide-react';
@@ -44,6 +45,7 @@ export function MiscellanyEditor() {
   const [loadedId, setLoadedId] = useState(id);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>(() => !isEdit || Boolean(createdDraft) ? 'ready' : 'loading');
+  const { markSaved } = useUnsavedChanges([form, tagsText], loadState === 'ready' && id === loadedId);
   useEffect(() => {
     let active = true;
     void getMiscellanies().then((list) => {
@@ -72,10 +74,12 @@ export function MiscellanyEditor() {
     if (!form.content.trim()) { toast({ title: '请输入正文内容', variant: 'destructive' }); return; }
     const tags = parseTags(tagsText);
     if (tags.length === 0) { toast({ title: '请至少添加一个标签', variant: 'destructive' }); return; }
+    const savedSnapshot = [form, tagsText];
     setSaving(true);
     try {
       const payload: MiscellanyPayload = { title: form.title.trim(), summary: form.summary.trim(), content: form.content, category: form.category.trim(), tags };
       const miscellany = isEdit && id ? await updateMiscellany(id, payload) : await createMiscellany(payload);
+      markSaved(savedSnapshot);
       toast({ title: '杂谈已保存', variant: 'success' });
       if (keepFullscreen) {
         setFullscreen(true);

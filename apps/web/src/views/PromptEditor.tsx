@@ -1,3 +1,4 @@
+import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Check, Maximize2 } from 'lucide-react';
@@ -52,6 +53,7 @@ export function PromptEditor() {
   const [loadedId, setLoadedId] = useState(id);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>(() => !isEdit || Boolean(createdDraft) ? 'ready' : 'loading');
+  const { markSaved } = useUnsavedChanges(form, loadState === 'ready' && id === loadedId);
   useEffect(() => {
     let active = true;
     void fetchCategories().catch(() => {});
@@ -97,6 +99,7 @@ export function PromptEditor() {
       return;
     }
 
+    const savedSnapshot = form;
     setSaving(true);
     try {
       const payload: PromptPayload = {
@@ -107,6 +110,7 @@ export function PromptEditor() {
         tagIds: [...form.tagIds]
       };
       const prompt = isEdit && id ? await updatePrompt(id, payload) : await createPrompt(payload);
+      markSaved(savedSnapshot);
       toast({ title: 'Prompt 已保存', variant: 'success' });
       if (keepFullscreen) {
         setFullscreen(true);

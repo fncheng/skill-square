@@ -1,3 +1,4 @@
+import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Check, Maximize2 } from 'lucide-react';
@@ -65,6 +66,7 @@ export function NoteEditor() {
   const [loadedId, setLoadedId] = useState(id);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>(() => !isEdit || Boolean(createdDraft) ? 'ready' : 'loading');
+  const { markSaved } = useUnsavedChanges([form, tagsText], loadState === 'ready' && id === loadedId);
   useEffect(() => {
     let active = true;
     void getNotes().then((list) => {
@@ -112,6 +114,7 @@ export function NoteEditor() {
       return;
     }
 
+    const savedSnapshot = [form, tagsText];
     setSaving(true);
     try {
       const payload: NotePayload = {
@@ -123,6 +126,7 @@ export function NoteEditor() {
       };
 
       const note = isEdit && id ? await updateNote(id, payload) : await createNote(payload);
+      markSaved(savedSnapshot);
       toast({ title: '笔记已保存', variant: 'success' });
       if (keepFullscreen) {
         setFullscreen(true);

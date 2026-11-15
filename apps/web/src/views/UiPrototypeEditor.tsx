@@ -1,3 +1,4 @@
+import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Check, Upload } from 'lucide-react';
@@ -61,6 +62,7 @@ export function UiPrototypeEditor() {
   const [loadedId, setLoadedId] = useState(id);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>(() => !isEdit ? 'ready' : 'loading');
+  const { markSaved } = useUnsavedChanges([form, tagsText], loadState === 'ready' && id === loadedId);
   useEffect(() => {
     let active = true;
     void getUiPrototypes().then((list) => {
@@ -150,6 +152,7 @@ export function UiPrototypeEditor() {
       return;
     }
 
+    const savedSnapshot = [form, tagsText];
     setSaving(true);
     try {
       const payload: UiPrototypePayload = {
@@ -162,6 +165,7 @@ export function UiPrototypeEditor() {
       };
       const prototype =
         isEdit && id ? await updateUiPrototype(id, payload) : await createUiPrototype(payload);
+      markSaved(savedSnapshot);
       toast({ title: 'UI 原型已保存', variant: 'success' });
       navigate(`/ui-prototypes/${prototype.id}`);
     } finally {
