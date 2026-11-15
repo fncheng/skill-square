@@ -62,35 +62,37 @@ export function NoteEditor() {
   };
   const [fullscreen, setFullscreen] = useState(() => locationState?.fullscreen === true);
 
+  const [loadedId, setLoadedId] = useState(id);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>(() => !isEdit || Boolean(createdDraft) ? 'ready' : 'loading');
   useEffect(() => {
-    const bootstrap = async () => {
-      const hasCreatedDraft = Boolean(isEdit && id && createdDraft);
-
-      if (hasCreatedDraft) {
-        // 新建导航状态仅用于首屏初始化，消费后避免刷新时恢复陈旧快照。
-        navigate(location.pathname, { replace: true, state: null });
-      }
-
-      const list = await getNotes();
-      setCategoryOptions(Array.from(new Set(list.map((item) => item.category).filter(Boolean))));
-
-      if (isEdit && id) {
-        if (hasCreatedDraft) return;
-        const note = await getNote(id);
+    let active = true;
+    void getNotes().then((list) => {
+      if (active) setCategoryOptions(Array.from(new Set(list.map((item) => item.category).filter(Boolean))));
+    }).catch(() => {});
+    if (createdDraft) {
+      navigate(location.pathname, { replace: true, state: null });
+    }
+    if (isEdit && id && !Boolean(createdDraft)) {
+      setLoadState('loading');
+      void getNote(id).then((note) => {
+        if (!active) return;
         updateForm(() => ({
-          title: note.title,
-          summary: note.summary,
-          content: note.content,
-          category: note.category,
-          tags: [...note.tags]
+        title: note.title,
+        summary: note.summary,
+        content: note.content,
+        category: note.category,
+        tags: [...note.tags]
         }));
         updateTagsText(note.tags.join(', '));
-      }
-    };
-    void bootstrap();
-    // 路由 ID 变化时消费一次导航表单；清除 location.state 后不重复加载以免覆盖编辑内容。
+        setLoadedId(id);
+        setLoadState('ready');
+      }).catch(() => { if (active) { setLoadedId(id); setLoadState('error'); } });
+    } else { setLoadedId(id); setLoadState('ready'); }
+    return () => { active = false; };
+    // 仅在资源或重试次数变化时重新加载，避免覆盖正在编辑的内容。
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [id, loadAttempt]);
 
   /** 全屏工作区保存后留在编辑页；普通页头保存继续进入详情页。 */
   const handleSubmit = async (keepFullscreen = false) => {
@@ -137,6 +139,10 @@ export function NoteEditor() {
       setSaving(false);
     }
   };
+
+  if (id !== loadedId || loadState !== 'ready') {
+    return <section className="p-6">{id !== loadedId || loadState === 'loading' ? '正在加载内容…' : <><p>加载失败，无法编辑此资源。</p><Button type="button" onClick={() => setLoadAttempt((value) => value + 1)}>重试</Button></>}</section>;
+  }
 
   return (
     <section>

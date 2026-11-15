@@ -58,26 +58,36 @@ export function UiPrototypeEditor() {
   htmlRef.current = form.html;
   const htmlBytes = getUtf8ByteLength(form.html);
 
+  const [loadedId, setLoadedId] = useState(id);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>(() => !isEdit ? 'ready' : 'loading');
   useEffect(() => {
-    const bootstrap = async () => {
-      const list = await getUiPrototypes();
-      setCategoryOptions(Array.from(new Set(list.map((item) => item.category).filter(Boolean))));
+    let active = true;
+    void getUiPrototypes().then((list) => {
+      if (active) setCategoryOptions(Array.from(new Set(list.map((item) => item.category).filter(Boolean))));
+    }).catch(() => {});
 
-      if (isEdit && id) {
-        const prototype = await getUiPrototype(id);
+    if (isEdit && id && true) {
+      setLoadState('loading');
+      void getUiPrototype(id).then((prototype) => {
+        if (!active) return;
         setForm({
-          title: prototype.title,
-          summary: prototype.summary,
-          html: prototype.html,
-          category: prototype.category,
-          tags: [...prototype.tags],
-          allowExternal: prototype.allowExternal
+        title: prototype.title,
+        summary: prototype.summary,
+        html: prototype.html,
+        category: prototype.category,
+        tags: [...prototype.tags],
+        allowExternal: prototype.allowExternal
         });
         setTagsText(prototype.tags.join(', '));
-      }
-    };
-    void bootstrap();
-  }, [id, isEdit]);
+        setLoadedId(id);
+        setLoadState('ready');
+      }).catch(() => { if (active) { setLoadedId(id); setLoadState('error'); } });
+    } else { setLoadedId(id); setLoadState('ready'); }
+    return () => { active = false; };
+    // 仅在资源或重试次数变化时重新加载，避免覆盖正在编辑的内容。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, loadAttempt]);
 
   const handleImport = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -158,6 +168,10 @@ export function UiPrototypeEditor() {
       setSaving(false);
     }
   };
+
+  if (id !== loadedId || loadState !== 'ready') {
+    return <section className="p-6">{id !== loadedId || loadState === 'loading' ? '正在加载内容…' : <><p>加载失败，无法编辑此资源。</p><Button type="button" onClick={() => setLoadAttempt((value) => value + 1)}>重试</Button></>}</section>;
+  }
 
   return (
     <section>
