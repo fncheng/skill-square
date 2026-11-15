@@ -10,6 +10,7 @@ interface UiPrototypeEditorPanelProps {
   value: string;
   allowExternal: boolean;
   onChange: (value: string) => void;
+  readOnly?: boolean;
 }
 
 /** 统一承载 HTML 源码编辑与沙箱预览，切换时保留 Monaco 编辑状态。 */
@@ -17,7 +18,8 @@ export function UiPrototypeEditorPanel({
   title,
   value,
   allowExternal,
-  onChange
+  onChange,
+  readOnly = false
 }: UiPrototypeEditorPanelProps) {
   const [previewing, setPreviewing] = useState(false);
 
@@ -41,7 +43,7 @@ export function UiPrototypeEditorPanel({
       </div>
 
       <div className="editor-mode-panel" hidden={previewing}>
-        <PromptMonacoEditor value={value} language="html" onChange={onChange} />
+        <PromptMonacoEditor value={value} language="html" onChange={onChange} readOnly={readOnly} />
       </div>
 
       {previewing ? (

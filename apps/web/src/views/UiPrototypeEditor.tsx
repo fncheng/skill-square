@@ -50,6 +50,7 @@ export function UiPrototypeEditor() {
 
   const isEdit = Boolean(id);
   const [saving, setSaving] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
   const [tagsText, setTagsText] = useState('');
   const [form, setForm] = useState<UiPrototypePayload>(emptyForm);
@@ -90,26 +91,31 @@ export function UiPrototypeEditor() {
       return;
     }
 
-    const html = await file.text();
-    // 读取文件和等待确认期间，源码仍可能被用户修改。
-    let currentHtml = htmlRef.current;
-    while (currentHtml && currentHtml !== html) {
-      const replace = await confirm({
-        title: '替换 HTML 源码',
-        description: '导入文件将替换当前 HTML 源码，是否继续？',
-        confirmText: '替换源码',
-        cancelText: '取消'
-      });
-      if (!replace) return;
-      if (currentHtml === htmlRef.current) break;
-      currentHtml = htmlRef.current;
+    setImporting(true);
+    try {
+      const html = await file.text();
+      // 读取文件和等待确认期间，源码仍可能被用户修改。
+      let currentHtml = htmlRef.current;
+      while (currentHtml && currentHtml !== html) {
+        const replace = await confirm({
+          title: '替换 HTML 源码',
+          description: '导入文件将替换当前 HTML 源码，是否继续？',
+          confirmText: '替换源码',
+          cancelText: '取消'
+        });
+        if (!replace) return;
+        if (currentHtml === htmlRef.current) break;
+        currentHtml = htmlRef.current;
+      }
+      setForm((prev) => ({
+        ...prev,
+        title: prev.title || file.name.replace(/\.html?$/i, ''),
+        html
+      }));
+      toast({ title: 'HTML 文件已导入', variant: 'success' });
+    } finally {
+      setImporting(false);
     }
-    setForm((prev) => ({
-      ...prev,
-      title: prev.title || file.name.replace(/\.html?$/i, ''),
-      html
-    }));
-    toast({ title: 'HTML 文件已导入', variant: 'success' });
   };
 
   const handleSubmit = async () => {
@@ -168,11 +174,11 @@ export function UiPrototypeEditor() {
               accept=".html,text/html"
               onChange={(event) => void handleImport(event)}
             />
-            <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+            <Button variant="outline" disabled={saving || importing} onClick={() => fileInputRef.current?.click()}>
               <Upload className="h-4 w-4" />
               导入 HTML
             </Button>
-            <Button disabled={saving} onClick={handleSubmit}>
+            <Button disabled={saving || importing} onClick={handleSubmit}>
               <Check className="h-4 w-4" />
               {saving ? '保存中...' : '保存'}
             </Button>
@@ -182,7 +188,7 @@ export function UiPrototypeEditor() {
 
       <div className="editor-layout">
         <div className="form-surface">
-          <div className="form-grid">
+          <fieldset disabled={saving} className="form-grid min-w-0">
             <label className="form-field">
               <span className="form-label">名称</span>
               <Input
@@ -256,13 +262,14 @@ export function UiPrototypeEditor() {
                 {formatFileSize(htmlBytes)} / 2 MB
               </strong>
             </div>
-          </div>
+          </fieldset>
         </div>
 
         <UiPrototypeEditorPanel
           title={form.title}
           value={form.html}
           allowExternal={form.allowExternal}
+          readOnly={saving}
           onChange={(html) => setForm((prev) => ({ ...prev, html }))}
         />
       </div>
