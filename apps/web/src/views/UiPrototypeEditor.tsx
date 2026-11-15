@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { useConfirm } from '@/hooks/use-confirm';
 import type { UiPrototypePayload } from '@/types/domain';
 import {
   formatFileSize,
@@ -44,6 +45,7 @@ export function UiPrototypeEditor() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { confirm } = useConfirm();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isEdit = Boolean(id);
@@ -51,6 +53,8 @@ export function UiPrototypeEditor() {
   const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
   const [tagsText, setTagsText] = useState('');
   const [form, setForm] = useState<UiPrototypePayload>(emptyForm);
+  const htmlRef = useRef(form.html);
+  htmlRef.current = form.html;
   const htmlBytes = getUtf8ByteLength(form.html);
 
   useEffect(() => {
@@ -87,6 +91,19 @@ export function UiPrototypeEditor() {
     }
 
     const html = await file.text();
+    // 读取文件和等待确认期间，源码仍可能被用户修改。
+    let currentHtml = htmlRef.current;
+    while (currentHtml && currentHtml !== html) {
+      const replace = await confirm({
+        title: '替换 HTML 源码',
+        description: '导入文件将替换当前 HTML 源码，是否继续？',
+        confirmText: '替换源码',
+        cancelText: '取消'
+      });
+      if (!replace) return;
+      if (currentHtml === htmlRef.current) break;
+      currentHtml = htmlRef.current;
+    }
     setForm((prev) => ({
       ...prev,
       title: prev.title || file.name.replace(/\.html?$/i, ''),
