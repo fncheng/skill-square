@@ -24,3 +24,7 @@ related:
 - `apps/web/src/views/SkillCenter.tsx`
 - `apps/api/src/skills`
 - `apps/api/prisma/schema.prisma`
+
+## 相关 Bug 记录
+
+- [未保存内容离开编辑页或关闭 SKILL 弹窗时丢失](../../bugs/BUG-20261115-001-未保存内容离开时丢失.md)

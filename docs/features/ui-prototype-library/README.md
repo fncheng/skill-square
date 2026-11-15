@@ -42,3 +42,10 @@ UI 原型库用于保存、筛选、编辑和预览单文件 HTML 原型。
 - `apps/web/src/components/ui-prototype`
 - `apps/api/src/ui-prototypes`
 - `apps/api/prisma/schema.prisma`
+
+## 相关 Bug 记录
+
+- [未保存内容离开编辑页或关闭 SKILL 弹窗时丢失](../../bugs/BUG-20261115-001-未保存内容离开时丢失.md)
+- [编辑页加载期间输入可能被详情覆盖](../../bugs/BUG-20261115-002-编辑页加载覆盖输入.md)
+- [保存期间继续输入可能随页面跳转丢失](../../bugs/BUG-20261115-003-保存期间输入丢失.md)
+- [导入 HTML 直接替换原型源码](../../bugs/BUG-20261115-004-导入原型覆盖源码.md)
