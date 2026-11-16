@@ -2,7 +2,7 @@
 type: index
 status: active
 created: 2026-08-27
-updated: 2026-09-17
+updated: 2026-11-15
 related: []
 ---
 
@@ -13,6 +13,7 @@ related: []
 ## 当前结构
 
 - `features/`：按长期业务能力组织的 Feature 上下文，Feature README 是功能知识入口。
+- `bugs/`：跨功能问题的现象、修复和验证记录。
 - `api/`：RESTful API 的接口、数据结构、认证和错误响应说明。
 - `architecture.md`：系统分层、模块边界、数据一致性和部署架构。
 - `docker-ghcr-deployment.md`、`docker-image-deployment.md`：在线和离线容器部署说明。
@@ -32,6 +33,14 @@ related: []
 | [UI 原型库](./features/ui-prototype-library/README.md) | `active` | 管理、筛选并在隔离沙箱中预览单文件 HTML 原型。 |
 | [模型回答库](./features/model-response-library/README.md) | `active` | 仅管理员可见的模型回答收录、溯源、批注与迁移。 |
 | [访问控制](./features/access-control/README.md) | `active` | 提供单管理员登录、Cookie 会话和访客只读访问边界。 |
+
+
+## Bug 记录
+
+- [未保存内容离开编辑页或关闭 SKILL 弹窗时丢失](./bugs/BUG-20261115-001-未保存内容离开时丢失.md)
+- [编辑页加载期间输入可能被详情覆盖](./bugs/BUG-20261115-002-编辑页加载覆盖输入.md)
+- [保存期间继续输入可能随页面跳转丢失](./bugs/BUG-20261115-003-保存期间输入丢失.md)
+- [导入 HTML 直接替换原型源码](./bugs/BUG-20261115-004-导入原型覆盖源码.md)
 
 ## 现有专题文档
 
@@ -76,8 +85,8 @@ related: []
 ## 命名与状态
 
 - Feature 目录使用 lowercase kebab-case，并以 `features/<feature>/README.md` 作为稳定入口。
-- Bug 使用 `BUG-YYYYMMDD-NNN-kebab-case-description.md`。
-- Investigation 使用 `INV-YYYYMMDD-NNN-kebab-case-description.md`。
+- Bug 使用 `BUG-YYYYMMDD-NNN-中文描述.md`。
+- Investigation 使用 `INV-YYYYMMDD-NNN-中文描述.md`。
 - 状态变化只更新 frontmatter，不移动文件路径；`superseded` 文档通过 `related` 指向后继文档。
 
 | 文档类型 | 可用状态 |

@@ -1,3 +1,4 @@
+import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Check, Maximize2 } from 'lucide-react';
@@ -49,33 +50,37 @@ export function PromptEditor() {
   };
   const [fullscreen, setFullscreen] = useState(() => locationState?.fullscreen === true);
 
+  const [loadedId, setLoadedId] = useState(id);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>(() => !isEdit || Boolean(createdDraft) ? 'ready' : 'loading');
+  const { markSaved } = useUnsavedChanges(form, loadState === 'ready' && id === loadedId);
   useEffect(() => {
-    const bootstrap = async () => {
-      const hasCreatedDraft = Boolean(isEdit && id && createdDraft);
-      if (hasCreatedDraft) {
-        // 新建导航状态仅用于首屏初始化，消费后避免刷新时恢复陈旧快照。
-        navigate(location.pathname, { replace: true, state: null });
-      }
-
-      await Promise.all([fetchCategories(), fetchTags()]);
-
-      if (isEdit && id) {
-        if (hasCreatedDraft) return;
-        const prompt = await getPrompt(id);
+    let active = true;
+    void fetchCategories().catch(() => {});
+    void fetchTags().catch(() => {});
+    if (createdDraft) {
+      navigate(location.pathname, { replace: true, state: null });
+    }
+    if (isEdit && id && !Boolean(createdDraft)) {
+      setLoadState('loading');
+      void getPrompt(id).then((prompt) => {
+        if (!active) return;
         updateForm(() => ({
-          name: prompt.name,
-          description: prompt.description,
-          content: prompt.content,
-          categoryId: prompt.categoryId,
-          tagIds: prompt.tags.map((tag) => tag.id),
-          isFavorite: prompt.isFavorite
+        name: prompt.name,
+        description: prompt.description,
+        content: prompt.content,
+        categoryId: prompt.categoryId,
+        tagIds: prompt.tags.map((tag) => tag.id),
+        isFavorite: prompt.isFavorite
         }));
-      }
-    };
-    void bootstrap();
-    // 路由 ID 变化时消费一次导航表单；清除 location.state 后不重复加载以免覆盖编辑内容。
+        setLoadedId(id);
+        setLoadState('ready');
+      }).catch(() => { if (active) { setLoadedId(id); setLoadState('error'); } });
+    } else { setLoadedId(id); setLoadState('ready'); }
+    return () => { active = false; };
+    // 仅在资源或重试次数变化时重新加载，避免覆盖正在编辑的内容。
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [id, loadAttempt]);
 
   const handleTagsChange = (event: ChangeEvent<HTMLSelectElement>) => {
     const tagIds = Array.from(event.target.selectedOptions, (option) => option.value);
@@ -94,6 +99,7 @@ export function PromptEditor() {
       return;
     }
 
+    const savedSnapshot = form;
     setSaving(true);
     try {
       const payload: PromptPayload = {
@@ -104,6 +110,15 @@ export function PromptEditor() {
         tagIds: [...form.tagIds]
       };
       const prompt = isEdit && id ? await updatePrompt(id, payload) : await createPrompt(payload);
+      // 仅规范化请求期间未再变化的字段，保留可能出现的后续输入。
+      const currentForm = formRef.current;
+      const displayedForm = {
+        ...currentForm,
+        name: currentForm.name === savedSnapshot.name ? payload.name : currentForm.name,
+        description: currentForm.description === savedSnapshot.description ? payload.description : currentForm.description
+      };
+      updateForm(() => displayedForm);
+      markSaved(payload, displayedForm);
       toast({ title: 'Prompt 已保存', variant: 'success' });
       if (keepFullscreen) {
         setFullscreen(true);
@@ -120,6 +135,10 @@ export function PromptEditor() {
       setSaving(false);
     }
   };
+
+  if (id !== loadedId || loadState !== 'ready') {
+    return <section className="p-6">{id !== loadedId || loadState === 'loading' ? '正在加载内容…' : <><p>加载失败，无法编辑此资源。</p><Button type="button" onClick={() => setLoadAttempt((value) => value + 1)}>重试</Button></>}</section>;
+  }
 
   return (
     <section>

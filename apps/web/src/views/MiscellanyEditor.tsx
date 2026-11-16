@@ -1,3 +1,4 @@
+import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Check, Maximize2 } from 'lucide-react';
@@ -41,36 +42,44 @@ export function MiscellanyEditor() {
     setForm(nextForm);
   };
   const [fullscreen, setFullscreen] = useState(() => locationState?.fullscreen === true);
+  const [loadedId, setLoadedId] = useState(id);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>(() => !isEdit || Boolean(createdDraft) ? 'ready' : 'loading');
+  const { markSaved } = useUnsavedChanges([form, tagsText], loadState === 'ready' && id === loadedId);
   useEffect(() => {
-    const bootstrap = async () => {
-      const hasCreatedDraft = Boolean(isEdit && id && createdDraft);
-      if (hasCreatedDraft) {
-        // 新建导航状态仅用于首屏初始化，消费后避免刷新时恢复陈旧快照。
-        navigate(location.pathname, { replace: true, state: null });
-      }
-      const list = await getMiscellanies();
-      setCategoryOptions(Array.from(new Set(list.map((item) => item.category).filter(Boolean))));
-      if (isEdit && id) {
-        if (hasCreatedDraft) return;
-        const miscellany = await getMiscellany(id);
+    let active = true;
+    void getMiscellanies().then((list) => {
+      if (active) setCategoryOptions(Array.from(new Set(list.map((item) => item.category).filter(Boolean))));
+    }).catch(() => {});
+    if (createdDraft) {
+      navigate(location.pathname, { replace: true, state: null });
+    }
+    if (isEdit && id && !Boolean(createdDraft)) {
+      setLoadState('loading');
+      void getMiscellany(id).then((miscellany) => {
+        if (!active) return;
         updateForm(() => ({ title: miscellany.title, summary: miscellany.summary, content: miscellany.content, category: miscellany.category, tags: [...miscellany.tags] }));
         updateTagsText(miscellany.tags.join(', '));
-      }
-    };
-    void bootstrap();
-    // location.state 只为本次新建路由转换消费，清除后不应触发资源重新加载。
+        setLoadedId(id);
+        setLoadState('ready');
+      }).catch(() => { if (active) { setLoadedId(id); setLoadState('error'); } });
+    } else { setLoadedId(id); setLoadState('ready'); }
+    return () => { active = false; };
+    // 仅在资源或重试次数变化时重新加载，避免覆盖正在编辑的内容。
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, isEdit]);
+  }, [id, loadAttempt]);
   /** 全屏工作区保存后留在编辑页；普通页头保存继续进入详情页。 */
   const handleSubmit = async (keepFullscreen = false) => {
     if (!form.title.trim()) { toast({ title: '请输入标题', variant: 'destructive' }); return; }
     if (!form.content.trim()) { toast({ title: '请输入正文内容', variant: 'destructive' }); return; }
     const tags = parseTags(tagsText);
     if (tags.length === 0) { toast({ title: '请至少添加一个标签', variant: 'destructive' }); return; }
+    const savedSnapshot = [form, tagsText];
     setSaving(true);
     try {
       const payload: MiscellanyPayload = { title: form.title.trim(), summary: form.summary.trim(), content: form.content, category: form.category.trim(), tags };
       const miscellany = isEdit && id ? await updateMiscellany(id, payload) : await createMiscellany(payload);
+      markSaved(savedSnapshot);
       toast({ title: '杂谈已保存', variant: 'success' });
       if (keepFullscreen) {
         setFullscreen(true);
@@ -85,6 +94,10 @@ export function MiscellanyEditor() {
       navigate(`/miscellanies/${miscellany.id}`);
     } finally { setSaving(false); }
   };
+  if (id !== loadedId || loadState !== 'ready') {
+    return <section className="p-6">{id !== loadedId || loadState === 'loading' ? '正在加载内容…' : <><p>加载失败，无法编辑此资源。</p><Button type="button" onClick={() => setLoadAttempt((value) => value + 1)}>重试</Button></>}</section>;
+  }
+
   return <section><PageHead title={isEdit ? '编辑杂谈' : '新建杂谈'} subtitle="维护标题、摘要、分类、标签与 Markdown 正文内容。" back={isEdit && id ? `/miscellanies/${id}` : '/miscellanies'} actions={<><Button type="button" variant="outline" onClick={() => setFullscreen(true)}><Maximize2 className="h-4 w-4" />全屏</Button><Button disabled={saving} onClick={() => void handleSubmit()}><Check className="h-4 w-4" />{saving ? '保存中...' : '保存'}</Button></>} />
     <MarkdownEditorPanel title="正文内容" value={form.content} onChange={(content) => updateForm((previous) => ({ ...previous, content }))} fullscreen={fullscreen} onFullscreenChange={setFullscreen} fullscreenTitle={form.title || '未命名杂谈'} onSave={() => void handleSubmit(true)} saving={saving} metadata={<>
       <label className="form-field"><span className="form-label">标题</span><Input value={form.title} maxLength={200} placeholder="输入杂谈标题" onChange={(event) => updateForm((previous) => ({ ...previous, title: event.target.value }))} /><span className="text-xs text-muted-foreground">{form.title.length}/200</span></label>

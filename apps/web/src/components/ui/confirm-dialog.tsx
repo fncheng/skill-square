@@ -8,6 +8,16 @@ export function normalizeConfirmationText(value: string) {
   return value.normalize('NFC').trim();
 }
 
+/** 原生模态窗口处于顶层；旧浏览器不支持 :modal 时使用已打开的 dialog。 */
+function getConfirmPortalTarget(): HTMLElement {
+  try {
+    return document.querySelector<HTMLDialogElement>('dialog:modal') ?? document.body;
+  } catch {
+    const dialogs = document.querySelectorAll<HTMLDialogElement>('dialog[open]');
+    return dialogs.item(dialogs.length - 1) ?? document.body;
+  }
+}
+
 export function ConfirmDialog() {
   const { open, title, description, confirmText, cancelText, destructive, verification, close } = useConfirmStore();
   const [verificationInput, setVerificationInput] = useState('');
@@ -101,6 +111,6 @@ export function ConfirmDialog() {
         </div>
       </form>
     </div>,
-    document.body
+    getConfirmPortalTarget()
   );
 }

@@ -1283,7 +1283,7 @@ export function MarkdownEditorPanel({
                 </button>
               </div>
             ) : null}
-            <div className="form-grid">{metadata}</div>
+            <fieldset disabled={saving} className="form-grid min-w-0">{metadata}</fieldset>
           </aside>
         ) : null}
 
@@ -1360,7 +1360,7 @@ export function MarkdownEditorPanel({
               onPointerMove={handleSourcePointerMove}
               onPointerLeave={handleSourcePointerLeave}
             >
-              <PromptMonacoEditor value={value} onChange={onChange} onEditorChange={setMonacoEditor} />
+              <PromptMonacoEditor value={value} onChange={onChange} onEditorChange={setMonacoEditor} readOnly={saving} />
             </div>
 
             {fullscreen ? (

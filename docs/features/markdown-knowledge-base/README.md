@@ -3,7 +3,7 @@ type: feature
 feature: markdown-knowledge-base
 status: active
 created: 2026-08-27
-updated: 2026-09-19
+updated: 2026-11-15
 related: []
 ---
 
@@ -49,3 +49,9 @@ Markdown 知识库统一承载解决方案、学习笔记和杂谈，支持列�
 - `apps/api/src/miscellanies`
 - `apps/api/src/annotations`
 - `apps/api/prisma/schema.prisma`
+
+## 相关 Bug 记录
+
+- [未保存内容离开编辑页或关闭 SKILL 弹窗时丢失](../../bugs/BUG-20261115-001-未保存内容离开时丢失.md)
+- [编辑页加载期间输入可能被详情覆盖](../../bugs/BUG-20261115-002-编辑页加载覆盖输入.md)
+- [保存期间继续输入可能随页面跳转丢失](../../bugs/BUG-20261115-003-保存期间输入丢失.md)

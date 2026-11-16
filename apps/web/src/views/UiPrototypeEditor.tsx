@@ -1,3 +1,4 @@
+import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Check, Upload } from 'lucide-react';
@@ -13,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { useConfirm } from '@/hooks/use-confirm';
 import type { UiPrototypePayload } from '@/types/domain';
 import {
   formatFileSize,
@@ -44,35 +46,50 @@ export function UiPrototypeEditor() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { confirm } = useConfirm();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isEdit = Boolean(id);
   const [saving, setSaving] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
   const [tagsText, setTagsText] = useState('');
   const [form, setForm] = useState<UiPrototypePayload>(emptyForm);
+  const htmlRef = useRef(form.html);
+  htmlRef.current = form.html;
   const htmlBytes = getUtf8ByteLength(form.html);
 
+  const [loadedId, setLoadedId] = useState(id);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>(() => !isEdit ? 'ready' : 'loading');
+  const { markSaved } = useUnsavedChanges([form, tagsText], loadState === 'ready' && id === loadedId);
   useEffect(() => {
-    const bootstrap = async () => {
-      const list = await getUiPrototypes();
-      setCategoryOptions(Array.from(new Set(list.map((item) => item.category).filter(Boolean))));
+    let active = true;
+    void getUiPrototypes().then((list) => {
+      if (active) setCategoryOptions(Array.from(new Set(list.map((item) => item.category).filter(Boolean))));
+    }).catch(() => {});
 
-      if (isEdit && id) {
-        const prototype = await getUiPrototype(id);
+    if (isEdit && id && true) {
+      setLoadState('loading');
+      void getUiPrototype(id).then((prototype) => {
+        if (!active) return;
         setForm({
-          title: prototype.title,
-          summary: prototype.summary,
-          html: prototype.html,
-          category: prototype.category,
-          tags: [...prototype.tags],
-          allowExternal: prototype.allowExternal
+        title: prototype.title,
+        summary: prototype.summary,
+        html: prototype.html,
+        category: prototype.category,
+        tags: [...prototype.tags],
+        allowExternal: prototype.allowExternal
         });
         setTagsText(prototype.tags.join(', '));
-      }
-    };
-    void bootstrap();
-  }, [id, isEdit]);
+        setLoadedId(id);
+        setLoadState('ready');
+      }).catch(() => { if (active) { setLoadedId(id); setLoadState('error'); } });
+    } else { setLoadedId(id); setLoadState('ready'); }
+    return () => { active = false; };
+    // 仅在资源或重试次数变化时重新加载，避免覆盖正在编辑的内容。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, loadAttempt]);
 
   const handleImport = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -86,13 +103,34 @@ export function UiPrototypeEditor() {
       return;
     }
 
-    const html = await file.text();
-    setForm((prev) => ({
-      ...prev,
-      title: prev.title || file.name.replace(/\.html?$/i, ''),
-      html
-    }));
-    toast({ title: 'HTML 文件已导入', variant: 'success' });
+    setImporting(true);
+    try {
+      const html = await file.text();
+      // 读取文件和等待确认期间，源码仍可能被用户修改。
+      let currentHtml = htmlRef.current;
+      let needsConfirmation = Boolean(currentHtml && currentHtml !== html);
+      while (needsConfirmation) {
+        const replace = await confirm({
+          title: '替换 HTML 源码',
+          description: '导入文件将替换当前 HTML 源码，是否继续？',
+          confirmText: '替换源码',
+          cancelText: '取消'
+        });
+        if (!replace) return;
+        if (currentHtml === htmlRef.current) break;
+        currentHtml = htmlRef.current;
+        // 用户确认后源码再次变化时，即使变为空字符串也须重新确认。
+        needsConfirmation = currentHtml !== html;
+      }
+      setForm((prev) => ({
+        ...prev,
+        title: prev.title || file.name.replace(/\.html?$/i, ''),
+        html
+      }));
+      toast({ title: 'HTML 文件已导入', variant: 'success' });
+    } finally {
+      setImporting(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -117,6 +155,7 @@ export function UiPrototypeEditor() {
       return;
     }
 
+    const savedSnapshot = [form, tagsText];
     setSaving(true);
     try {
       const payload: UiPrototypePayload = {
@@ -129,12 +168,17 @@ export function UiPrototypeEditor() {
       };
       const prototype =
         isEdit && id ? await updateUiPrototype(id, payload) : await createUiPrototype(payload);
+      markSaved(savedSnapshot);
       toast({ title: 'UI 原型已保存', variant: 'success' });
       navigate(`/ui-prototypes/${prototype.id}`);
     } finally {
       setSaving(false);
     }
   };
+
+  if (id !== loadedId || loadState !== 'ready') {
+    return <section className="p-6">{id !== loadedId || loadState === 'loading' ? '正在加载内容…' : <><p>加载失败，无法编辑此资源。</p><Button type="button" onClick={() => setLoadAttempt((value) => value + 1)}>重试</Button></>}</section>;
+  }
 
   return (
     <section>
@@ -151,11 +195,11 @@ export function UiPrototypeEditor() {
               accept=".html,text/html"
               onChange={(event) => void handleImport(event)}
             />
-            <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+            <Button variant="outline" disabled={saving || importing} onClick={() => fileInputRef.current?.click()}>
               <Upload className="h-4 w-4" />
               导入 HTML
             </Button>
-            <Button disabled={saving} onClick={handleSubmit}>
+            <Button disabled={saving || importing} onClick={handleSubmit}>
               <Check className="h-4 w-4" />
               {saving ? '保存中...' : '保存'}
             </Button>
@@ -165,7 +209,7 @@ export function UiPrototypeEditor() {
 
       <div className="editor-layout">
         <div className="form-surface">
-          <div className="form-grid">
+          <fieldset disabled={saving} className="form-grid min-w-0">
             <label className="form-field">
               <span className="form-label">名称</span>
               <Input
@@ -239,13 +283,14 @@ export function UiPrototypeEditor() {
                 {formatFileSize(htmlBytes)} / 2 MB
               </strong>
             </div>
-          </div>
+          </fieldset>
         </div>
 
         <UiPrototypeEditorPanel
           title={form.title}
           value={form.html}
           allowExternal={form.allowExternal}
+          readOnly={saving}
           onChange={(html) => setForm((prev) => ({ ...prev, html }))}
         />
       </div>

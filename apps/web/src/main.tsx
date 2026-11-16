@@ -1,6 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import App from './App';
 import { AuthBootstrap } from './components/auth/AuthBootstrap';
 import './assets/main.css';
@@ -11,11 +11,10 @@ if (!container) {
   throw new Error('未找到根节点 #root');
 }
 
+const router = createBrowserRouter([{ path: '*', element: <><AuthBootstrap /><App /></> }]);
+
 createRoot(container).render(
   <StrictMode>
-    <BrowserRouter>
-      <AuthBootstrap />
-      <App />
-    </BrowserRouter>
+    <RouterProvider router={router} />
   </StrictMode>
 );
