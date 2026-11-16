@@ -13,6 +13,7 @@ import { useConfirm } from '@/hooks/use-confirm';
 import { useMarkdown } from '@/hooks/use-markdown';
 import { useToast } from '@/hooks/use-toast';
 import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
+import { useConfirmStore } from '@/stores/confirm';
 import type { Skill, SkillCandidate, SkillFile, SkillVersion, SkillTool, SkillVariant, SkillSummary, SkillVersionSummary } from '@/types/skill';
 import { skillRequestId } from './skill-request-id';
 
@@ -82,13 +83,24 @@ function UploadDialog({
   const initialManualState = useRef(JSON.stringify([toolKey, source, name, description, note]));
   const manualDirty = manual && JSON.stringify([toolKey, source, name, description, note]) !== initialManualState.current;
   const { markSaved } = useUnsavedChanges([toolKey, source, name, description, note], manual);
-  const requestClose = () => {
-    if (!busy && (!manualDirty || window.confirm('内容尚未保存，确定放弃修改吗？'))) close();
+  const { confirm } = useConfirm();
+  const confirmingClose = useRef(false);
+  const requestClose = async () => {
+    if (busy || confirmingClose.current) return;
+    if (!manualDirty) { close(); return; }
+    confirmingClose.current = true;
+    try {
+      if (await confirm({ title: '放弃未保存的修改？', description: '关闭后，尚未保存的内容将丢失。', confirmText: '放弃修改', cancelText: '继续编辑' })) close();
+    } finally {
+      confirmingClose.current = false;
+    }
   };
   useEffect(() => {
     if (!dialog.current?.open) dialog.current?.showModal();
     return () => {
       epoch.current++;
+      // 导航卸载弹窗时释放尚未完成的确认，避免遗留无法操作的遮罩。
+      if (confirmingClose.current) useConfirmStore.getState().close(false);
     };
   }, []);
   const choose = async (next?: File) => {
@@ -183,7 +195,7 @@ function UploadDialog({
       aria-labelledby="skill-dialog-title"
       onCancel={(event) => {
         event.preventDefault();
-        requestClose();
+        void requestClose();
       }}
       className="w-[min(680px,calc(100vw-32px))] rounded-xl border border-slate-200 p-0 shadow-xl backdrop:bg-slate-950/40"
     >
@@ -193,7 +205,7 @@ function UploadDialog({
             type="button"
             aria-label="关闭"
             disabled={busy}
-            onClick={requestClose}
+            onClick={() => void requestClose()}
             className="absolute right-5 top-5 rounded p-1 text-slate-500 hover:bg-slate-100"
           >
             <X className="h-4 w-4" />
@@ -313,7 +325,7 @@ function UploadDialog({
           </fieldset>
         </div>
         <footer className="flex shrink-0 justify-end gap-2 border-t px-6 py-4">
-          <Button variant="outline" disabled={busy} onClick={requestClose}>
+          <Button variant="outline" disabled={busy} onClick={() => void requestClose()}>
             取消
           </Button>
           <Button disabled={busy || (!manual && !candidate) || Boolean(target && !newVariant && !baseline)} onClick={() => void submit()}>

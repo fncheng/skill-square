@@ -3,7 +3,7 @@ type: feature
 feature: model-response-library
 status: active
 created: 2026-09-03
-updated: 2026-09-03
+updated: 2026-11-15
 related:
   - ../markdown-knowledge-base/README.md
   - ../access-control/README.md

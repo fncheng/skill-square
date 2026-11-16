@@ -18,7 +18,10 @@ export function useUnsavedChanges(value: unknown, ready = true) {
   }, [current, ready]);
 
   const blocker = useBlocker(({ currentLocation, nextLocation }) =>
-    currentLocation.pathname !== nextLocation.pathname && state.current.ready && state.current.current !== snapshot.current
+    (currentLocation.pathname !== nextLocation.pathname ||
+      currentLocation.search !== nextLocation.search ||
+      currentLocation.hash !== nextLocation.hash) &&
+      state.current.ready && state.current.current !== snapshot.current
   );
   useEffect(() => {
     if (blocker.state !== 'blocked') return;
@@ -35,5 +38,8 @@ export function useUnsavedChanges(value: unknown, ready = true) {
     return () => window.removeEventListener('beforeunload', warn);
   }, []);
 
-  return { markSaved: (saved: unknown) => { snapshot.current = JSON.stringify(saved); } };
+  return { markSaved: (saved: unknown, displayed?: unknown) => {
+    snapshot.current = JSON.stringify(saved);
+    if (displayed !== undefined) state.current.current = JSON.stringify(displayed);
+  } };
 }

@@ -101,6 +101,7 @@ export function ConfirmDialog() {
         </div>
       </form>
     </div>,
-    document.body
+    // 原生模态 dialog 位于顶层，确认弹窗需挂在其中才能获得焦点和点击。
+    document.querySelector('dialog:modal') ?? document.body
   );
 }

@@ -3,7 +3,7 @@ type: feature
 feature: markdown-knowledge-base
 status: active
 created: 2026-08-27
-updated: 2026-09-19
+updated: 2026-11-15
 related: []
 ---
 

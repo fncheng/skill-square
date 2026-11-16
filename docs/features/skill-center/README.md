@@ -3,7 +3,7 @@ type: feature
 feature: skill-center
 status: active
 created: 2026-11-10
-updated: 2026-11-11
+updated: 2026-11-15
 related:
   - ../access-control/README.md
 ---

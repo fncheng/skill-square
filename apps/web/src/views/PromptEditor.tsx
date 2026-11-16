@@ -110,7 +110,15 @@ export function PromptEditor() {
         tagIds: [...form.tagIds]
       };
       const prompt = isEdit && id ? await updatePrompt(id, payload) : await createPrompt(payload);
-      markSaved(savedSnapshot);
+      // 仅规范化请求期间未再变化的字段，保留可能出现的后续输入。
+      const currentForm = formRef.current;
+      const displayedForm = {
+        ...currentForm,
+        name: currentForm.name === savedSnapshot.name ? payload.name : currentForm.name,
+        description: currentForm.description === savedSnapshot.description ? payload.description : currentForm.description
+      };
+      updateForm(() => displayedForm);
+      markSaved(payload, displayedForm);
       toast({ title: 'Prompt 已保存', variant: 'success' });
       if (keepFullscreen) {
         setFullscreen(true);
