@@ -108,7 +108,8 @@ export function UiPrototypeEditor() {
       const html = await file.text();
       // 读取文件和等待确认期间，源码仍可能被用户修改。
       let currentHtml = htmlRef.current;
-      while (currentHtml && currentHtml !== html) {
+      let needsConfirmation = Boolean(currentHtml && currentHtml !== html);
+      while (needsConfirmation) {
         const replace = await confirm({
           title: '替换 HTML 源码',
           description: '导入文件将替换当前 HTML 源码，是否继续？',
@@ -118,6 +119,8 @@ export function UiPrototypeEditor() {
         if (!replace) return;
         if (currentHtml === htmlRef.current) break;
         currentHtml = htmlRef.current;
+        // 用户确认后源码再次变化时，即使变为空字符串也须重新确认。
+        needsConfirmation = currentHtml !== html;
       }
       setForm((prev) => ({
         ...prev,
