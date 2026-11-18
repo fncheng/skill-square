@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type KeyboardEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ChartPie, Copy, FileText, Plus, RotateCcw, Search, Star, Trash2, X } from 'lucide-react';
+import { Copy, Plus, RotateCcw, Search, Star, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, type SelectOption } from '@/components/ui/select';
 import { useConfirm } from '@/hooks/use-confirm';
@@ -12,8 +12,6 @@ import type { Prompt } from '@/types/domain';
 import { copyText } from '@/utils/clipboard';
 import { formatShortDate } from '@/utils/date';
 import { getTagStyle } from '@/utils/tag-style';
-
-const hotKeywords = ['代码优化', '需求分析', '单元测试', '接口设计', '文档生成', 'Bug排查'];
 
 const favoriteFilterOptions: readonly SelectOption<FavoriteFilter>[] = [
   { value: '', label: '全部收藏' },
@@ -72,11 +70,6 @@ export function PromptList({ favoriteView = false }: { favoriteView?: boolean })
 
   const clearSearch = async () => {
     store.setFilters({ search: '' });
-    await handleSearch();
-  };
-
-  const applyKeyword = async (keyword: string) => {
-    store.setFilters({ search: keyword });
     await handleSearch();
   };
 
@@ -144,184 +137,83 @@ export function PromptList({ favoriteView = false }: { favoriteView?: boolean })
 
   return (
     <section className="prompt-home">
-      {favoriteView ? (
-        <>
-          <div className="page-head">
-            <div>
-              <h1 className="page-title">我的收藏</h1>
-              <p className="page-subtitle">集中查看已收藏的 Prompt，快速查找并复用常用内容。</p>
-            </div>
-            {isAdmin ? (
-              <Button onClick={() => navigate('/prompts/new')}>
-                <Plus className="h-4 w-4" />
-                新建 Prompt
-              </Button>
-            ) : null}
+      <div className="page-head">
+        <div>
+          <h1 className="page-title">{favoriteView ? '我的收藏' : 'Prompt'}</h1>
+          <p className="page-subtitle">
+            {favoriteView ? '集中查看已收藏的 Prompt，快速查找并复用常用内容。' : '搜索、收藏和管理 AI 提示词，快速查找并复用常用内容。'}
+          </p>
+        </div>
+        {isAdmin ? (
+          <Button onClick={() => navigate('/prompts/new')}>
+            <Plus className="h-4 w-4" />
+            新建 Prompt
+          </Button>
+        ) : null}
+      </div>
+
+      <section className="solution-toolbar">
+        <label className="solution-search">
+          <Search className="h-4 w-4 text-slate-400" />
+          <input
+            value={store.filters.search}
+            type="text"
+            placeholder="搜索 Prompt、分类、标签关键词..."
+            onChange={(event) => store.setFilters({ search: event.target.value })}
+            onKeyUp={handleSearchKeyup}
+          />
+          {store.filters.search ? (
+            <button type="button" className="solution-search-clear" aria-label="清除搜索" onClick={clearSearch}>
+              <X className="h-4 w-4" />
+            </button>
+          ) : null}
+        </label>
+
+        <div className="favorite-toolbar-filters">
+          <div className="category-chips">
+            <button
+              type="button"
+              className={`category-chip${!store.filters.categoryId ? ' active' : ''}`}
+              onClick={() => applyCategory('')}
+            >
+              全部
+            </button>
+            {store.categories.map((category) => (
+              <button
+                key={category.id}
+                type="button"
+                className={`category-chip${store.filters.categoryId === category.id ? ' active' : ''}`}
+                onClick={() => applyCategory(category.id)}
+              >
+                {category.name}
+              </button>
+            ))}
           </div>
-
-          <section className="solution-toolbar">
-            <label className="solution-search">
-              <Search className="h-4 w-4 text-slate-400" />
-              <input
-                value={store.filters.search}
-                type="text"
-                placeholder="搜索 Prompt、分类、标签关键词..."
-                onChange={(event) => store.setFilters({ search: event.target.value })}
-                onKeyUp={handleSearchKeyup}
-              />
-              {store.filters.search ? (
-                <button type="button" className="solution-search-clear" onClick={clearSearch}>
-                  <X className="h-4 w-4" />
-                </button>
-              ) : null}
-            </label>
-
-            <div className="favorite-toolbar-filters">
-              <div className="category-chips">
-                <button
-                  type="button"
-                  className={`category-chip${!store.filters.categoryId ? ' active' : ''}`}
-                  onClick={() => applyCategory('')}
-                >
-                  全部
-                </button>
-                {store.categories.map((category) => (
-                  <button
-                    key={category.id}
-                    type="button"
-                    className={`category-chip${store.filters.categoryId === category.id ? ' active' : ''}`}
-                    onClick={() => applyCategory(category.id)}
-                  >
-                    {category.name}
-                  </button>
-                ))}
-              </div>
-              <Select
-                value={selectedTagId}
-                options={tagFilterOptions}
-                ariaLabel="标签筛选"
-                className="w-40"
-                onValueChange={(tagId) => void applyTagFilter(tagId)}
-              />
-              <Button variant="outline" onClick={handleReset}>
-                <RotateCcw className="h-4 w-4" />
-                重置
-              </Button>
-            </div>
-          </section>
-        </>
-      ) : (
-        <>
-          <section className="prompt-hero">
-            <div className="hero-copy">
-              <h1>
-                发现优质 <span>Prompt</span>
-              </h1>
-              <p>搜索、收藏、管理你的 AI 提示词，让 AI 帮你更高效地完成工作</p>
-
-              <label className="hero-search">
-                <Search className="h-5 w-5 text-slate-500" />
-                <input
-                  value={store.filters.search}
-                  type="text"
-                  placeholder="搜索 Prompt、分类、标签关键词..."
-                  onChange={(event) => store.setFilters({ search: event.target.value })}
-                  onKeyUp={handleSearchKeyup}
-                />
-                {store.filters.search ? (
-                  <button type="button" className="hero-search-clear" onClick={clearSearch}>
-                    <X className="h-4 w-4" />
-                  </button>
-                ) : null}
-              </label>
-
-              <div className="hot-keywords">
-                <b>热门搜索:</b>
-                {hotKeywords.map((keyword) => (
-                  <button key={keyword} type="button" onClick={() => applyKeyword(keyword)}>
-                    {keyword}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="hero-art" aria-hidden="true">
-              <div className="art-search">
-                <Search className="h-5 w-5" />
-                <span />
-              </div>
-              <div className="art-card art-card-primary">
-                <div className="art-thumb">&lt;/&gt;</div>
-                <i />
-                <i />
-              </div>
-              <div className="art-card">
-                <div className="art-thumb">
-                  <FileText className="h-8 w-8" />
-                </div>
-                <i />
-                <i />
-              </div>
-              <div className="art-card">
-                <div className="art-thumb">
-                  <ChartPie className="h-8 w-8" />
-                </div>
-                <i />
-                <i />
-              </div>
-            </div>
-          </section>
-
-          <section className="category-toolbar">
-            <div className="category-main">
-              <h2>分类</h2>
-              <div className="category-chips">
-                <button
-                  type="button"
-                  className={`category-chip${!store.filters.categoryId ? ' active' : ''}`}
-                  onClick={() => applyCategory('')}
-                >
-                  全部
-                </button>
-                {store.categories.map((category) => (
-                  <button
-                    key={category.id}
-                    type="button"
-                    className={`category-chip${store.filters.categoryId === category.id ? ' active' : ''}`}
-                    onClick={() => applyCategory(category.id)}
-                  >
-                    {category.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="card-view-tools">
-              <Select
-                value={store.filters.favorite}
-                options={favoriteFilterOptions}
-                ariaLabel="收藏筛选"
-                className="w-36"
-                onValueChange={(favorite) => {
-                  store.setFilters({ favorite });
-                  void handleSearch();
-                }}
-              />
-              <Select
-                value={selectedTagId}
-                options={tagFilterOptions}
-                ariaLabel="标签筛选"
-                className="w-40"
-                onValueChange={(tagId) => void applyTagFilter(tagId)}
-              />
-              <Button variant="outline" onClick={handleReset}>
-                <RotateCcw className="h-4 w-4" />
-                重置
-              </Button>
-            </div>
-          </section>
-        </>
-      )}
+          {!favoriteView ? (
+            <Select
+              value={store.filters.favorite}
+              options={favoriteFilterOptions}
+              ariaLabel="收藏筛选"
+              className="w-36"
+              onValueChange={(favorite) => {
+                store.setFilters({ favorite });
+                void handleSearch();
+              }}
+            />
+          ) : null}
+          <Select
+            value={selectedTagId}
+            options={tagFilterOptions}
+            ariaLabel="标签筛选"
+            className="w-40"
+            onValueChange={(tagId) => void applyTagFilter(tagId)}
+          />
+          <Button variant="outline" onClick={handleReset}>
+            <RotateCcw className="h-4 w-4" />
+            重置
+          </Button>
+        </div>
+      </section>
 
       <section className="prompt-card-grid">
         {store.loading ? <div className="loading-panel">正在加载 Prompt...</div> : null}
@@ -447,12 +339,6 @@ export function PromptList({ favoriteView = false }: { favoriteView?: boolean })
           下一页
         </Button>
       </div>
-
-      {isAdmin && !favoriteView ? (
-        <button type="button" className="prompt-fab" title="新建 Prompt" onClick={() => navigate('/prompts/new')}>
-          <Plus className="h-7 w-7" />
-        </button>
-      ) : null}
     </section>
   );
 }
